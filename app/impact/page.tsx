@@ -1,0 +1,244 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
+import Navigation from '@/components/Navigation';
+import { EASE_OUT } from '@/lib/animations';
+import { calcPricing, formatEuro } from '@/lib/pricing';
+import { TrendingDown, Users, Euro, ShieldCheck, ArrowRight, AlertTriangle, Clock } from 'lucide-react';
+
+interface Profile {
+  company_name: string;
+  subscription_tier: string | null;
+  subscription_status: string;
+  client_count: number | null;
+  monthly_revenue: number | null;
+  industry: string | null;
+  churn_rate: number | null;
+}
+
+function useCountUp(target: number, duration = 1.5, start = false) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let startTime: number;
+    const tick = (now: number) => {
+      if (!startTime) startTime = now;
+      const progress = Math.min((now - startTime) / (duration * 1000), 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(eased * target);
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [target, duration, start]);
+  return value;
+}
+
+function useRealTimeCounter(perSecond: number, active: boolean) {
+  const [value, setValue] = useState(0);
+  const startRef = useRef<number>(0);
+  useEffect(() => {
+    if (!active) return;
+    startRef.current = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - startRef.current) / 1000;
+      setValue(elapsed * perSecond);
+    }, 100);
+    return () => clearInterval(interval);
+  }, [perSecond, active]);
+  return value;
+}
+
+export default function ImpactPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<{ id: string; email?: string; created_at?: string } | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data?.user) { router.replace('/login'); return; }
+      setUser(data.user);
+      const { data: profileData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      setProfile(profileData as Profile);
+      setLoading(false);
+      setTimeout(() => setInView(true), 200);
+    });
+  }, [router]);
+
+  if (loading) {
+    return (
+      <>
+        <Navigation user={user} />
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
+        </div>
+      </>
+    );
+  }
+
+  const clients = Number(profile?.client_count ?? 100);
+  const revenue = Number(profile?.monthly_revenue ?? 50000);
+  const churn = Number(profile?.churn_rate ?? 5);
+  const pricing = calcPricing({ clients, revenue, churn });
+
+  const clientsLostPerDay = (clients * churn) / 100 / 30;
+  const clientsLostPerMonth = (clients * churn) / 100;
+  const clientsLostPerYear = clientsLostPerMonth * 12;
+
+  const arpu = clients > 0 ? revenue / clients : 0;
+  const revenueLostPerDay = arpu * clientsLostPerDay;
+  const revenueLostPerMonth = arpu * clientsLostPerMonth;
+  const revenueLostPerYear = arpu * clientsLostPerYear;
+
+  const savedClientsPerMonth = clientsLostPerMonth * 0.5;
+  const savedRevenuePerMonth = revenueLostPerMonth * 0.5;
+  const roi = pricing.monthly > 0 ? Math.round(savedRevenuePerMonth / pricing.monthly) : 0;
+  const breakEvenWeeks = savedRevenuePerMonth > 0 ? Math.max(1, Math.ceil((pricing.monthly * 4) / (savedRevenuePerMonth * 4) * 2)) : 0;
+
+  const realTimeLoss = useRealTimeCounter(revenueLostPerDay / 86400, inView);
+
+  const animatedClientsDay = useCountUp(clientsLostPerDay, 1.5, inView);
+  const animatedClientsMonth = useCountUp(clientsLostPerMonth, 1.5, inView);
+  const animatedClientsYear = useCountUp(clientsLostPerYear, 1.5, inView);
+  const animatedRevDay = useCountUp(revenueLostPerDay, 1.5, inView);
+  const animatedRevMonth = useCountUp(revenueLostPerMonth, 1.5, inView);
+  const animatedRevYear = useCountUp(revenueLostPerYear, 1.5, inView);
+  const animatedSavedClients = useCountUp(savedClientsPerMonth, 1.5, inView);
+  const animatedSavedRev = useCountUp(savedRevenuePerMonth, 1.5, inView);
+  const animatedRoi = useCountUp(roi, 1.5, inView);
+
+  return (
+    <>
+      <Navigation user={user} />
+
+      <div className="sticky top-[73px] z-40 border-b border-slate-100 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Votre tarif</span>
+            <motion.span key={pricing.monthly} initial={{ opacity: 0.5, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-lg font-extrabold text-brand-700">
+              {formatEuro(pricing.monthly)}<span className="text-sm font-medium text-slate-400">/mois</span>
+            </motion.span>
+          </div>
+          <div className="hidden text-xs text-slate-500 sm:block">
+            Mensuel: 1 semaine gratuite · Annuel: {formatEuro(pricing.annualPerMonth)}/mois (1 mois gratuit)
+          </div>
+        </div>
+      </div>
+
+      <main className="mx-auto max-w-4xl px-6 py-16">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="mb-16 text-center">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-600">Churnly</p>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Votre situation réelle</h1>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.2 }} className="mb-8">
+          <h2 className="mb-6 text-center text-xl font-bold text-slate-900">En ce moment même, vous perdez :</h2>
+          <div className="rounded-3xl border border-red-100 bg-red-50/40 p-8">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <div className="text-center">
+                <Users className="mx-auto mb-2 h-6 w-6 text-red-400" />
+                <p className="text-3xl font-extrabold text-red-600">{animatedClientsDay.toFixed(1)}</p>
+                <p className="mt-1 text-xs text-red-400">clients / jour</p>
+              </div>
+              <div className="text-center">
+                <Users className="mx-auto mb-2 h-6 w-6 text-red-400" />
+                <p className="text-3xl font-extrabold text-red-600">{Math.round(animatedClientsMonth)}</p>
+                <p className="mt-1 text-xs text-red-400">clients / mois</p>
+              </div>
+              <div className="text-center">
+                <Users className="mx-auto mb-2 h-6 w-6 text-red-400" />
+                <p className="text-3xl font-extrabold text-red-600">{Math.round(animatedClientsYear)}</p>
+                <p className="mt-1 text-xs text-red-400">clients / an</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.3 }} className="mb-8">
+          <h2 className="mb-6 text-center text-xl font-bold text-slate-900">Ce qui signifie :</h2>
+          <div className="rounded-3xl border border-red-100 bg-red-50/40 p-8">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <div className="text-center">
+                <Euro className="mx-auto mb-2 h-6 w-6 text-red-400" />
+                <p className="text-3xl font-extrabold text-red-600">{formatEuro(animatedRevDay)}</p>
+                <p className="mt-1 text-xs text-red-400">revenue perdu / jour</p>
+              </div>
+              <div className="text-center">
+                <Euro className="mx-auto mb-2 h-6 w-6 text-red-400" />
+                <p className="text-3xl font-extrabold text-red-600">{formatEuro(animatedRevMonth)}</p>
+                <p className="mt-1 text-xs text-red-400">revenue perdu / mois</p>
+              </div>
+              <div className="text-center">
+                <Euro className="mx-auto mb-2 h-6 w-6 text-red-400" />
+                <p className="text-3xl font-extrabold text-red-600">{formatEuro(animatedRevYear)}</p>
+                <p className="mt-1 text-xs text-red-400">revenue perdu / an</p>
+              </div>
+            </div>
+            <div className="mt-8 flex items-center justify-center gap-2 rounded-2xl bg-red-100/60 px-6 py-4">
+              <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+              <Clock className="h-4 w-4 text-red-500" />
+              <p className="text-sm font-semibold text-red-600">Depuis votre inscription : {formatEuro(realTimeLoss)} perdu</p>
+            </div>
+          </div>
+        </motion.div>
+
+        <div className="my-12 flex items-center gap-4">
+          <div className="h-px flex-1 bg-slate-200" />
+          <ShieldCheck className="h-6 w-6 text-brand-600" />
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.4 }} className="mb-8">
+          <h2 className="mb-6 text-center text-xl font-bold text-brand-700">Avec Churnly :</h2>
+          <div className="rounded-3xl border border-emerald-100 bg-emerald-50/40 p-8">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="text-center">
+                <TrendingDown className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
+                <p className="text-3xl font-extrabold text-emerald-600">-50%</p>
+                <p className="mt-1 text-xs text-emerald-500">réduction du churn</p>
+              </div>
+              <div className="text-center">
+                <Users className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
+                <p className="text-3xl font-extrabold text-emerald-600">{Math.round(animatedSavedClients)}</p>
+                <p className="mt-1 text-xs text-emerald-500">clients sauvés / mois</p>
+              </div>
+              <div className="text-center">
+                <Euro className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
+                <p className="text-3xl font-extrabold text-emerald-600">{formatEuro(animatedSavedRev)}</p>
+                <p className="mt-1 text-xs text-emerald-500">revenue économisée / mois</p>
+              </div>
+              <div className="text-center">
+                <ShieldCheck className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
+                <p className="text-3xl font-extrabold text-emerald-600">{Math.round(animatedRoi)}x</p>
+                <p className="mt-1 text-xs text-emerald-500">ROI sur votre investissement</p>
+              </div>
+            </div>
+            <div className="mt-6 rounded-xl bg-emerald-100/50 px-6 py-3 text-center">
+              <p className="text-sm font-semibold text-emerald-700">Rentabilité en {breakEvenWeeks} semaine{breakEvenWeeks > 1 ? 's' : ''}</p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.5 }} className="space-y-3">
+          <button onClick={() => router.push('/preview')} className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-700">
+            Commencer — {formatEuro(pricing.monthly)}/mois (1 semaine gratuite) <ArrowRight className="h-5 w-5" />
+          </button>
+          <button onClick={() => router.push('/preview?billing=annual')} className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-brand-200 bg-white px-8 py-4 text-base font-bold text-brand-700 transition hover:bg-brand-50">
+            Annuel — {formatEuro(pricing.annualPerMonth)}/mois (1 mois gratuit)
+          </button>
+          <button onClick={() => router.push('/dashboard')} className="flex w-full items-center justify-center gap-2 rounded-full px-8 py-3 text-sm font-medium text-slate-500 transition hover:text-slate-700">
+            Voir mon dashboard
+          </button>
+        </motion.div>
+      </main>
+    </>
+  );
+}
