@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
         .upsert({ email, code, expires_at: expiresAt }, { onConflict: 'email' });
 
       if (dbError) {
+        console.error('[verify-email] upsert failed', dbError.message);
         return NextResponse.json({ error: 'Erreur base de données.' }, { status: 500 });
       }
 
