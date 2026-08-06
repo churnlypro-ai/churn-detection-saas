@@ -12,6 +12,14 @@ const config: Config = {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      transitionDuration: {
+        base: '300ms',
+        smooth: '400ms',
+        slow: '600ms',
+      },
+      transitionTimingFunction: {
+        'out-smooth': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':

@@ -1,12 +1,27 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import * as THREE from 'three';
+import MagicHexagon from '@/components/MagicHexagon';
+
+const FLOATING_BALLS = [
+  { x: '18%', y: '22%', delay: 0 },
+  { x: '78%', y: '16%', delay: 0.4 },
+  { x: '30%', y: '68%', delay: 0.8 },
+  { x: '85%', y: '62%', delay: 1.2 },
+  { x: '55%', y: '12%', delay: 1.6 },
+  { x: '10%', y: '55%', delay: 2 },
+];
 
 export default function AnimatedHero() {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalStep, setModalStep] = useState<1 | 2>(1);
+  const [modalData, setModalData] = useState({ email: '', clients: 50, revenue: 50000 });
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -116,6 +131,20 @@ export default function AnimatedHero() {
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
       </motion.div>
 
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {FLOATING_BALLS.map((ball, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0.3 }}
+            whileInView={{ y: [0, -24, 12], opacity: [0.3, 0.7, 0.2] }}
+            viewport={{ once: false, amount: 0.5 }}
+            transition={{ duration: 6, delay: ball.delay, repeat: Infinity, repeatType: 'reverse' }}
+            className="absolute h-8 w-8 rounded-full bg-brand-500 blur-md"
+            style={{ left: ball.x, top: ball.y }}
+          />
+        ))}
+      </div>
+
       <motion.div style={{ y: textY, opacity: textOpacity }} className="relative mx-auto flex max-w-4xl flex-col items-center px-6 py-32 text-center">
         <motion.span
           initial={{ opacity: 0, y: 10 }}
@@ -153,15 +182,114 @@ export default function AnimatedHero() {
           transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="mt-10 flex flex-col items-center gap-3"
         >
-          <a
-            href="/signup"
+          <button
+            type="button"
+            onClick={() => setShowModal(true)}
             className="rounded-full bg-brand-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
           >
             Commencer gratuitement
-          </a>
+          </button>
           <span className="text-xs text-slate-400">Pas de carte bancaire requise · Aperçu gratuit</span>
         </motion.div>
       </motion.div>
+
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
+            onClick={() => setShowModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.4 }}
+              className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="absolute right-6 top-6 text-slate-400 transition hover:text-slate-600"
+              >
+                ✕
+              </button>
+
+              {modalStep === 1 ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <h3 className="text-2xl font-bold text-slate-900">Prêt à voir votre churn ?</h3>
+                  <p className="mt-2 text-sm text-slate-600">Remplissez 3 infos pour démarrer.</p>
+
+                  <div className="mt-6">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">Email</label>
+                    <input
+                      type="email"
+                      value={modalData.email}
+                      onChange={(e) => setModalData({ ...modalData, email: e.target.value })}
+                      placeholder="vous@entreprise.com"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600"
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      Nombre de clients: {modalData.clients}
+                    </label>
+                    <input
+                      type="range"
+                      min={5}
+                      max={10000}
+                      step={5}
+                      value={modalData.clients}
+                      onChange={(e) => setModalData({ ...modalData, clients: Number(e.target.value) })}
+                      className="w-full accent-brand-600"
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">CA mensuel</label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-500">€</span>
+                      <input
+                        type="number"
+                        value={modalData.revenue}
+                        onChange={(e) => setModalData({ ...modalData, revenue: Number(e.target.value) })}
+                        className="flex-1 rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600"
+                      />
+                    </div>
+                  </div>
+
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      setModalStep(2);
+                      setTimeout(() => router.push('/signup'), 2500);
+                    }}
+                    disabled={!modalData.email}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="mt-6 w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+                  >
+                    Valider et analyser
+                  </motion.button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-8"
+                >
+                  <MagicHexagon variant="medium" churnRate={5} status="loading" />
+                  <p className="mt-6 text-slate-600">On calcule votre risque…</p>
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

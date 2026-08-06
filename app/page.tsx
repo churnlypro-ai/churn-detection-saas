@@ -5,6 +5,7 @@ import { useRef, useEffect, useState } from 'react';
 import Navigation from '@/components/Navigation';
 import AnimatedHero from '@/components/AnimatedHero';
 import Calculator from '@/components/Calculator';
+import SectionDivider from '@/components/SectionDivider';
 import { EASE_OUT } from '@/lib/animations';
 import { ShieldCheck, Zap, LineChart, Lock, ArrowRight, TrendingDown, Building2, Users, Euro, AlertTriangle } from 'lucide-react';
 
@@ -304,7 +305,8 @@ function CaseStudiesSection() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.6, ease: EASE_OUT, delay: c.delay }}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              whileHover={{ y: -6, rotateY: 4, transition: { duration: 0.2 } }}
+              style={{ perspective: 1000 }}
               className="flex flex-col rounded-3xl border border-slate-100 bg-white p-8 shadow-sm"
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{c.company}</p>
@@ -405,18 +407,24 @@ export default function Home() {
           <AnimatedHero />
         </motion.div>
 
-        <div className="relative h-24 bg-gradient-to-b from-transparent via-slate-50/80 to-slate-50" />
+        <SectionDivider />
 
         <RealitySection />
+        <SectionDivider />
         <StrategySection />
+        <SectionDivider />
 
         <div className="relative bg-slate-50">
           <Calculator />
         </div>
+        <SectionDivider />
 
         <HowItWorksSection />
+        <SectionDivider />
         <ChurnDefinitionSection />
+        <SectionDivider />
         <CaseStudiesSection />
+        <SectionDivider />
         <CTASection />
       </main>
 
