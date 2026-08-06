@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -66,10 +64,14 @@
   }
   html {
     scroll-behavior: smooth;
+    transition: background-color 300ms ease-out, color 300ms ease-out;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 300ms ease-out, color 300ms ease-out;
   }
 }
 

@@ -112,18 +112,18 @@ export default function Upload() {
     <>
       <Navigation user={user} />
       <main className="mx-auto flex min-h-[calc(100vh-73px)] max-w-xl flex-col items-center justify-center px-6 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           Bienvenue{companyName ? ` ${companyName}` : ''}
         </h1>
-        <p className="mt-3 text-slate-600">
+        <p className="mt-3 text-slate-600 dark:text-slate-400">
           Connectez vos données clients pour voir qui risque de partir.
         </p>
 
-        <label className="mt-10 flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-8 py-12 transition hover:border-brand-300 hover:bg-brand-50/40">
-          <span className="text-sm font-semibold text-brand-600">
+        <label className="mt-10 flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-8 py-12 transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-brand-600 dark:hover:bg-brand-500/5">
+          <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
             {status === 'parsing' || status === 'analyzing' ? 'Traitement en cours…' : 'Télécharger un CSV'}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
             {fileName || 'name, revenue_monthly, days_since_last_login, support_tickets_open, payment_status'}
           </span>
           <input
@@ -136,21 +136,21 @@ export default function Upload() {
         </label>
 
         {status === 'analyzing' && (
-          <p className="mt-4 animate-pulse text-sm text-slate-500">Claude analyse vos clients…</p>
+          <p className="mt-4 animate-pulse text-sm text-slate-500 dark:text-slate-400">Claude analyse vos clients…</p>
         )}
-        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <div className="mt-8 flex items-center gap-4 text-xs text-slate-400">
-          <span className="h-px w-10 bg-slate-200" />
+        <div className="mt-8 flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+          <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
           ou
-          <span className="h-px w-10 bg-slate-200" />
+          <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
         </div>
 
         <button
           type="button"
           disabled
           title="Bientôt disponible"
-          className="mt-6 rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-400"
+          className="mt-6 rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-400 dark:border-slate-700 dark:text-slate-500"
         >
           Connecter Stripe (bientôt)
         </button>

@@ -102,7 +102,7 @@ function PreviewContent() {
       <>
         <Navigation user={user} />
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700" />
         </div>
       </>
     );
@@ -126,7 +126,7 @@ function PreviewContent() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3, ease: EASE_OUT }}
-              className="mb-6 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-center text-sm font-medium text-amber-700"
+              className="mb-6 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-center text-sm font-medium text-amber-700 dark:border-amber-800/40 dark:bg-amber-500/10 dark:text-amber-400"
             >
               Paiement annulé. Vous pouvez réessayer quand vous voulez.
             </motion.div>
@@ -137,17 +137,17 @@ function PreviewContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE_OUT }}
-          className="rounded-3xl border border-slate-100 bg-white p-10 text-center shadow-sm"
+          className="rounded-3xl border border-slate-100 bg-white p-10 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
-          <p className="text-sm font-medium text-slate-500">Analyse complète</p>
-          <p className="mt-2 text-lg text-slate-700">
-            <span className="font-bold text-slate-900">{clientCount}</span> clients analysés
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Analyse complète</p>
+          <p className="mt-2 text-lg text-slate-700 dark:text-slate-300">
+            <span className="font-bold text-slate-900 dark:text-white">{clientCount}</span> clients analysés
           </p>
 
-          <div className="mt-8 rounded-2xl bg-amber-50/60 px-6 py-8">
+          <div className="mt-8 rounded-2xl bg-amber-50/60 px-6 py-8 dark:bg-amber-500/10">
             <div className="mb-2 flex items-center justify-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
+              <p className="text-sm font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
                 Clients à risque détectés
               </p>
             </div>
@@ -155,7 +155,7 @@ function PreviewContent() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.2 }}
-              className="text-5xl font-extrabold text-amber-700"
+              className="text-5xl font-extrabold text-amber-700 dark:text-amber-400"
             >
               {atRiskCount}
             </motion.p>
@@ -185,12 +185,12 @@ function PreviewContent() {
               transition={{ duration: 0.4, ease: EASE_OUT }}
               className="mt-8"
             >
-              <div className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">
+              <div className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-6 flex items-center justify-center gap-2">
-                  <Lock className="h-5 w-5 text-brand-600" />
-                  <h2 className="text-xl font-bold text-slate-900">Débloquez vos clients à risque</h2>
+                  <Lock className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Débloquez vos clients à risque</h2>
                 </div>
-                <p className="text-center text-sm text-slate-600">
+                <p className="text-center text-sm text-slate-600 dark:text-slate-400">
                   Pour voir qui sont ces {atRiskCount} clients, pourquoi ils sont à risque,
                   et comment les sauver — passez à Churnly Premium.
                 </p>
@@ -199,28 +199,28 @@ function PreviewContent() {
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.15 }}
-                  className="mt-6 rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50/60 to-white p-6"
+                  className="mt-6 rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50/60 to-white p-6 dark:border-brand-800/40 dark:from-brand-500/10 dark:to-slate-900"
                 >
-                  <p className="text-center text-xs font-semibold uppercase tracking-wide text-brand-600">Votre prix personnalisé</p>
+                  <p className="text-center text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Votre prix personnalisé</p>
                   <motion.p
                     key={dynamicPrice}
                     initial={{ opacity: 0.5, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="mt-2 text-center text-5xl font-extrabold text-brand-700"
+                    className="mt-2 text-center text-5xl font-extrabold text-brand-700 dark:text-brand-400"
                   >
                     {formatEuro(dynamicPrice)}
-                    <span className="text-lg font-medium text-slate-400">/mois</span>
+                    <span className="text-lg font-medium text-slate-400 dark:text-slate-500">/mois</span>
                   </motion.p>
 
                   <div className="mt-5 space-y-1.5">
                     {breakdown.map((item) => (
-                      <div key={item.label} className="flex items-center justify-between text-xs text-slate-600">
+                      <div key={item.label} className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
                         <span>{item.label}</span>
                         <span className="font-medium">+{formatEuro(item.amount)}</span>
                       </div>
                     ))}
-                    <div className="mt-2 flex items-center justify-between border-t border-brand-100 pt-2 text-sm font-semibold text-slate-900">
+                    <div className="mt-2 flex items-center justify-between border-t border-brand-100 pt-2 text-sm font-semibold text-slate-900 dark:border-brand-800/40 dark:text-white">
                       <span>Total</span>
                       <span>{formatEuro(dynamicPrice)}</span>
                     </div>
@@ -240,10 +240,10 @@ function PreviewContent() {
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, ease: EASE_OUT, delay: 0.3 + i * 0.08 }}
-                      className="flex items-center gap-2.5 text-sm text-slate-700"
+                      className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300"
                     >
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
-                        <Check className="h-3 w-3 text-emerald-600" />
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
+                        <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       {feature}
                     </motion.div>
@@ -277,13 +277,13 @@ function PreviewContent() {
                   <motion.p
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 text-center text-sm text-red-600"
+                    className="mt-4 text-center text-sm text-red-600 dark:text-red-400"
                   >
                     {checkoutError}
                   </motion.p>
                 )}
 
-                <p className="mt-4 text-center text-xs text-slate-400">
+                <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
                   Annulable à tout moment · Paiement sécurisé via Stripe
                 </p>
               </div>
@@ -299,7 +299,7 @@ export default function Preview() {
   return (
     <Suspense fallback={
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700" />
       </div>
     }>
       <PreviewContent />

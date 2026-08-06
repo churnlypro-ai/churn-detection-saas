@@ -47,10 +47,10 @@ function formatEuro(value: number): string {
 }
 
 function riskBadge(score: number): { label: string; className: string } {
-  if (score > 80) return { label: `${score}% Critique`, className: 'bg-red-50 text-red-700' };
-  if (score >= 60) return { label: `${score}% Risque`, className: 'bg-orange-50 text-orange-700' };
-  if (score >= 40) return { label: `${score}% Surveiller`, className: 'bg-yellow-50 text-yellow-700' };
-  return { label: `${score}% Stable`, className: 'bg-emerald-50 text-emerald-700' };
+  if (score > 80) return { label: `${score}% Critique`, className: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400' };
+  if (score >= 60) return { label: `${score}% Risque`, className: 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400' };
+  if (score >= 40) return { label: `${score}% Surveiller`, className: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400' };
+  return { label: `${score}% Stable`, className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' };
 }
 
 const EMAIL_TEMPLATES = [
@@ -122,33 +122,33 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.3, ease: EASE_OUT }}
-        className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-8 shadow-2xl"
+        className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-8 shadow-2xl dark:bg-slate-900"
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={onClose} className="absolute right-5 top-5 text-slate-400 transition hover:text-slate-700">
+        <button onClick={onClose} className="absolute right-5 top-5 text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-200">
           <X className="h-5 w-5" />
         </button>
 
-        <h3 className="text-xl font-bold text-slate-900">{client.client_name}</h3>
-        <p className="mt-1 text-sm text-slate-500">Score de churn: {client.churn_score}% · {formatEuro(client.revenue_monthly)}/mois</p>
-        <p className="mt-2 text-sm text-slate-600">{client.reason}</p>
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{client.client_name}</h3>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Score de churn: {client.churn_score}% · {formatEuro(client.revenue_monthly)}/mois</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{client.reason}</p>
 
         <div className="mt-6">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Choisissez un template</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Choisissez un template</p>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             {EMAIL_TEMPLATES.map((tpl) => (
               <button
                 key={tpl.id}
                 onClick={() => generateEmail(tpl.id)}
                 className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${
-                  selected === tpl.id ? 'border-brand-400 bg-brand-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  selected === tpl.id ? 'border-brand-400 bg-brand-50/50 shadow-sm dark:bg-brand-500/10' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800'
                 }`}
               >
-                <tpl.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
+                <tpl.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-600 dark:text-brand-400" />
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{tpl.label}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{tpl.subject}</p>
-                  <p className="mt-1 text-xs text-slate-400">{tpl.forWho}</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{tpl.label}</p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{tpl.subject}</p>
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{tpl.forWho}</p>
                 </div>
               </button>
             ))}
@@ -157,8 +157,8 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
 
         <AnimatePresence>
           {loading && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700" />
               Génération de l'email personnalisé…
             </motion.div>
           )}
@@ -170,12 +170,12 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: EASE_OUT }}
-              className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-5"
+              className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/60"
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sujet</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">{generated.subject}</p>
-              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Corps</p>
-              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{generated.body}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Sujet</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{generated.subject}</p>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Corps</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300">{generated.body}</p>
               <button
                 onClick={sendEmail}
                 disabled={sent}
@@ -206,31 +206,31 @@ function PaywallModal({ atRisk, price, onClose }: { atRisk: number; price: numbe
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.3, ease: EASE_OUT }}
-        className="relative w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl"
+        className="relative w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl dark:bg-slate-900"
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={onClose} className="absolute right-5 top-5 text-slate-400 transition hover:text-slate-700">
+        <button onClick={onClose} className="absolute right-5 top-5 text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-200">
           <X className="h-5 w-5" />
         </button>
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/10">
           <Lock className="h-8 w-8 text-amber-500" />
         </div>
-        <h3 className="text-xl font-bold text-slate-900">{atRisk} client{atRisk > 1 ? 's' : ''} à risque détecté{atRisk > 1 ? 's' : ''}</h3>
-        <p className="mt-3 text-sm text-slate-600">
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{atRisk} client{atRisk > 1 ? 's' : ''} à risque détecté{atRisk > 1 ? 's' : ''}</h3>
+        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
           Ces clients sont projetés au churn. Pour voir qui ils sont, pourquoi ils sont à risque,
           et comment les sauver — passez à Churnly Premium.
         </p>
-        <div className="mt-6 rounded-2xl bg-gradient-to-b from-brand-50/60 to-white p-5">
-          <p className="text-3xl font-extrabold text-brand-700">{formatEuro(price)}<span className="text-base font-medium text-slate-400">/mois</span></p>
-          <p className="mt-1 text-xs text-slate-500">Annulable à tout moment</p>
+        <div className="mt-6 rounded-2xl bg-gradient-to-b from-brand-50/60 to-white p-5 dark:from-brand-500/10 dark:to-slate-900">
+          <p className="text-3xl font-extrabold text-brand-700 dark:text-brand-400">{formatEuro(price)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">/mois</span></p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Annulable à tout moment</p>
         </div>
         <button
           onClick={() => router.push('/preview')}
-          className="mt-6 w-full rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700"
+          className="mt-6 w-full rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
         >
           Voir les détails
         </button>
-        <button onClick={onClose} className="mt-3 text-xs text-slate-400 transition hover:text-slate-600">
+        <button onClick={onClose} className="mt-3 text-xs text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-300">
           Plus tard
         </button>
       </motion.div>
@@ -242,14 +242,14 @@ function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onE
   const [emailClient, setEmailClient] = useState<AnalysisRow | null>(null);
 
   if (!clients.length) {
-    return <div className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-slate-500">Aucun client analysé pour l'instant.</div>;
+    return <div className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Aucun client analysé pour l'instant.</div>;
   }
 
   return (
     <>
-      <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full min-w-[840px] text-left text-sm">
-          <thead className="border-b border-slate-100 bg-slate-50/60 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-slate-100 bg-slate-50/60 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-400">
             <tr>
               <th className="px-5 py-3 font-semibold">Client</th>
               <th className="px-5 py-3 font-semibold">Revenue</th>
@@ -259,22 +259,22 @@ function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onE
               <th className="px-5 py-3 font-semibold">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {clients.map((client) => {
               const badge = riskBadge(client.churn_score);
               return (
-                <tr key={client.id} className="align-top transition hover:bg-slate-50/50">
-                  <td className="px-5 py-4 font-medium text-slate-900">{client.client_name}</td>
-                  <td className="px-5 py-4 text-slate-700">{formatEuro(client.revenue_monthly)}</td>
+                <tr key={client.id} className="align-top transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                  <td className="px-5 py-4 font-medium text-slate-900 dark:text-white">{client.client_name}</td>
+                  <td className="px-5 py-4 text-slate-700 dark:text-slate-300">{formatEuro(client.revenue_monthly)}</td>
                   <td className="px-5 py-4">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}>{badge.label}</span>
                   </td>
-                  <td className="max-w-[220px] px-5 py-4 text-slate-600">{client.reason}</td>
-                  <td className="max-w-[240px] px-5 py-4 text-slate-600">{client.solution}</td>
+                  <td className="max-w-[220px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.reason}</td>
+                  <td className="max-w-[240px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.solution}</td>
                   <td className="px-5 py-4">
                     <button
                       onClick={() => setEmailClient(client)}
-                      className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100"
+                      className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20"
                     >
                       <Mail className="h-3.5 w-3.5" /> Envoyer un email
                     </button>
@@ -411,7 +411,7 @@ export default function Dashboard() {
       <>
         <Navigation user={user} />
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700" />
         </div>
       </>
     );
@@ -426,13 +426,13 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: EASE_OUT }}
-            className="rounded-3xl border border-slate-100 bg-white p-12 shadow-sm"
+            className="rounded-3xl border border-slate-100 bg-white p-12 shadow-sm dark:border-slate-800 dark:bg-slate-900"
           >
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.2 }}
-              className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50"
+              className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/10"
             >
               <AlertTriangle className="h-8 w-8 text-amber-500" />
             </motion.div>
@@ -440,7 +440,7 @@ export default function Dashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
-              className="text-5xl font-extrabold text-slate-900"
+              className="text-5xl font-extrabold text-slate-900 dark:text-white"
             >
               {metrics.atRisk}
             </motion.p>
@@ -448,7 +448,7 @@ export default function Dashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="mt-2 text-lg font-medium text-slate-600"
+              className="mt-2 text-lg font-medium text-slate-600 dark:text-slate-400"
             >
               client{metrics.atRisk > 1 ? 's' : ''} à risque détecté{metrics.atRisk > 1 ? 's' : ''}
             </motion.p>
@@ -456,7 +456,7 @@ export default function Dashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
-              className="mt-4 text-sm text-slate-500"
+              className="mt-4 text-sm text-slate-500 dark:text-slate-400"
             >
               Sur vos {metrics.clientCount} clients, {metrics.atRisk} sont projetés au churn ({metrics.churnRate.toFixed(1)}%/mois).
             </motion.p>
@@ -486,10 +486,10 @@ export default function Dashboard() {
   }
 
   const metricCards = [
-    { label: 'MRR Total', value: formatEuro(metrics.mrr), icon: Euro, accent: 'text-slate-900' },
-    { label: 'Churn Rate', value: `${metrics.churnRate.toFixed(1)}%`, icon: TrendingDown, accent: 'text-red-500' },
-    { label: 'LTV Moyen', value: formatEuro(metrics.ltv), icon: Users, accent: 'text-slate-900' },
-    { label: 'Clients à risque', value: `${metrics.atRisk}`, icon: AlertTriangle, accent: 'text-amber-600' },
+    { label: 'MRR Total', value: formatEuro(metrics.mrr), icon: Euro, accent: 'text-slate-900 dark:text-white' },
+    { label: 'Churn Rate', value: `${metrics.churnRate.toFixed(1)}%`, icon: TrendingDown, accent: 'text-red-500 dark:text-red-400' },
+    { label: 'LTV Moyen', value: formatEuro(metrics.ltv), icon: Users, accent: 'text-slate-900 dark:text-white' },
+    { label: 'Clients à risque', value: `${metrics.atRisk}`, icon: AlertTriangle, accent: 'text-amber-600 dark:text-amber-400' },
   ];
 
   return (
@@ -514,8 +514,8 @@ export default function Dashboard() {
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">{profile?.company_name || 'Dashboard'}</h1>
-              <p className="mt-1 text-sm text-slate-500">Plan €{profile?.subscription_tier}/mois · Actif</p>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{profile?.company_name || 'Dashboard'}</h1>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Plan €{profile?.subscription_tier}/mois · Actif</p>
             </div>
           </div>
         </motion.div>
@@ -528,31 +528,31 @@ export default function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.1 }}
               whileHover={{ y: -3, transition: { duration: 0.2 } }}
-              className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{card.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{card.label}</p>
                 <card.icon className={`h-4 w-4 ${card.accent}`} />
               </div>
-              <p className="text-2xl font-bold text-slate-900">{card.value}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{card.value}</p>
             </motion.div>
           ))}
         </div>
 
         <div className="relative z-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm lg:col-span-2">
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
             <div className="mb-4 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-brand-600" />
-              <h2 className="text-sm font-semibold text-slate-900">Projection de revenue</h2>
+              <BarChart3 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Projection de revenue</h2>
             </div>
             <div className="h-[220px]">
               <ResponsiveRevenueChart data={chartData} />
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.15 }} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.15 }} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-4 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <h2 className="text-sm font-semibold text-slate-900">Distribution du risque</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Distribution du risque</h2>
             </div>
             <div className="h-[220px]">
               <ResponsiveRiskChart data={riskDistribution} />
@@ -561,20 +561,20 @@ export default function Dashboard() {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
-          <h2 className="mb-3 text-lg font-semibold text-slate-900">Clients à risque</h2>
+          <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Clients à risque</h2>
           <PaidClientTable clients={clients} onEmailSent={() => user && loadData(user.id)} />
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
-          <h2 className="mb-3 text-lg font-semibold text-slate-900">Historique</h2>
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+          <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Historique</h2>
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             {history.length === 0 ? (
-              <p className="text-sm text-slate-400">Aucun événement pour l'instant.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">Aucun événement pour l'instant.</p>
             ) : (
-              <ul className="space-y-2 text-sm text-slate-600">
+              <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                 {history.map((event, index) => (
                   <li key={index} className="flex gap-3">
-                    <span className="w-24 shrink-0 text-slate-400">{new Date(event.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long' })}</span>
+                    <span className="w-24 shrink-0 text-slate-400 dark:text-slate-500">{new Date(event.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long' })}</span>
                     <span>{event.text}</span>
                   </li>
                 ))}
@@ -607,7 +607,7 @@ function ResponsiveRevenueChart({ data }: { data: { month: string; revenue: numb
               className="w-full rounded-t bg-red-400/60"
             />
           </div>
-          <span className="text-[10px] text-slate-400">{d.month}</span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500">{d.month}</span>
         </div>
       ))}
     </div>
@@ -627,8 +627,8 @@ function ResponsiveRiskChart({ data }: { data: { range: string; count: number; c
             className="w-full rounded-t-lg"
             style={{ backgroundColor: d.color, minHeight: d.count > 0 ? '8px' : '0' }}
           />
-          <span className="text-[10px] font-medium text-slate-500">{d.range}</span>
-          <span className="text-xs font-bold text-slate-700">{d.count}</span>
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">{d.range}</span>
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{d.count}</span>
         </div>
       ))}
     </div>

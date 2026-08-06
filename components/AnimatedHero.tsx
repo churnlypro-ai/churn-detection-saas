@@ -121,7 +121,7 @@ export default function AnimatedHero() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden bg-gradient-to-b from-white via-white to-slate-50">
+    <section ref={sectionRef} className="relative overflow-hidden bg-gradient-to-b from-white via-white to-slate-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
       <motion.div style={{ y: orbsY }} className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-10%] top-[10%] h-[400px] w-[400px] rounded-full bg-brand-200/20 blur-[120px]" />
         <div className="absolute right-[-5%] bottom-[5%] h-[300px] w-[300px] rounded-full bg-brand-100/30 blur-[100px]" />
@@ -150,7 +150,7 @@ export default function AnimatedHero() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-6 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-medium text-slate-500 shadow-sm backdrop-blur-sm"
+          className="mb-6 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-medium text-slate-500 shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400"
         >
           Analyse par IA · Prévention de churn en temps réel
         </motion.span>
@@ -159,7 +159,7 @@ export default function AnimatedHero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-6xl"
+          className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl"
         >
           Churnly
           <br />
@@ -170,7 +170,7 @@ export default function AnimatedHero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-6 max-w-xl text-lg text-slate-600"
+          className="mt-6 max-w-xl text-lg text-slate-600 dark:text-slate-400"
         >
           Prédisez qui va partir avant qu&apos;il ne parte. Uploadez vos données clients, notre IA
           détecte les signaux de risque et vous dit exactement quoi faire.
@@ -189,7 +189,7 @@ export default function AnimatedHero() {
           >
             Commencer gratuitement
           </button>
-          <span className="text-xs text-slate-400">Pas de carte bancaire requise · Aperçu gratuit</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">Pas de carte bancaire requise · Aperçu gratuit</span>
         </motion.div>
       </motion.div>
 
@@ -207,35 +207,35 @@ export default function AnimatedHero() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.4 }}
-              className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl"
+              className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl dark:bg-slate-900"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="absolute right-6 top-6 text-slate-400 transition hover:text-slate-600"
+                className="absolute right-6 top-6 text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
               >
                 ✕
               </button>
 
               {modalStep === 1 ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <h3 className="text-2xl font-bold text-slate-900">Prêt à voir votre churn ?</h3>
-                  <p className="mt-2 text-sm text-slate-600">Remplissez 3 infos pour démarrer.</p>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Prêt à voir votre churn ?</h3>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Remplissez 3 infos pour démarrer.</p>
 
                   <div className="mt-6">
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">Email</label>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Email</label>
                     <input
                       type="email"
                       value={modalData.email}
                       onChange={(e) => setModalData({ ...modalData, email: e.target.value })}
                       placeholder="vous@entreprise.com"
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     />
                   </div>
 
                   <div className="mt-4">
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Nombre de clients: {modalData.clients}
                     </label>
                     <input
@@ -250,14 +250,14 @@ export default function AnimatedHero() {
                   </div>
 
                   <div className="mt-4">
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">CA mensuel</label>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">CA mensuel</label>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-500">€</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">€</span>
                       <input
                         type="number"
                         value={modalData.revenue}
                         onChange={(e) => setModalData({ ...modalData, revenue: Number(e.target.value) })}
-                        className="flex-1 rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600"
+                        className="flex-1 rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       />
                     </div>
                   </div>
@@ -283,7 +283,7 @@ export default function AnimatedHero() {
                   className="flex flex-col items-center justify-center py-8"
                 >
                   <MagicHexagon variant="medium" churnRate={5} status="loading" />
-                  <p className="mt-6 text-slate-600">On calcule votre risque…</p>
+                  <p className="mt-6 text-slate-600 dark:text-slate-400">On calcule votre risque…</p>
                 </motion.div>
               )}
             </motion.div>
