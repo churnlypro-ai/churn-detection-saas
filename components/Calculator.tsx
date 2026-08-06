@@ -152,8 +152,8 @@ export default function Calculator() {
           <motion.div
             key={`price-${stats.monthly}`}
             initial={{ opacity: 0.6, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
+            animate={{ opacity: 1, scale: [1, 1.015, 1] }}
+            transition={{ opacity: { duration: 0.4 }, scale: { duration: 3, repeat: Infinity, ease: 'easeInOut' } }}
             className="rounded-3xl border border-brand-100 bg-brand-50/50 p-8"
           >
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-600">Votre tarif estimé</p>

@@ -86,3 +86,17 @@
   background-color: #fcd34d;
   border-radius: 999px;
 }
+
+.section-divider {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(217, 119, 6, 0.05) 50%,
+    transparent 100%
+  );
+}
+
+:focus-visible {
+  outline: 2px solid #d97706;
+  outline-offset: 2px;
+}

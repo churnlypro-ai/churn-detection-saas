@@ -1,30 +1,42 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Check, X } from 'lucide-react';
 
 export type HexagonStatus = 'idle' | 'loading' | 'success' | 'error';
+export type HexagonVariant = 'small' | 'medium' | 'large';
 
 interface MagicHexagonProps {
-  clientCount: number;
-  churnRate: number;
-  monthlyRevenue: number;
+  clientCount?: number;
+  churnRate?: number;
+  monthlyRevenue?: number;
   isLocked?: boolean;
   status?: HexagonStatus;
+  variant?: HexagonVariant;
 }
 
+const VARIANT_SIZE: Record<HexagonVariant, number> = {
+  small: 140,
+  medium: 220,
+  large: 360,
+};
+
 function getChurnColor(churn: number): THREE.Color {
-  if (churn < 5) return new THREE.Color(0xf59e0b);
-  if (churn < 8) return new THREE.Color(0xfdba74);
-  if (churn < 15) return new THREE.Color(0xf97316);
-  return new THREE.Color(0xef4444);
+  if (churn < 5) return new THREE.Color(0x10b981);
+  if (churn < 10) return new THREE.Color(0x84cc16);
+  if (churn < 15) return new THREE.Color(0xf59e0b);
+  if (churn < 20) return new THREE.Color(0xf97316);
+  return new THREE.Color(0xdc2626);
 }
 
 function getRotationSpeed(churn: number): number {
   if (churn < 5) return 0.15;
-  if (churn < 8) return 0.3;
+  if (churn < 10) return 0.3;
   if (churn < 15) return 0.6;
-  return 1.2;
+  if (churn < 20) return 0.9;
+  return 1.4;
 }
 
 function getHexSize(clients: number): number {
@@ -35,7 +47,14 @@ function getLineThickness(revenue: number): number {
   return 0.01 + Math.min(revenue / 200000, 1) * 0.04;
 }
 
-export default function MagicHexagon({ clientCount, churnRate, monthlyRevenue, isLocked, status = 'idle' }: MagicHexagonProps) {
+export default function MagicHexagon({
+  clientCount = 100,
+  churnRate = 5,
+  monthlyRevenue = 50000,
+  isLocked,
+  status = 'idle',
+  variant,
+}: MagicHexagonProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const propsRef = useRef({ clientCount, churnRate, monthlyRevenue, isLocked, status });
   propsRef.current = { clientCount, churnRate, monthlyRevenue, isLocked, status };
@@ -277,5 +296,39 @@ export default function MagicHexagon({ clientCount, churnRate, monthlyRevenue, i
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="h-full w-full" />;
+  const sizeStyle = variant ? { width: VARIANT_SIZE[variant], height: VARIANT_SIZE[variant] } : undefined;
+
+  return (
+    <div className="relative" style={sizeStyle}>
+      <canvas ref={canvasRef} className="h-full w-full" />
+      <AnimatePresence>
+        {status === 'success' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            transition={{ delay: 0.3, duration: 0.4, ease: 'easeOut' }}
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/90">
+              <Check className="h-6 w-6 text-white" />
+            </div>
+          </motion.div>
+        )}
+        {status === 'error' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/90">
+              <X className="h-6 w-6 text-white" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
