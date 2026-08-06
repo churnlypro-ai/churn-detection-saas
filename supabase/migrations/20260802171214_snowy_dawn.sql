@@ -1,3 +1,19 @@
+/*
+# Fix: make duplicate Stripe schema migration idempotent
+
+This migration originally duplicated 20260802171042_velvet_crystal.sql
+verbatim (same tables, ENUM types, policies, and views), but without any
+existence guards on CREATE POLICY / CREATE TYPE / CREATE VIEW. Applied
+after velvet_crystal, it failed outright ("policy already exists" /
+"type already exists"), which aborted the migration run and prevented
+every migration after it — including 20260802234113_create_email_verifications_table.sql
+— from ever being applied. That missing table is why /api/verify-email
+returned "Erreur base de données." for every signup attempt.
+
+This version keeps the same end-state schema but guards every statement
+so it is a safe no-op whether or not velvet_crystal already ran.
+*/
+
 CREATE TABLE IF NOT EXISTS stripe_customers (
   id bigint primary key generated always as identity,
   user_id uuid references auth.users(id) not null unique,
@@ -9,23 +25,29 @@ CREATE TABLE IF NOT EXISTS stripe_customers (
 
 ALTER TABLE stripe_customers ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own customer data" ON stripe_customers;
 CREATE POLICY "Users can view their own customer data"
     ON stripe_customers
     FOR SELECT
     TO authenticated
     USING (user_id = auth.uid() AND deleted_at IS NULL);
 
-CREATE TYPE stripe_subscription_status AS ENUM (
-    'not_started',
-    'incomplete',
-    'incomplete_expired',
-    'trialing',
-    'active',
-    'past_due',
-    'canceled',
-    'unpaid',
-    'paused'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'stripe_subscription_status') THEN
+    CREATE TYPE stripe_subscription_status AS ENUM (
+        'not_started',
+        'incomplete',
+        'incomplete_expired',
+        'trialing',
+        'active',
+        'past_due',
+        'canceled',
+        'unpaid',
+        'paused'
+    );
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS stripe_subscriptions (
   id bigint primary key generated always as identity,
@@ -45,6 +67,7 @@ CREATE TABLE IF NOT EXISTS stripe_subscriptions (
 
 ALTER TABLE stripe_subscriptions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own subscription data" ON stripe_subscriptions;
 CREATE POLICY "Users can view their own subscription data"
     ON stripe_subscriptions
     FOR SELECT
@@ -58,11 +81,16 @@ CREATE POLICY "Users can view their own subscription data"
         AND deleted_at IS NULL
     );
 
-CREATE TYPE stripe_order_status AS ENUM (
-    'pending',
-    'completed',
-    'canceled'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'stripe_order_status') THEN
+    CREATE TYPE stripe_order_status AS ENUM (
+        'pending',
+        'completed',
+        'canceled'
+    );
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS stripe_orders (
     id bigint primary key generated always as identity,
@@ -81,6 +109,7 @@ CREATE TABLE IF NOT EXISTS stripe_orders (
 
 ALTER TABLE stripe_orders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own order data" ON stripe_orders;
 CREATE POLICY "Users can view their own order data"
     ON stripe_orders
     FOR SELECT
@@ -95,7 +124,7 @@ CREATE POLICY "Users can view their own order data"
     );
 
 -- View for user subscriptions
-CREATE VIEW stripe_user_subscriptions WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW stripe_user_subscriptions WITH (security_invoker = true) AS
 SELECT
     c.customer_id,
     s.subscription_id,
@@ -115,7 +144,7 @@ AND s.deleted_at IS NULL;
 GRANT SELECT ON stripe_user_subscriptions TO authenticated;
 
 -- View for user orders
-CREATE VIEW stripe_user_orders WITH (security_invoker) AS
+CREATE OR REPLACE VIEW stripe_user_orders WITH (security_invoker = true) AS
 SELECT
     c.customer_id,
     o.id as order_id,
@@ -132,3 +161,5 @@ LEFT JOIN stripe_orders o ON c.customer_id = o.customer_id
 WHERE c.user_id = auth.uid()
 AND c.deleted_at IS NULL
 AND o.deleted_at IS NULL;
+
+GRANT SELECT ON stripe_user_orders TO authenticated;

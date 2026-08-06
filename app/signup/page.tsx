@@ -168,12 +168,19 @@ export default function Signup() {
     const { data: sessionData } = await supabase.auth.signInWithPassword({ email, password });
 
     if (sessionData.user) {
-      await supabase.from('users').update({
+      const { error: updateError } = await supabase.from('users').update({
         client_count: clientCount,
         monthly_revenue: monthlyRevenue,
         industry,
         churn_rate: churnRate,
       }).eq('id', sessionData.user.id);
+
+      if (updateError) {
+        setError('Compte créé, mais impossible d\'enregistrer votre profil. Vous pourrez le compléter dans les Réglages.');
+        setLoading(false);
+        router.push('/impact');
+        return;
+      }
     }
 
     setLoading(false);

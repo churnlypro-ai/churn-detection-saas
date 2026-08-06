@@ -67,18 +67,43 @@ export default function PricingPage() {
                 onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
                 className="mt-10 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700"
               />
-              <motion.p
-                key={monthlyRevenue}
-                initial={{ scale: 0.9, opacity: 0.6 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="mt-6 text-4xl font-extrabold text-brand-600 dark:text-brand-400"
-              >
-                {formatEuro(monthlyRevenue)}
-              </motion.p>
+
+              <div className="mt-6 flex items-center gap-3">
+                <motion.p
+                  key={monthlyRevenue}
+                  initial={{ scale: 0.9, opacity: 0.6 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-4xl font-extrabold text-brand-600 dark:text-brand-400"
+                >
+                  {formatEuro(monthlyRevenue)}
+                </motion.p>
+                <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900">
+                  <input
+                    type="number"
+                    min={10000}
+                    max={1000000}
+                    step={5000}
+                    value={monthlyRevenue}
+                    onChange={(e) =>
+                      setMonthlyRevenue(Math.max(10000, Math.min(1000000, Number(e.target.value) || 0)))
+                    }
+                    className="w-24 bg-transparent text-right text-sm font-semibold text-slate-700 focus:outline-none dark:text-slate-200"
+                    aria-label="Chiffre d'affaires mensuel en euros"
+                  />
+                  <span className="text-sm text-slate-400 dark:text-slate-500">€</span>
+                </div>
+              </div>
+
               <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
                 Cela nous aide à calculer votre risque de churn.
               </p>
+
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                <strong>📊 C&apos;est une moyenne :</strong> ce chiffre représente votre CA mensuel moyen. Votre
+                prix réel dépendra aussi de votre taux de churn et de la taille de votre client base. Ne vous
+                inquiétez pas si ce n&apos;est pas parfait — nous adapterons automatiquement lors de la facturation.
+              </div>
 
               <motion.button
                 onClick={() => setStep(2)}
