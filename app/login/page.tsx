@@ -48,29 +48,29 @@ export default function Login() {
           style={{ perspective: 1200 }}
           className="relative z-10 w-full max-w-sm"
         >
-          <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900">Bon retour</h1>
-          <p className="mb-8 text-sm text-slate-500">Connectez-vous à votre compte.</p>
+          <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Bon retour</h1>
+          <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">Connectez-vous à votre compte.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                 placeholder="vous@entreprise.com"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Mot de passe</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Mot de passe</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                 placeholder="••••••••"
               />
             </div>
@@ -96,9 +96,9 @@ export default function Login() {
             </motion.button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
             Pas encore de compte ?{' '}
-            <Link href="/signup" className="font-medium text-brand-600 hover:underline">
+            <Link href="/signup" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
               Créer un compte
             </Link>
           </p>

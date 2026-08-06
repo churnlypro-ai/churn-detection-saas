@@ -12,10 +12,10 @@ import { ArrowRight } from 'lucide-react';
 const DEFAULT_CLIENT_COUNT = 100;
 
 function getChurnLabel(rate: number): { label: string; className: string } {
-  if (rate < 5) return { label: 'Excellent', className: 'text-emerald-600' };
-  if (rate < 10) return { label: 'Bon', className: 'text-lime-600' };
-  if (rate < 15) return { label: 'À surveiller', className: 'text-orange-600' };
-  return { label: 'Critique', className: 'text-red-600' };
+  if (rate < 5) return { label: 'Excellent', className: 'text-emerald-600 dark:text-emerald-400' };
+  if (rate < 10) return { label: 'Bon', className: 'text-lime-600 dark:text-lime-400' };
+  if (rate < 15) return { label: 'À surveiller', className: 'text-orange-600 dark:text-orange-400' };
+  return { label: 'Critique', className: 'text-red-600 dark:text-red-400' };
 }
 
 export default function PricingPage() {
@@ -51,10 +51,10 @@ export default function PricingPage() {
               transition={{ duration: 0.6, ease: EASE_OUT }}
               className="flex w-full max-w-md flex-col items-center text-center"
             >
-              <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-brand-600">
+              <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
                 Voir nos tarifs
               </p>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
                 Quel est votre chiffre d&apos;affaires mensuel ?
               </h1>
 
@@ -65,18 +65,18 @@ export default function PricingPage() {
                 step={5000}
                 value={monthlyRevenue}
                 onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
-                className="mt-10 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600"
+                className="mt-10 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700"
               />
               <motion.p
                 key={monthlyRevenue}
                 initial={{ scale: 0.9, opacity: 0.6 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="mt-6 text-4xl font-extrabold text-brand-600"
+                className="mt-6 text-4xl font-extrabold text-brand-600 dark:text-brand-400"
               >
                 {formatEuro(monthlyRevenue)}
               </motion.p>
-              <p className="mt-4 text-sm text-slate-500">
+              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
                 Cela nous aide à calculer votre risque de churn.
               </p>
 
@@ -84,7 +84,7 @@ export default function PricingPage() {
                 onClick={() => setStep(2)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="mt-12 flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700"
+                className="mt-12 flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
               >
                 Suivant <ArrowRight className="h-4 w-4" />
               </motion.button>
@@ -100,8 +100,8 @@ export default function PricingPage() {
               transition={{ duration: 0.6, ease: EASE_OUT }}
               className="flex w-full max-w-md flex-col items-center text-center"
             >
-              <p className="mb-2 text-sm text-slate-500">Étape 2/3</p>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">Étape 2/3</p>
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
                 Quel est votre taux de churn mensuel ?
               </h2>
 
@@ -114,7 +114,7 @@ export default function PricingPage() {
                     step={1}
                     value={churnRate}
                     onChange={(e) => setChurnRate(Number(e.target.value))}
-                    className="mt-10 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600"
+                    className="mt-10 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700"
                   />
                   <motion.p
                     key={churnRate}
@@ -123,14 +123,14 @@ export default function PricingPage() {
                     transition={{ duration: 0.3 }}
                     className={`mt-6 text-4xl font-extrabold ${churnLabel.className}`}
                   >
-                    {churnRate}%<span className="ml-2 text-lg text-slate-500">{churnLabel.label}</span>
+                    {churnRate}%<span className="ml-2 text-lg text-slate-500 dark:text-slate-400">{churnLabel.label}</span>
                   </motion.p>
 
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600"
+                    className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
                   >
                     <strong>Si vous ne savez pas :</strong> le churn moyen est d&apos;environ 5 à 8 % par mois
                     (~50 % par an).
@@ -140,7 +140,7 @@ export default function PricingPage() {
                     onClick={handleCalculate}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="mt-12 flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700"
+                    className="mt-12 flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
                   >
                     Calculer mon prix <ArrowRight className="h-4 w-4" />
                   </motion.button>
@@ -153,7 +153,7 @@ export default function PricingPage() {
                   className="mt-12 flex flex-col items-center"
                 >
                   <MagicHexagon variant="large" churnRate={churnRate} status="loading" />
-                  <p className="mt-4 text-sm text-slate-500">On calcule votre prix…</p>
+                  <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">On calcule votre prix…</p>
                 </motion.div>
               )}
             </motion.div>
@@ -176,17 +176,17 @@ export default function PricingPage() {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5 }}
-                  className="text-6xl font-extrabold text-brand-600"
+                  className="text-6xl font-extrabold text-brand-600 dark:text-brand-400"
                 >
                   {formatEuro(pricing.monthly)}
-                  <span className="text-2xl font-medium text-slate-400">/mois</span>
+                  <span className="text-2xl font-medium text-slate-400 dark:text-slate-500">/mois</span>
                 </motion.p>
 
                 <motion.p
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4, duration: 0.5 }}
-                  className="mt-4 text-sm text-slate-500"
+                  className="mt-4 text-sm text-slate-500 dark:text-slate-400"
                 >
                   Score de risque {pricing.score.toFixed(1)} · Palier {pricing.tierName} — basé sur un CA de{' '}
                   {formatEuro(monthlyRevenue)}/mois et {churnRate}% de churn.
@@ -196,19 +196,19 @@ export default function PricingPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6, duration: 0.5 }}
-                  className="mt-6 rounded-2xl border border-brand-100 bg-brand-50/60 p-5"
+                  className="mt-6 rounded-2xl border border-brand-100 bg-brand-50/60 p-5 dark:border-brand-800/40 dark:bg-brand-500/10"
                 >
-                  <p className="font-semibold text-brand-700">
+                  <p className="font-semibold text-brand-700 dark:text-brand-400">
                     Ou {formatEuro(pricing.annualPerMonth)}/mois en annuel
                   </p>
-                  <p className="mt-1 text-xs text-brand-600">1 mois offert sur l&apos;engagement annuel</p>
+                  <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">1 mois offert sur l&apos;engagement annuel</p>
                 </motion.div>
 
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.8 }}
-                  className="mt-5 inline-block rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-500"
+                  className="mt-5 inline-block rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400"
                 >
                   ✓ Engagement 0 · Annulez quand vous voulez
                 </motion.div>
@@ -223,7 +223,7 @@ export default function PricingPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => router.push('/signup')}
-                    className="rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700"
+                    className="rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
                   >
                     S&apos;abonner maintenant
                   </motion.button>
@@ -231,7 +231,7 @@ export default function PricingPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => router.push('/')}
-                    className="rounded-full border-2 border-brand-600 px-8 py-4 text-sm font-semibold text-brand-600 transition hover:bg-brand-50"
+                    className="rounded-full border-2 border-brand-600 px-8 py-4 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10"
                   >
                     Voir la démo
                   </motion.button>

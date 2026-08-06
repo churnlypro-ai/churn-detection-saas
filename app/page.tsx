@@ -50,15 +50,15 @@ function CountUp({ end, duration = 1.5, prefix = '', suffix = '' }: { end: numbe
 
 function RealitySection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/30 px-6 py-28">
+    <section className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/30 px-6 py-28 dark:from-slate-950 dark:to-slate-900">
       <div className="mx-auto max-w-4xl">
-        <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600">
+        <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
           Le constat
         </motion.p>
-        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           La réalité opérationnelle
         </motion.h2>
-        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-6 text-lg leading-relaxed text-slate-600">
+        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
           90% des dirigeants découvrent leur problème de churn quand le client a déjà annulé.
           Pendant ce temps, le revenue s'évapore silencieusement — un client perdu n'envoie pas
           d'alerte, il disparaît. Résultat : €60k/an de revenue perdu en moyenne, sans qu'aucun
@@ -75,10 +75,10 @@ function RealitySection() {
               transition={{ duration: 0.6, ease: EASE_OUT, delay: i * 0.2 }}
               className="text-center"
             >
-              <p className="text-4xl font-extrabold text-brand-600 sm:text-5xl">
+              <p className="text-4xl font-extrabold text-brand-600 dark:text-brand-400 sm:text-5xl">
                 <CountUp end={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
               </p>
-              <p className="mt-3 text-sm text-slate-500">{stat.label}</p>
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-500">{stat.label}</p>
             </motion.div>
           ))}
         </div>
@@ -87,7 +87,7 @@ function RealitySection() {
           {Array.from({ length: 12 }).map((_, i) => (
             <motion.div
               key={i}
-              className="absolute h-16 w-16 rounded-full border border-brand-200 bg-brand-50/50"
+              className="absolute h-16 w-16 rounded-full border border-brand-200 bg-brand-50/50 dark:border-brand-800/40 dark:bg-brand-500/10"
               style={{ left: `${(i / 12) * 100}%`, top: `${Math.sin(i) * 20}px` }}
               initial={{ opacity: 0.6 }}
               animate={{ opacity: [0.6, 0.05, 0.6] }}
@@ -102,15 +102,15 @@ function RealitySection() {
 
 function StrategySection() {
   return (
-    <section className="relative overflow-hidden bg-white px-6 py-28">
+    <section className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
       <div className="mx-auto max-w-4xl">
-        <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600">
+        <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
           Le levier
         </motion.p>
-        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           Votre stratégie commerciale
         </motion.h2>
-        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-6 text-lg leading-relaxed text-slate-600">
+        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
           Vous investissez en acquisition. Vos équipes optimisent les campagnes, les funnels,
           les coûts par lead. Mais chaque client acquis repart par la porte de sortie sans
           que personne ne l'ait vu partir. La rétention génère 10x plus de valeur que
@@ -125,11 +125,11 @@ function StrategySection() {
             transition={{ duration: 0.8, ease: EASE_OUT }}
             className="flex flex-col items-center gap-3"
           >
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
               <TrendingDown className="h-8 w-8" />
             </div>
-            <p className="text-sm font-medium text-slate-500">Acquisition</p>
-            <p className="text-xs text-slate-400">Coût élevé · ROI lent</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Acquisition</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Coût élevé · ROI lent</p>
           </motion.div>
 
           <motion.div
@@ -139,7 +139,7 @@ function StrategySection() {
             transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.4 }}
             className="flex flex-col items-center"
           >
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
               <ArrowRight className="h-6 w-6" />
             </div>
           </motion.div>
@@ -154,20 +154,20 @@ function StrategySection() {
             <motion.div
               animate={{ boxShadow: ['0 0 0 0 rgba(217,119,6,0.2)', '0 0 0 12px rgba(217,119,6,0)'] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
-              className="flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-50 text-brand-600"
+              className="flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"
             >
               <ShieldCheck className="h-8 w-8" />
             </motion.div>
-            <p className="text-sm font-semibold text-brand-700">Rétention</p>
-            <p className="text-xs text-brand-500">10x plus de valeur</p>
+            <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">Rétention</p>
+            <p className="text-xs text-brand-500 dark:text-brand-500">10x plus de valeur</p>
           </motion.div>
         </div>
 
-        <motion.div {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }} className="mt-8 rounded-2xl border border-brand-100 bg-brand-50/50 p-6 text-center">
-          <p className="text-lg font-semibold text-slate-900">
+        <motion.div {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }} className="mt-8 rounded-2xl border border-brand-100 bg-brand-50/50 p-6 text-center dark:border-brand-800/40 dark:bg-brand-500/5">
+          <p className="text-lg font-semibold text-slate-900 dark:text-white">
             La rétention génère 10x plus de valeur que l'acquisition
           </p>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             Un client retenu continue de payer, recommande votre produit, et coûte zéro en acquisition.
           </p>
         </motion.div>
@@ -184,12 +184,12 @@ const STEPS = [
 
 function HowItWorksSection() {
   return (
-    <section className="relative bg-slate-50 px-6 py-28">
+    <section className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
       <div className="mx-auto max-w-5xl">
-        <motion.h2 {...reveal} className="mb-4 text-center text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+        <motion.h2 {...reveal} className="mb-4 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           Comment ça marche
         </motion.h2>
-        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mb-16 text-center text-slate-600">
+        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mb-16 text-center text-slate-600 dark:text-slate-400">
           Trois étapes. Trente secondes. Des actions concrètes.
         </motion.p>
 
@@ -202,16 +202,16 @@ function HowItWorksSection() {
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.6, ease: EASE_OUT, delay: i * 0.15 }}
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
-              className="relative rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow hover:shadow-md"
+              className="relative rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
             >
-              <span className="absolute right-6 top-6 text-3xl font-extrabold text-slate-100">{step.step}</span>
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+              <span className="absolute right-6 top-6 text-3xl font-extrabold text-slate-100 dark:text-slate-800">{step.step}</span>
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
                 <step.icon className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{step.description}</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{step.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{step.description}</p>
               {i < STEPS.length - 1 && (
-                <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-slate-300 sm:block">
+                <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-slate-300 dark:text-slate-700 sm:block">
                   <ArrowRight className="h-5 w-5" />
                 </div>
               )}
@@ -225,28 +225,28 @@ function HowItWorksSection() {
 
 function ChurnDefinitionSection() {
   return (
-    <section className="relative overflow-hidden bg-white px-6 py-28">
+    <section className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
       <div className="mx-auto max-w-3xl">
-        <motion.h2 {...reveal} className="text-center text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+        <motion.h2 {...reveal} className="text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           Qu&apos;est-ce que le churn ?
         </motion.h2>
-        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-6 text-lg leading-relaxed text-slate-600">
+        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
           Le churn, c&apos;est le pourcentage de clients qui arrêtent d&apos;utiliser votre produit
           chaque mois. Un churn de 5% peut sembler faible — mais sur un an, c&apos;est près de 50%
           de votre base clients qui disparaît.
         </motion.p>
-        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-4 text-lg leading-relaxed text-slate-600">
+        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-4 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
           La plupart des dirigeants le découvrent trop tard, quand le client a déjà annulé.
           Churnly identifie les signaux d&apos;alerte <em>avant</em> l&apos;annulation, pendant
           qu&apos;il est encore temps d&apos;agir.
         </motion.p>
 
-        <div className="relative mt-16 h-40 overflow-hidden rounded-2xl bg-slate-50">
+        <div className="relative mt-16 h-40 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-900">
           <div className="absolute left-0 top-0 flex h-full w-full items-center">
             {Array.from({ length: 20 }).map((_, i) => (
               <motion.div
                 key={`in-${i}`}
-                className="absolute h-8 w-8 rounded-full bg-brand-200"
+                className="absolute h-8 w-8 rounded-full bg-brand-200 dark:bg-brand-500/30"
                 initial={{ x: -50, opacity: 0 }}
                 animate={{ x: 800, opacity: [0, 1, 1, 0] }}
                 transition={{ duration: 4, repeat: Infinity, delay: i * 0.4, ease: 'linear' }}
@@ -256,7 +256,7 @@ function ChurnDefinitionSection() {
             {Array.from({ length: 15 }).map((_, i) => (
               <motion.div
                 key={`out-${i}`}
-                className="absolute h-8 w-8 rounded-full border-2 border-red-200 bg-red-50"
+                className="absolute h-8 w-8 rounded-full border-2 border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-950/40"
                 initial={{ x: 800, opacity: 0 }}
                 animate={{ x: -50, opacity: [0, 1, 1, 0] }}
                 transition={{ duration: 5, repeat: Infinity, delay: i * 0.5 + 1, ease: 'linear' }}
@@ -265,18 +265,18 @@ function ChurnDefinitionSection() {
             ))}
           </div>
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Clients qui arrivent · Clients qui partent</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Clients qui arrivent · Clients qui partent</p>
           </div>
         </div>
 
         <motion.div {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }} className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6">
-            <p className="text-sm font-semibold text-slate-900">Pourquoi c'est ignoré</p>
-            <p className="mt-2 text-sm text-slate-600">Aucun signal d'alarme. Le client ne dit rien. Il part en silence. Personne n'est notifié.</p>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">Pourquoi c'est ignoré</p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Aucun signal d'alarme. Le client ne dit rien. Il part en silence. Personne n'est notifié.</p>
           </div>
-          <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-6">
-            <p className="text-sm font-semibold text-brand-700">Avec Churnly</p>
-            <p className="mt-2 text-sm text-slate-600">Détection des signaux faibles 30 à 60 jours avant l'annulation. Action recommandée immédiate.</p>
+          <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-6 dark:border-brand-800/40 dark:bg-brand-500/5">
+            <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">Avec Churnly</p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Détection des signaux faibles 30 à 60 jours avant l'annulation. Action recommandée immédiate.</p>
           </div>
         </motion.div>
       </div>
@@ -292,9 +292,9 @@ const CASES = [
 
 function CaseStudiesSection() {
   return (
-    <section className="relative bg-slate-50 px-6 py-28">
+    <section className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
       <div className="mx-auto max-w-5xl">
-        <motion.h2 {...reveal} className="mb-16 text-center text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+        <motion.h2 {...reveal} className="mb-16 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           Cas réels
         </motion.h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -307,15 +307,15 @@ function CaseStudiesSection() {
               transition={{ duration: 0.6, ease: EASE_OUT, delay: c.delay }}
               whileHover={{ y: -6, rotateY: 4, transition: { duration: 0.2 } }}
               style={{ perspective: 1000 }}
-              className="flex flex-col rounded-3xl border border-slate-100 bg-white p-8 shadow-sm"
+              className="flex flex-col rounded-3xl border border-slate-100 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-950"
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{c.company}</p>
-              <p className="mt-4 text-4xl font-extrabold text-brand-600">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{c.company}</p>
+              <p className="mt-4 text-4xl font-extrabold text-brand-600 dark:text-brand-400">
                 <CountUp end={c.result} prefix={c.result > 1000 ? '€' : ''} suffix={c.result > 1000 ? '' : '%'} />
               </p>
-              <p className="text-sm text-slate-500">{c.unit}</p>
-              <p className="mt-4 flex-1 text-sm leading-relaxed text-slate-600">{c.description}</p>
-              <div className="mt-6 rounded-full bg-brand-50 px-3 py-1.5 text-center text-xs font-semibold text-brand-700">
+              <p className="text-sm text-slate-500 dark:text-slate-500">{c.unit}</p>
+              <p className="mt-4 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{c.description}</p>
+              <div className="mt-6 rounded-full bg-brand-50 px-3 py-1.5 text-center text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-400">
                 {c.metric}
               </div>
             </motion.div>
@@ -414,7 +414,7 @@ export default function Home() {
         <StrategySection />
         <SectionDivider />
 
-        <div className="relative bg-slate-50">
+        <div className="relative bg-slate-50 dark:bg-slate-900">
           <Calculator />
         </div>
         <SectionDivider />
@@ -428,13 +428,13 @@ export default function Home() {
         <CTASection />
       </main>
 
-      <footer className="relative border-t border-slate-100 bg-white py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 sm:flex-row">
+      <footer className="relative border-t border-slate-100 bg-white py-10 dark:border-slate-800 dark:bg-slate-950">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 dark:text-slate-500 sm:flex-row">
           <span>© {new Date().getFullYear()} Churnly</span>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-slate-800">Confidentialité</a>
-            <a href="#" className="hover:text-slate-800">Conditions</a>
-            <a href="#" className="hover:text-slate-800">Contact</a>
+            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">Confidentialité</a>
+            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">Conditions</a>
+            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">Contact</a>
           </div>
         </div>
       </footer>
