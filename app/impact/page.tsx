@@ -73,17 +73,6 @@ export default function ImpactPage() {
     });
   }, [router]);
 
-  if (loading) {
-    return (
-      <>
-        <Navigation user={user} />
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700" />
-        </div>
-      </>
-    );
-  }
-
   const clients = Number(profile?.client_count ?? 100);
   const revenue = Number(profile?.monthly_revenue ?? 50000);
   const churn = Number(profile?.churn_rate ?? 5);
@@ -114,6 +103,17 @@ export default function ImpactPage() {
   const animatedSavedClients = useCountUp(savedClientsPerMonth, 1.5, inView);
   const animatedSavedRev = useCountUp(savedRevenuePerMonth, 1.5, inView);
   const animatedRoi = useCountUp(roi, 1.5, inView);
+
+  if (loading) {
+    return (
+      <>
+        <Navigation user={user} />
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700" />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
