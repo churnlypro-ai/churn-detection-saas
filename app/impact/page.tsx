@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
-import { calcPricing, formatEuro } from '@/lib/pricing';
+import { calcPrice, calcPricing, formatEuro } from '@/lib/pricing';
 import { TrendingDown, Users, Euro, ShieldCheck, ArrowRight, AlertTriangle, Clock } from 'lucide-react';
 
 interface Profile {
@@ -57,6 +57,8 @@ export default function ImpactPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [inView, setInView] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -72,6 +74,35 @@ export default function ImpactPage() {
       setTimeout(() => setInView(true), 200);
     });
   }, [router]);
+
+  async function handleSubscribe() {
+    setCheckoutLoading(true);
+    setCheckoutError('');
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const rev = profile?.monthly_revenue ?? 0;
+      const churn = profile?.churn_rate ?? 5;
+      const clientCountForTier = profile?.client_count ?? 0;
+      const tier = String(calcPrice(Number(clientCountForTier), Number(rev), Number(churn)));
+
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tier }),
+      });
+
+      if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
+
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+      setCheckoutLoading(false);
+    }
+  }
 
   const clients = Number(profile?.client_count ?? 100);
   const revenue = Number(profile?.monthly_revenue ?? 50000);
@@ -228,12 +259,25 @@ export default function ImpactPage() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.5 }} className="space-y-3">
-          <button onClick={() => router.push('/preview')} className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-700">
-            Commencer — {formatEuro(pricing.monthly)}/mois (1 semaine gratuite) <ArrowRight className="h-5 w-5" />
+          <button
+            onClick={handleSubscribe}
+            disabled={checkoutLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-700 disabled:opacity-60"
+          >
+            {checkoutLoading ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Redirection vers le paiement…
+              </>
+            ) : (
+              <>
+                Commencer — {formatEuro(pricing.monthly)}/mois (1 semaine gratuite) <ArrowRight className="h-5 w-5" />
+              </>
+            )}
           </button>
-          <button onClick={() => router.push('/preview?billing=annual')} className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-brand-200 bg-white px-8 py-4 text-base font-bold text-brand-700 transition hover:bg-brand-50 dark:border-brand-800/40 dark:bg-slate-900 dark:text-brand-400 dark:hover:bg-brand-500/10">
-            Annuel — {formatEuro(pricing.annualPerMonth)}/mois (1 mois gratuit)
-          </button>
+          {checkoutError && (
+            <p className="text-center text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
+          )}
           <button onClick={() => router.push('/dashboard')} className="flex w-full items-center justify-center gap-2 rounded-full px-8 py-3 text-sm font-medium text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
             Voir mon dashboard
           </button>
