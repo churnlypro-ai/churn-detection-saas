@@ -22,7 +22,7 @@ function generateCode(): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, action } = await req.json();
+    const { email, action, code: submittedCode } = await req.json();
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'Email requis.' }, { status: 400 });
@@ -69,8 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'verify') {
-      const { code } = await req.json();
-      if (!code) {
+      if (!submittedCode) {
         return NextResponse.json({ error: 'Code requis.' }, { status: 400 });
       }
 
@@ -88,7 +87,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Code expiré. Demandez un nouveau code.' }, { status: 400 });
       }
 
-      if (data.code !== code) {
+      if (data.code !== submittedCode) {
         return NextResponse.json({ error: 'Code incorrect.' }, { status: 400 });
       }
 
