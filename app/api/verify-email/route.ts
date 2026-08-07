@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (emailError) {
+        console.error('[verify-email] resend send failed', JSON.stringify(emailError));
         return NextResponse.json({ error: 'Erreur envoi email.' }, { status: 500 });
       }
 
