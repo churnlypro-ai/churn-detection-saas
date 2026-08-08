@@ -191,8 +191,21 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
   );
 }
 
-function PaywallModal({ atRisk, price, onClose }: { atRisk: number; price: number; onClose: () => void }) {
-  const router = useRouter();
+function PaywallModal({
+  atRisk,
+  price,
+  onClose,
+  onSubscribe,
+  loading,
+  error,
+}: {
+  atRisk: number;
+  price: number;
+  onClose: () => void;
+  onSubscribe: () => void;
+  loading: boolean;
+  error: string;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -225,11 +238,20 @@ function PaywallModal({ atRisk, price, onClose }: { atRisk: number; price: numbe
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Annulable à tout moment</p>
         </div>
         <button
-          onClick={() => router.push('/preview')}
-          className="mt-6 w-full rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+          onClick={onSubscribe}
+          disabled={loading}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
         >
-          Voir les détails
+          {loading ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Redirection…
+            </>
+          ) : (
+            'S\'abonner maintenant'
+          )}
         </button>
+        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <button onClick={onClose} className="mt-3 text-xs text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-300">
           Plus tard
         </button>
@@ -305,6 +327,8 @@ export default function Dashboard() {
   const [actionLog, setActionLog] = useState<ActionRow[]>([]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   const loadData = useCallback(async (userId: string) => {
     const { data: results } = await supabase
@@ -356,6 +380,31 @@ export default function Dashboard() {
       }
     });
   }, [router, loadData]);
+
+  async function handleSubscribe() {
+    setCheckoutLoading(true);
+    setCheckoutError('');
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const tier = String(calcPrice(Number(profile?.client_count ?? 0), Number(profile?.monthly_revenue ?? 0), Number(profile?.churn_rate ?? 5)));
+
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tier }),
+      });
+
+      if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
+
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+      setCheckoutLoading(false);
+    }
+  }
 
   const isSubscribed = profile?.subscription_status === 'active';
 
@@ -478,6 +527,9 @@ export default function Dashboard() {
               atRisk={metrics.atRisk}
               price={calcPrice(Number(profile?.client_count ?? 0), Number(profile?.monthly_revenue ?? 0), Number(profile?.churn_rate ?? 5))}
               onClose={() => setShowPaywall(false)}
+              onSubscribe={handleSubscribe}
+              loading={checkoutLoading}
+              error={checkoutError}
             />
           )}
         </AnimatePresence>
