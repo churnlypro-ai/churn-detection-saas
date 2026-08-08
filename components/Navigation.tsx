@@ -1,17 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function Navigation({ user }: { user: { id?: string; email?: string } | null }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   async function handleLogout() {
     await supabase.auth.signOut();
     router.push('/login');
   }
+
+  const isAuthPage = pathname === '/signup' || pathname === '/login';
 
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
@@ -23,7 +26,7 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
         <div className="flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
           <ThemeToggle />
 
-          {user ? (
+          {isAuthPage ? null : user ? (
             <>
               <Link href="/dashboard" className="hover:text-slate-900 dark:hover:text-white">
                 Dashboard
@@ -31,6 +34,9 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
               <Link href="/settings" className="hover:text-slate-900 dark:hover:text-white">
                 Réglages
               </Link>
+              {user.email && (
+                <span className="hidden text-slate-400 dark:text-slate-500 sm:inline">{user.email}</span>
+              )}
               <button
                 onClick={handleLogout}
                 className="rounded-full border border-slate-200 px-4 py-1.5 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
@@ -40,9 +46,11 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
             </>
           ) : (
             <>
-              <Link href="/pricing" className="hover:text-slate-900 dark:hover:text-white">
-                Tarifs
-              </Link>
+              {pathname !== '/pricing' && (
+                <Link href="/pricing" className="hover:text-slate-900 dark:hover:text-white">
+                  Tarifs
+                </Link>
+              )}
               <Link href="/login" className="hover:text-slate-900 dark:hover:text-white">
                 Se connecter
               </Link>

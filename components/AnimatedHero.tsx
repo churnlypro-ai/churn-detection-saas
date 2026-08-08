@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import * as THREE from 'three';
-import MagicHexagon from '@/components/MagicHexagon';
 
 const FLOATING_BALLS = [
   { x: '18%', y: '22%', delay: 0 },
@@ -16,12 +15,8 @@ const FLOATING_BALLS = [
 ];
 
 export default function AnimatedHero() {
-  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [modalStep, setModalStep] = useState<1 | 2>(1);
-  const [modalData, setModalData] = useState({ email: '', clients: 50, revenue: 50000 });
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -182,114 +177,15 @@ export default function AnimatedHero() {
           transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="mt-10 flex flex-col items-center gap-3"
         >
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
+          <Link
+            href="/signup"
             className="rounded-full bg-brand-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
           >
             Commencer gratuitement
-          </button>
+          </Link>
           <span className="text-xs text-slate-400 dark:text-slate-500">Pas de carte bancaire requise · Aperçu gratuit</span>
         </motion.div>
       </motion.div>
-
-      <AnimatePresence>
-        {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
-            onClick={() => setShowModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.4 }}
-              className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl dark:bg-slate-900"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="absolute right-6 top-6 text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                ✕
-              </button>
-
-              {modalStep === 1 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Prêt à voir votre churn ?</h3>
-                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Remplissez 3 infos pour démarrer.</p>
-
-                  <div className="mt-6">
-                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Email</label>
-                    <input
-                      type="email"
-                      value={modalData.email}
-                      onChange={(e) => setModalData({ ...modalData, email: e.target.value })}
-                      placeholder="vous@entreprise.com"
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    />
-                  </div>
-
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Nombre de clients: {modalData.clients}
-                    </label>
-                    <input
-                      type="range"
-                      min={5}
-                      max={10000}
-                      step={5}
-                      value={modalData.clients}
-                      onChange={(e) => setModalData({ ...modalData, clients: Number(e.target.value) })}
-                      className="w-full accent-brand-600"
-                    />
-                  </div>
-
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">CA mensuel</label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">€</span>
-                      <input
-                        type="number"
-                        value={modalData.revenue}
-                        onChange={(e) => setModalData({ ...modalData, revenue: Number(e.target.value) })}
-                        className="flex-1 rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <motion.button
-                    type="button"
-                    onClick={() => {
-                      setModalStep(2);
-                      setTimeout(() => router.push('/signup'), 2500);
-                    }}
-                    disabled={!modalData.email}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="mt-6 w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-                  >
-                    Valider et analyser
-                  </motion.button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center justify-center py-8"
-                >
-                  <MagicHexagon variant="medium" churnRate={5} status="loading" />
-                  <p className="mt-6 text-slate-600 dark:text-slate-400">On calcule votre risque…</p>
-                </motion.div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }
