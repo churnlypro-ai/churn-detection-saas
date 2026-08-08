@@ -18,6 +18,15 @@ export async function POST(req: NextRequest) {
   const { tier } = body ?? {};
   const priceId = PRICE_IDS[String(tier)];
   if (!priceId) {
+    console.error(
+      '[create-checkout-session] invalid tier',
+      JSON.stringify({
+        receivedTier: tier,
+        configuredPriceEnvVars: Object.fromEntries(
+          Object.entries(PRICE_IDS).map(([key, value]) => [key, value ? 'set' : 'MISSING']),
+        ),
+      }),
+    );
     return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 400 });
   }
 
