@@ -159,7 +159,7 @@ export default function ImpactPage() {
             </motion.span>
           </div>
           <div className="hidden text-xs text-slate-500 dark:text-slate-400 sm:block">
-            Mensuel: 1 semaine gratuite · Annuel: {formatEuro(pricing.annualPerMonth)}/mois (1 mois gratuit)
+            Mensuel: 3 jours gratuits · Annuel: {formatEuro(pricing.annualPerMonth)}/mois (1 mois gratuit)
           </div>
         </div>
       </div>
@@ -271,7 +271,7 @@ export default function ImpactPage() {
               </>
             ) : (
               <>
-                Commencer — {formatEuro(pricing.monthly)}/mois (1 semaine gratuite) <ArrowRight className="h-5 w-5" />
+                Commencer — {formatEuro(pricing.monthly)}/mois (3 jours gratuits) <ArrowRight className="h-5 w-5" />
               </>
             )}
           </button>
