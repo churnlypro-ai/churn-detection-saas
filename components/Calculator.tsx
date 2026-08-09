@@ -29,7 +29,11 @@ function SliderField({ label, value, min, max, step, onChange, display, inputSuf
             value={value}
             onChange={(e) => {
               const v = Number(e.target.value);
-              if (!Number.isNaN(v)) onChange(Math.max(min, Math.min(max, v)));
+              if (!Number.isNaN(v)) onChange(v);
+            }}
+            onBlur={(e) => {
+              const v = Number(e.target.value);
+              onChange(Math.max(min, Math.min(max, Number.isNaN(v) ? min : v)));
             }}
             className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-brand-400"
           />
@@ -124,7 +128,7 @@ export default function Calculator() {
             label="CA mensuel"
             value={monthlyRevenue}
             min={1000}
-            max={1000000}
+            max={2000000}
             step={1000}
             onChange={setMonthlyRevenue}
             display={`CA: ${formatEuro(monthlyRevenue)}/mois`}
