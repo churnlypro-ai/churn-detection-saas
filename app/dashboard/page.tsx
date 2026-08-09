@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +23,18 @@ interface Profile {
   trial_end: string | null;
 }
 
+interface RiskFactor {
+  factor: string;
+  evidence: string;
+  weight: 'low' | 'medium' | 'high';
+}
+
+interface RecommendedAction {
+  type: 'email' | 'call' | 'offer' | 'other';
+  detail: string;
+  expected_impact: string;
+}
+
 interface AnalysisRow {
   id: string;
   client_name: string;
@@ -30,6 +42,8 @@ interface AnalysisRow {
   churn_score: number;
   reason: string;
   solution: string;
+  confidence?: number | null;
+  details?: { risk_factors: RiskFactor[]; recommended_actions: RecommendedAction[] } | null;
 }
 
 interface UploadRow {
@@ -202,8 +216,69 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
   );
 }
 
+const WEIGHT_STYLES: Record<RiskFactor['weight'], string> = {
+  high: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400',
+  medium: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
+  low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+};
+
+function ClientDetailRow({ client }: { client: AnalysisRow }) {
+  const factors = client.details?.risk_factors ?? [];
+  const actions = client.details?.recommended_actions ?? [];
+
+  return (
+    <tr className="bg-slate-50/60 dark:bg-slate-800/30">
+      <td colSpan={6} className="px-5 py-5">
+        {typeof client.confidence === 'number' && (
+          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+            Confiance de l'analyse : <strong>{Math.round(client.confidence * 100)}%</strong>
+            {client.confidence < 0.6 && ' — données limitées pour ce client, à prendre avec prudence.'}
+          </p>
+        )}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Facteurs de risque</p>
+            {factors.length === 0 ? (
+              <p className="text-xs text-slate-400 dark:text-slate-500">Aucun détail disponible.</p>
+            ) : (
+              <ul className="space-y-2">
+                {factors.map((f, i) => (
+                  <li key={i} className="rounded-xl border border-slate-100 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${WEIGHT_STYLES[f.weight]}`}>{f.weight}</span>
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white">{f.factor}</span>
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400">{f.evidence}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Actions recommandées</p>
+            {actions.length === 0 ? (
+              <p className="text-xs text-slate-400 dark:text-slate-500">Aucune action détaillée disponible.</p>
+            ) : (
+              <ul className="space-y-2">
+                {actions.map((a, i) => (
+                  <li key={i} className="rounded-xl border border-brand-100 bg-brand-50/40 p-3 dark:border-brand-800/40 dark:bg-brand-500/5">
+                    <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-brand-700 dark:bg-brand-500/15 dark:text-brand-400">{a.type}</span>
+                    <p className="mt-1.5 text-xs font-medium text-slate-800 dark:text-slate-200">{a.detail}</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{a.expected_impact}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onEmailSent: () => void }) {
   const [emailClient, setEmailClient] = useState<AnalysisRow | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (!clients.length) {
     return (
@@ -230,24 +305,37 @@ function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onE
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {clients.map((client) => {
               const badge = riskBadge(client.churn_score);
+              const isExpanded = expandedId === client.id;
+              const hasDetails = (client.details?.risk_factors?.length ?? 0) > 0 || (client.details?.recommended_actions?.length ?? 0) > 0;
               return (
-                <tr key={client.id} className="align-top transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                  <td className="px-5 py-4 font-medium text-slate-900 dark:text-white">{client.client_name}</td>
-                  <td className="px-5 py-4 text-slate-700 dark:text-slate-300">{formatEuro(client.revenue_monthly)}</td>
-                  <td className="px-5 py-4">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}>{badge.label}</span>
-                  </td>
-                  <td className="max-w-[220px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.reason}</td>
-                  <td className="max-w-[240px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.solution}</td>
-                  <td className="px-5 py-4">
-                    <button
-                      onClick={() => setEmailClient(client)}
-                      className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20"
-                    >
-                      <Mail className="h-3.5 w-3.5" /> Envoyer un email
-                    </button>
-                  </td>
-                </tr>
+                <Fragment key={client.id}>
+                  <tr className="align-top transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                    <td className="px-5 py-4 font-medium text-slate-900 dark:text-white">
+                      <button
+                        onClick={() => hasDetails && setExpandedId(isExpanded ? null : client.id)}
+                        className={`text-left ${hasDetails ? 'underline decoration-dotted underline-offset-4 hover:text-brand-600 dark:hover:text-brand-400' : ''}`}
+                        disabled={!hasDetails}
+                      >
+                        {client.client_name}
+                      </button>
+                    </td>
+                    <td className="px-5 py-4 text-slate-700 dark:text-slate-300">{formatEuro(client.revenue_monthly)}</td>
+                    <td className="px-5 py-4">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}>{badge.label}</span>
+                    </td>
+                    <td className="max-w-[220px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.reason}</td>
+                    <td className="max-w-[240px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.solution}</td>
+                    <td className="px-5 py-4">
+                      <button
+                        onClick={() => setEmailClient(client)}
+                        className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20"
+                      >
+                        <Mail className="h-3.5 w-3.5" /> Envoyer un email
+                      </button>
+                    </td>
+                  </tr>
+                  {isExpanded && <ClientDetailRow client={client} />}
+                </Fragment>
               );
             })}
           </tbody>

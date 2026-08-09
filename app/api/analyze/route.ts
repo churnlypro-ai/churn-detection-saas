@@ -24,7 +24,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing templateId or client data' }, { status: 400 });
     }
     try {
-      const email = await generateClientEmail(templateId, client);
+      const email = await generateClientEmail(templateId, {
+        ...client,
+        risk_factors: client.details?.risk_factors,
+        recommended_actions: client.details?.recommended_actions,
+      });
       return NextResponse.json({ subject: email.subject, body: email.body });
     } catch (err) {
       console.error('[analyze] email generation failed', err);
@@ -61,9 +65,10 @@ export async function POST(req: NextRequest) {
       client_name: item.client_name,
       revenue_monthly: revenueByName.get(item.client_name) ?? 0,
       churn_score: item.churn_score,
-      reason: item.reason,
-      solution: item.recommended_action,
+      reason: item.summary_reason,
+      solution: item.recommended_actions[0]?.detail ?? '',
       confidence: item.confidence,
+      details: { risk_factors: item.risk_factors, recommended_actions: item.recommended_actions },
     }));
 
     const { error: insertError } = await supabaseAdmin.from('analysis_results').insert(rows);
