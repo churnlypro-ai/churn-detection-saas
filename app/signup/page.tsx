@@ -181,6 +181,18 @@ export default function Signup() {
         router.push('/impact');
         return;
       }
+
+      const { data: sessionForToken } = await supabase.auth.getSession();
+      const token = sessionForToken?.session?.access_token;
+      if (token) {
+        fetch('/api/verify-company', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ companyName, clientCount, monthlyRevenue, churnRate }),
+        }).catch(() => {
+          // best-effort enrichment, never blocks signup
+        });
+      }
     }
 
     setLoading(false);
@@ -325,16 +337,16 @@ export default function Signup() {
                       <label className="mb-2 block text-sm font-medium text-slate-700">Nombre de clients</label>
                       <div className="flex items-center gap-3">
                         <Users className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                        <input type="range" min={1} max={10000} step={1} value={clientCount} onChange={(e) => setClientCount(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
-                        <input type="number" min={1} max={10000} value={clientCount} onChange={(e) => setClientCount(Math.max(1, Math.min(10000, Number(e.target.value))))} className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400" />
+                        <input type="range" min={5} max={10000} step={1} value={clientCount} onChange={(e) => setClientCount(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
+                        <input type="number" min={5} max={10000} value={clientCount} onChange={(e) => setClientCount(Math.max(5, Math.min(10000, Number(e.target.value))))} className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400" />
                       </div>
                     </div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">CA mensuel (€)</label>
                       <div className="flex items-center gap-3">
                         <Euro className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                        <input type="range" min={1000} max={1000000} step={1000} value={monthlyRevenue} onChange={(e) => setMonthlyRevenue(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
-                        <input type="number" min={1000} max={1000000} step={1000} value={monthlyRevenue} onChange={(e) => setMonthlyRevenue(Math.max(1000, Math.min(1000000, Number(e.target.value))))} className="w-24 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400" />
+                        <input type="range" min={10000} max={1000000} step={1000} value={monthlyRevenue} onChange={(e) => setMonthlyRevenue(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
+                        <input type="number" min={10000} max={1000000} step={1000} value={monthlyRevenue} onChange={(e) => setMonthlyRevenue(Math.max(10000, Math.min(1000000, Number(e.target.value))))} className="w-24 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400" />
                       </div>
                     </div>
                     <div>
