@@ -8,7 +8,7 @@ import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
 import {
   AlertTriangle, Lock, X, Mail, Gift, GraduationCap, Zap, Check, TrendingDown, Users, Euro,
-  BarChart3, Clock, Sparkles, ShieldCheck, Target,
+  BarChart3, Clock, Sparkles, ShieldCheck, Target, ChevronDown, Info,
 } from 'lucide-react';
 import { calcPrice, formatEuro as formatEuroShared } from '@/lib/pricing';
 
@@ -326,12 +326,22 @@ function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onE
                     <td className="max-w-[220px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.reason}</td>
                     <td className="max-w-[240px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.solution}</td>
                     <td className="px-5 py-4">
-                      <button
-                        onClick={() => setEmailClient(client)}
-                        className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20"
-                      >
-                        <Mail className="h-3.5 w-3.5" /> Envoyer un email
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {hasDetails && (
+                          <button
+                            onClick={() => setExpandedId(isExpanded ? null : client.id)}
+                            className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-400"
+                          >
+                            <Info className="h-3.5 w-3.5" /> Info client
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setEmailClient(client)}
+                          className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20"
+                        >
+                          <Mail className="h-3.5 w-3.5" /> Envoyer un email
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   {isExpanded && <ClientDetailRow client={client} />}
@@ -420,21 +430,25 @@ function LockedClientsTeaser({ atRisk, onSubscribe, loading, error }: { atRisk: 
 
 function ChurnEducationSection({ industry, churnRate }: { industry: string | null; churnRate: number }) {
   const benchmark = INDUSTRY_BENCHMARKS[industry ?? ''] ?? INDUSTRY_BENCHMARKS.other;
+  const [expanded, setExpanded] = useState<number | null>(null);
   const cards = [
     {
       icon: Sparkles,
       title: 'Qu\'est-ce que le churn ?',
       body: 'Le pourcentage de clients qui arrêtent d\'utiliser votre produit chaque mois. Un churn de 5% semble faible — mais sur un an, c\'est près de 50% de votre base qui disparaît.',
+      detail: 'Le churn se mesure généralement sur une base mensuelle : (clients perdus ce mois-ci / clients au début du mois) × 100. Ce qui le rend trompeur, c\'est l\'effet composé — un churn constant de 5%/mois donne un taux de rétention annuel d\'environ 54%, pas 95% comme on pourrait le croire intuitivement. C\'est pour ça qu\'un petit churn mensuel mérite une vraie attention, pas juste un coup d\'œil occasionnel.',
     },
     {
       icon: Target,
       title: 'Agir avant l\'annulation',
       body: 'La plupart des dirigeants découvrent le problème quand le client a déjà parti. Les signaux faibles (inactivité, tickets support, retard de paiement) apparaissent 30 à 60 jours avant.',
+      detail: 'Les signaux précoces les plus fiables : une baisse de fréquence de connexion sur 2 semaines consécutives, un ticket support resté sans réponse plus de 48h, ou un retard de paiement — même s\'il est régularisé ensuite. Pris isolément, chaque signal est faible. Combinés, ils deviennent un vrai indicateur. C\'est exactement ce que l\'analyse de vos clients détecte automatiquement à chaque upload.',
     },
     {
       icon: ShieldCheck,
       title: 'Rétention > Acquisition',
       body: 'Un client retenu continue de payer, recommande votre produit, et coûte zéro en acquisition. La rétention génère jusqu\'à 10x plus de valeur que l\'acquisition de nouveaux clients.',
+      detail: 'Acquérir un nouveau client coûte en moyenne 5 à 7x plus cher que d\'en retenir un existant, et il faut souvent plusieurs mois avant que ce nouveau client devienne rentable. Un client existant, lui, est déjà rentable — chaque mois de rétention supplémentaire est presque entièrement de la marge. C\'est pour ça qu\'une réduction de 5% du churn peut augmenter la rentabilité de 25 à 95% selon les études sur le sujet.',
     },
   ];
 
@@ -442,19 +456,40 @@ function ChurnEducationSection({ industry, churnRate }: { industry: string | nul
     <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
       <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Comprendre le churn</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {cards.map((card, i) => (
-          <motion.div
-            key={card.title}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.1 }}
-            className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-          >
-            <card.icon className="mb-3 h-5 w-5 text-brand-600 dark:text-brand-400" />
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">{card.title}</p>
-            <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{card.body}</p>
-          </motion.div>
-        ))}
+        {cards.map((card, i) => {
+          const isOpen = expanded === i;
+          return (
+            <motion.button
+              key={card.title}
+              type="button"
+              onClick={() => setExpanded(isOpen ? null : i)}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.1 }}
+              className="rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition hover:border-brand-200 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-800/60"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <card.icon className="mb-3 h-5 w-5 text-brand-600 dark:text-brand-400" />
+                <ChevronDown className={`h-4 w-4 flex-shrink-0 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+              </div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{card.title}</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{card.body}</p>
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: EASE_OUT }}
+                    className="overflow-hidden"
+                  >
+                    <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-600 dark:border-slate-800 dark:text-slate-400">{card.detail}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          );
+        })}
       </div>
       {churnRate > 0 && (
         <motion.div
@@ -487,6 +522,7 @@ export default function Dashboard() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
 
   const loadData = useCallback(async (userId: string) => {
     const { data: results } = await supabase
@@ -641,11 +677,38 @@ export default function Dashboard() {
     : status === 'canceled' ? 'Abonnement annulé'
     : 'Version gratuite';
 
+  const benchmark = INDUSTRY_BENCHMARKS[profile?.industry ?? ''] ?? INDUSTRY_BENCHMARKS.other;
+  const estimatedLifetimeMonths = metrics.churnRate > 0 ? Math.round(100 / metrics.churnRate) : 0;
+
   const metricCards = [
-    { label: 'MRR Total', value: formatEuro(metrics.mrr), icon: Euro, accent: 'text-slate-900 dark:text-white' },
-    { label: 'Churn Rate', value: `${metrics.churnRate.toFixed(1)}%`, icon: TrendingDown, accent: 'text-red-500 dark:text-red-400' },
-    { label: 'LTV Moyen', value: formatEuro(metrics.ltv), icon: Users, accent: 'text-slate-900 dark:text-white' },
-    { label: 'Clients à risque', value: `${metrics.atRisk}`, icon: AlertTriangle, accent: 'text-amber-600 dark:text-amber-400' },
+    {
+      label: 'MRR Total',
+      value: formatEuro(metrics.mrr),
+      icon: Euro,
+      accent: 'text-slate-900 dark:text-white',
+      detail: `Revenu mensuel récurrent total sur vos ${metrics.clientCount} clients, soit ${formatEuro(metrics.ltv)} par client en moyenne. C'est la base à partir de laquelle tout le reste (perte projetée, économies possibles) est calculé.`,
+    },
+    {
+      label: 'Churn Rate',
+      value: `${metrics.churnRate.toFixed(1)}%`,
+      icon: TrendingDown,
+      accent: 'text-red-500 dark:text-red-400',
+      detail: `${metrics.churnRate.toFixed(1)}% de vos clients partent chaque mois, contre une moyenne d'environ ${benchmark.rate}%/mois pour les ${benchmark.label}. ${metrics.churnRate > benchmark.rate ? "Vous êtes au-dessus de la moyenne de votre secteur." : 'Vous êtes en dessous de la moyenne de votre secteur.'} Sur un an, ce rythme représente environ ${Math.min(100, Math.round((1 - Math.pow(1 - metrics.churnRate / 100, 12)) * 100))}% de votre base qui renouvelle.`,
+    },
+    {
+      label: 'LTV Moyen',
+      value: formatEuro(metrics.ltv),
+      icon: Users,
+      accent: 'text-slate-900 dark:text-white',
+      detail: `Chaque client vous rapporte en moyenne ${formatEuro(metrics.ltv)}/mois. Avec votre churn actuel, sa durée de vie moyenne est estimée à environ ${estimatedLifetimeMonths || '—'} mois, pour une valeur totale d'environ ${formatEuro(metrics.ltv * (estimatedLifetimeMonths || 0))} sur toute la relation client.`,
+    },
+    {
+      label: 'Clients à risque',
+      value: `${metrics.atRisk}`,
+      icon: AlertTriangle,
+      accent: 'text-amber-600 dark:text-amber-400',
+      detail: `${metrics.atRisk} client${metrics.atRisk > 1 ? 's' : ''} sur ${metrics.clientCount} ${metrics.atRisk > 1 ? 'sont' : 'est'} projeté${metrics.atRisk > 1 ? 's' : ''} au churn ce mois-ci, représentant environ ${formatEuro(metrics.atRisk * metrics.ltv)} de revenu menacé. Importez un CSV pour voir précisément lesquels et pourquoi.`,
+    },
   ];
 
   return (
@@ -727,22 +790,43 @@ export default function Dashboard() {
         )}
 
         <div className="relative z-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {metricCards.map((card, i) => (
-            <motion.div
-              key={card.label}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.1 }}
-              whileHover={{ y: -3, transition: { duration: 0.2 } }}
-              className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{card.label}</p>
-                <card.icon className={`h-4 w-4 ${card.accent}`} />
-              </div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">{card.value}</p>
-            </motion.div>
-          ))}
+          {metricCards.map((card, i) => {
+            const isOpen = expandedMetric === card.label;
+            return (
+              <motion.button
+                key={card.label}
+                type="button"
+                onClick={() => setExpandedMetric(isOpen ? null : card.label)}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.1 }}
+                whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                className="rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition hover:border-brand-200 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-800/60"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{card.label}</p>
+                  <div className="flex items-center gap-1.5">
+                    <card.icon className={`h-4 w-4 ${card.accent}`} />
+                    <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{card.value}</p>
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: EASE_OUT }}
+                      className="overflow-hidden"
+                    >
+                      <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-600 dark:border-slate-800 dark:text-slate-400">{card.detail}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            );
+          })}
         </div>
 
         <motion.div
