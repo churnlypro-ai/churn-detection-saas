@@ -189,33 +189,21 @@ export default function Calculator() {
           </motion.div>
 
           <motion.div
-            key={`loss-${stats.annualLoss}`}
+            key={`impact-${stats.annualLoss}-${stats.annualSavings}`}
             initial={{ opacity: 0.6, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            className="rounded-3xl border border-red-100 bg-red-50/60 p-6 dark:border-red-800/40 dark:bg-red-950/20"
+            className="grid grid-cols-2 divide-x divide-slate-100 overflow-hidden rounded-3xl border border-slate-100 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900"
           >
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-500 dark:text-red-400">Sans Churnly</p>
-            <Row label="Clients perdus / mois" value={stats.clientsLostPerMonth.toFixed(1)} />
-            <Row label="Revenue perdue / mois" value={formatEuro(stats.revenueLostPerMonth)} />
-            <div className="mt-3 border-t border-red-200 pt-3 dark:border-red-800/40">
-              <Row label="Perte annuelle" value={formatEuro(stats.annualLoss)} bold valueClassName="text-red-600 dark:text-red-400" />
+            <div className="p-5 text-center">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-500 dark:text-red-400">Sans Churnly</p>
+              <p className="text-2xl font-extrabold text-red-600 dark:text-red-400">-{formatEuro(stats.annualLoss)}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">perte annuelle projetée</p>
             </div>
-          </motion.div>
-
-          <motion.div
-            key={`saved-${stats.annualSavings}`}
-            initial={{ opacity: 0.6, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-            className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-6 dark:border-emerald-800/40 dark:bg-emerald-950/20"
-          >
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Avec Churnly (-50% churn)</p>
-            <Row label="Clients sauvés / mois" value={stats.improvedClientsLost.toFixed(1)} />
-            <Row label="Revenue économisée / mois" value={formatEuro(stats.monthlySavings)} />
-            <div className="mt-3 border-t border-emerald-200 pt-3 dark:border-emerald-800/40">
-              <Row label="Économies annuelles" value={formatEuro(stats.annualSavings)} bold valueClassName="text-emerald-600 dark:text-emerald-400" />
-              <Row label="ROI" value={`${stats.roi}x`} />
+            <div className="p-5 text-center">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Avec Churnly</p>
+              <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">+{formatEuro(stats.annualSavings)}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">économisés/an · ROI {stats.roi}x</p>
             </div>
           </motion.div>
         </motion.div>
