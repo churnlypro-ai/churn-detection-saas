@@ -428,27 +428,71 @@ function LockedClientsTeaser({ atRisk, onSubscribe, loading, error }: { atRisk: 
   );
 }
 
-function ChurnEducationSection({ industry, churnRate }: { industry: string | null; churnRate: number }) {
+function ChurnEducationSection({
+  industry,
+  churnRate,
+  clientCount,
+  atRisk,
+  annualLoss,
+  completedActions,
+  hasAnalysis,
+}: {
+  industry: string | null;
+  churnRate: number;
+  clientCount: number;
+  atRisk: number;
+  annualLoss: number;
+  completedActions: number;
+  hasAnalysis: boolean;
+}) {
   const benchmark = INDUSTRY_BENCHMARKS[industry ?? ''] ?? INDUSTRY_BENCHMARKS.other;
   const [expanded, setExpanded] = useState<number | null>(null);
+
+  // Signaux réels (pas de supposition) : au-dessus de la moyenne secteur + aucune
+  // action de rétention engagée = l'entreprise ne s'occupe pas encore de son churn.
+  const aboveBenchmark = churnRate > benchmark.rate;
+  const passive = hasAnalysis && aboveBenchmark && completedActions === 0 && atRisk > 0;
+  const alreadyActing = completedActions > 0;
+  const annualRetentionRate = Math.min(100, Math.round((1 - Math.pow(1 - churnRate / 100, 12)) * 100));
+
+  const churnDetail = !hasAnalysis
+    ? 'Le churn se mesure généralement sur une base mensuelle : (clients perdus ce mois-ci / clients au début du mois) × 100. Ce qui le rend trompeur, c\'est l\'effet composé — un churn constant de 5%/mois donne un taux de rétention annuel d\'environ 54%, pas 95% comme on pourrait le croire intuitivement. Importez vos données pour voir votre propre chiffre.'
+    : `Chez vous, un churn de ${churnRate.toFixed(1)}%/mois représente, avec l'effet composé sur 12 mois, environ ${annualRetentionRate}% de votre base ${clientCount} clients qui pourrait se renouveler d'ici un an — soit ${formatEuro(annualLoss)} de revenu menacé sur l'année si rien ne change. C'est ce calcul, précisément, que fait Churnly à chaque upload.`;
+
+  const actDetail = !hasAnalysis
+    ? 'Les signaux précoces les plus fiables : une baisse de fréquence de connexion sur 2 semaines consécutives, un ticket support resté sans réponse plus de 48h, ou un retard de paiement — même s\'il est régularisé ensuite. Importez un CSV pour que Churnly détecte ces signaux sur vos propres clients.'
+    : atRisk === 0
+    ? 'Aucun client n\'est actuellement identifié comme à risque chez vous — c\'est le bon moment pour garder ce rythme et ré-analyser régulièrement, avant qu\'un signal faible n\'apparaisse.'
+    : alreadyActing
+    ? `Vous avez déjà engagé ${completedActions} action${completedActions > 1 ? 's' : ''} de rétention — c'est le bon réflexe. Il vous reste ${atRisk} client${atRisk > 1 ? 's' : ''} identifié${atRisk > 1 ? 's' : ''} à risque : plus vous agissez tôt sur ceux-là, plus la chance de les retenir est haute.`
+    : `Vous avez ${atRisk} client${atRisk > 1 ? 's' : ''} à risque identifié${atRisk > 1 ? 's' : ''} chez vous et aucune action de rétention envoyée pour l'instant. C'est exactement la fenêtre de 30 à 60 jours où agir change encore la donne — au-delà, le client a généralement déjà pris sa décision.`;
+
+  const retentionDetail = !hasAnalysis
+    ? 'Acquérir un nouveau client coûte en moyenne 5 à 7x plus cher que d\'en retenir un existant, et il faut souvent plusieurs mois avant que ce nouveau client devienne rentable. Importez vos données pour voir ce que ça représente concrètement pour vous.'
+    : passive
+    ? `Votre churn est de ${churnRate.toFixed(1)}%/mois, au-dessus de la moyenne de ${benchmark.rate}%/mois pour les ${benchmark.label} — et aucune action de rétention n'a encore été engagée. Ça veut dire que ${formatEuro(annualLoss)}/an partent aujourd'hui sans qu'aucune tentative de les retenir ne soit faite. C'est la plus grosse marge de progression disponible chez vous, avant même de penser acquisition.`
+    : alreadyActing
+    ? `Vous avez déjà ${completedActions} action${completedActions > 1 ? 's' : ''} de rétention engagée${completedActions > 1 ? 's' : ''} — c'est exactement ce levier qui génère jusqu'à 10x plus de valeur que l'acquisition. Chaque client retenu en plus, chez vous, représente en moyenne ${formatEuro(clientCount ? annualLoss / Math.max(1, atRisk || 1) : 0)}/an de revenu préservé.`
+    : `Votre churn de ${churnRate.toFixed(1)}%/mois est déjà à ou sous la moyenne de ${benchmark.rate}%/mois pour les ${benchmark.label} — vous êtes déjà globalement dans la bonne direction. Continuez à surveiller : chaque point de churn gagné en plus représente une part quasi entièrement en marge, contrairement à un nouveau client acquis.`;
+
   const cards = [
     {
       icon: Sparkles,
       title: 'Qu\'est-ce que le churn ?',
       body: 'Le pourcentage de clients qui arrêtent d\'utiliser votre produit chaque mois. Un churn de 5% semble faible — mais sur un an, c\'est près de 50% de votre base qui disparaît.',
-      detail: 'Le churn se mesure généralement sur une base mensuelle : (clients perdus ce mois-ci / clients au début du mois) × 100. Ce qui le rend trompeur, c\'est l\'effet composé — un churn constant de 5%/mois donne un taux de rétention annuel d\'environ 54%, pas 95% comme on pourrait le croire intuitivement. C\'est pour ça qu\'un petit churn mensuel mérite une vraie attention, pas juste un coup d\'œil occasionnel.',
+      detail: churnDetail,
     },
     {
       icon: Target,
       title: 'Agir avant l\'annulation',
       body: 'La plupart des dirigeants découvrent le problème quand le client a déjà parti. Les signaux faibles (inactivité, tickets support, retard de paiement) apparaissent 30 à 60 jours avant.',
-      detail: 'Les signaux précoces les plus fiables : une baisse de fréquence de connexion sur 2 semaines consécutives, un ticket support resté sans réponse plus de 48h, ou un retard de paiement — même s\'il est régularisé ensuite. Pris isolément, chaque signal est faible. Combinés, ils deviennent un vrai indicateur. C\'est exactement ce que l\'analyse de vos clients détecte automatiquement à chaque upload.',
+      detail: actDetail,
     },
     {
       icon: ShieldCheck,
       title: 'Rétention > Acquisition',
       body: 'Un client retenu continue de payer, recommande votre produit, et coûte zéro en acquisition. La rétention génère jusqu\'à 10x plus de valeur que l\'acquisition de nouveaux clients.',
-      detail: 'Acquérir un nouveau client coûte en moyenne 5 à 7x plus cher que d\'en retenir un existant, et il faut souvent plusieurs mois avant que ce nouveau client devienne rentable. Un client existant, lui, est déjà rentable — chaque mois de rétention supplémentaire est presque entièrement de la marge. C\'est pour ça qu\'une réduction de 5% du churn peut augmenter la rentabilité de 25 à 95% selon les études sur le sujet.',
+      detail: retentionDetail,
     },
   ];
 
@@ -868,7 +912,15 @@ export default function Dashboard() {
           </motion.div>
         </div>
 
-        <ChurnEducationSection industry={profile?.industry ?? null} churnRate={metrics.churnRate} />
+        <ChurnEducationSection
+          industry={profile?.industry ?? null}
+          churnRate={metrics.churnRate}
+          clientCount={metrics.clientCount}
+          atRisk={metrics.atRisk}
+          annualLoss={metrics.annualLoss}
+          completedActions={actionLog.filter((a) => a.completed).length}
+          hasAnalysis={clients.length > 0}
+        />
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
           <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Clients à risque</h2>
