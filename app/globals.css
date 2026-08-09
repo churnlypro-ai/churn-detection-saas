@@ -78,6 +78,20 @@
   }
 }
 
+canvas {
+  transition: none !important;
+}
+
+/* Elements that already animate continuously via Framer Motion (infinite
+   loops) shouldn't also carry the global theme-toggle transition — with
+   dozens of them at once (landing page decorative particles, the 3D hero
+   canvas) the extra transition work causes a visible freeze when toggling
+   dark mode. */
+.no-theme-transition,
+.no-theme-transition * {
+  transition: none !important;
+}
+
 ::selection {
   background-color: #fde68a;
 }

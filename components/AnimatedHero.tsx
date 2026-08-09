@@ -126,7 +126,7 @@ export default function AnimatedHero() {
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
       </motion.div>
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="no-theme-transition pointer-events-none absolute inset-0 overflow-hidden">
         {FLOATING_BALLS.map((ball, i) => (
           <motion.div
             key={i}
