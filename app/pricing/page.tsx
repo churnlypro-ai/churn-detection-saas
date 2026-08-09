@@ -202,8 +202,8 @@ export default function PricingPage() {
 
               <input
                 type="range"
-                min={10000}
-                max={1000000}
+                min={1000}
+                max={2000000}
                 step={5000}
                 value={monthlyRevenue}
                 onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
@@ -223,13 +223,12 @@ export default function PricingPage() {
                 <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900">
                   <input
                     type="number"
-                    min={10000}
-                    max={1000000}
+                    min={1000}
+                    max={2000000}
                     step={5000}
                     value={monthlyRevenue}
-                    onChange={(e) =>
-                      setMonthlyRevenue(Math.max(10000, Math.min(1000000, Number(e.target.value) || 0)))
-                    }
+                    onChange={(e) => setMonthlyRevenue(Number(e.target.value) || 0)}
+                    onBlur={(e) => setMonthlyRevenue(Math.max(1000, Math.min(2000000, Number(e.target.value) || 1000)))}
                     className="w-24 bg-transparent text-right text-sm font-semibold text-slate-700 focus:outline-none dark:text-slate-200"
                     aria-label="Chiffre d'affaires mensuel en euros"
                   />
