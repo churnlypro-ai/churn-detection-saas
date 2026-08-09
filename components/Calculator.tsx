@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo, useRef, useState } from 'react';
+import { motion, useInView } from 'framer-motion';
 import { EASE_OUT } from '@/lib/animations';
 import { calcPricing, formatEuro } from '@/lib/pricing';
 import { ArrowRight } from 'lucide-react';
@@ -67,6 +67,9 @@ export default function Calculator() {
   const [clientCount, setClientCount] = useState(100);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
   const [churnRate, setChurnRate] = useState(5);
+
+  const priceCardRef = useRef<HTMLDivElement>(null);
+  const priceCardInView = useInView(priceCardRef, { once: false, amount: 0.3 });
 
   const stats = useMemo(() => {
     const pricing = calcPricing({ clients: clientCount, revenue: monthlyRevenue, churn: churnRate });
@@ -154,10 +157,11 @@ export default function Calculator() {
           className="flex flex-col gap-5"
         >
           <motion.div
+            ref={priceCardRef}
             key={`price-${stats.monthly}`}
             initial={{ opacity: 0.6, scale: 0.98 }}
-            animate={{ opacity: 1, scale: [1, 1.015, 1] }}
-            transition={{ opacity: { duration: 0.4 }, scale: { duration: 3, repeat: Infinity, ease: 'easeInOut' } }}
+            animate={{ opacity: 1, scale: priceCardInView ? [1, 1.015, 1] : 1 }}
+            transition={{ opacity: { duration: 0.4 }, scale: { duration: 3, repeat: priceCardInView ? Infinity : 0, ease: 'easeInOut' } }}
             className="rounded-3xl border border-brand-100 bg-brand-50/50 p-8 dark:border-brand-800/40 dark:bg-brand-500/5"
           >
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Votre tarif estimé</p>

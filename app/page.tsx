@@ -49,6 +49,9 @@ function CountUp({ end, duration = 1.5, prefix = '', suffix = '' }: { end: numbe
 }
 
 function RealitySection() {
+  const pulseRef = useRef<HTMLDivElement>(null);
+  const pulseInView = useInView(pulseRef, { once: false, amount: 0.1 });
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/30 px-6 py-28 dark:from-slate-950 dark:to-slate-900">
       <div className="mx-auto max-w-4xl">
@@ -83,8 +86,8 @@ function RealitySection() {
           ))}
         </div>
 
-        <div className="no-theme-transition relative mt-20 h-32">
-          {Array.from({ length: 12 }).map((_, i) => (
+        <div ref={pulseRef} className="no-theme-transition relative mt-20 h-32">
+          {pulseInView && Array.from({ length: 12 }).map((_, i) => (
             <motion.div
               key={i}
               className="absolute h-16 w-16 rounded-full border border-brand-200 bg-brand-50/50 dark:border-brand-800/40 dark:bg-brand-500/10"
@@ -101,6 +104,9 @@ function RealitySection() {
 }
 
 function StrategySection() {
+  const shieldRef = useRef<HTMLDivElement>(null);
+  const shieldInView = useInView(shieldRef, { once: false, amount: 0.3 });
+
   return (
     <section className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
       <div className="mx-auto max-w-4xl">
@@ -152,7 +158,8 @@ function StrategySection() {
             className="flex flex-col items-center gap-3"
           >
             <motion.div
-              animate={{ boxShadow: ['0 0 0 0 rgba(217,119,6,0.2)', '0 0 0 12px rgba(217,119,6,0)'] }}
+              ref={shieldRef}
+              animate={shieldInView ? { boxShadow: ['0 0 0 0 rgba(217,119,6,0.2)', '0 0 0 12px rgba(217,119,6,0)'] } : undefined}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
               className="flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"
             >
@@ -224,6 +231,9 @@ function HowItWorksSection() {
 }
 
 function ChurnDefinitionSection() {
+  const flowRef = useRef<HTMLDivElement>(null);
+  const flowInView = useInView(flowRef, { once: false, amount: 0.1 });
+
   return (
     <section className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
       <div className="mx-auto max-w-3xl">
@@ -241,9 +251,9 @@ function ChurnDefinitionSection() {
           qu&apos;il est encore temps d&apos;agir.
         </motion.p>
 
-        <div className="relative mt-16 h-40 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-900">
+        <div ref={flowRef} className="relative mt-16 h-40 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-900">
           <div className="no-theme-transition absolute left-0 top-0 flex h-full w-full items-center">
-            {Array.from({ length: 20 }).map((_, i) => (
+            {flowInView && Array.from({ length: 20 }).map((_, i) => (
               <motion.div
                 key={`in-${i}`}
                 className="absolute h-8 w-8 rounded-full bg-brand-200 dark:bg-brand-500/30"
@@ -253,7 +263,7 @@ function ChurnDefinitionSection() {
                 style={{ top: `${20 + (i % 3) * 30}px` }}
               />
             ))}
-            {Array.from({ length: 15 }).map((_, i) => (
+            {flowInView && Array.from({ length: 15 }).map((_, i) => (
               <motion.div
                 key={`out-${i}`}
                 className="absolute h-8 w-8 rounded-full border-2 border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-950/40"
