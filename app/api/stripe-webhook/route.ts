@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
 
+function mapStripeStatus(status: string): 'trialing' | 'active' | 'canceled' | 'past_due' {
+  if (status === 'trialing') return 'trialing';
+  if (status === 'active') return 'active';
+  if (status === 'canceled' || status === 'incomplete_expired') return 'canceled';
+  return 'past_due';
+}
+
 export async function POST(req: NextRequest) {
   const stripe = getStripe();
   const signature = req.headers.get('stripe-signature');
@@ -30,13 +37,15 @@ export async function POST(req: NextRequest) {
         const session = event.data.object;
         const userId = session.metadata?.supabase_user_id;
         const tier = session.metadata?.tier;
-        if (userId && tier) {
+        if (userId && tier && session.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
           await supabaseAdmin
             .from('users')
             .update({
               subscription_tier: tier,
-              subscription_status: 'active',
-              stripe_subscription_id: session.subscription,
+              subscription_status: mapStripeStatus(subscription.status),
+              stripe_subscription_id: subscription.id,
+              trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
             })
             .eq('id', userId);
         }
@@ -48,7 +57,8 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin
           .from('users')
           .update({
-            subscription_status: subscription.status === 'active' ? 'active' : 'past_due',
+            subscription_status: mapStripeStatus(subscription.status),
+            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
           })
           .eq('stripe_subscription_id', subscription.id);
         break;
@@ -58,7 +68,7 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object;
         await supabaseAdmin
           .from('users')
-          .update({ subscription_status: 'canceled', subscription_tier: null })
+          .update({ subscription_status: 'canceled', subscription_tier: null, trial_end: null })
           .eq('stripe_subscription_id', subscription.id);
         break;
       }

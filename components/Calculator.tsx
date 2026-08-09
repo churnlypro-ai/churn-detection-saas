@@ -167,7 +167,7 @@ export default function Calculator() {
               {formatEuro(stats.monthly)}<span className="text-lg font-medium text-slate-400 dark:text-slate-500">/mois</span>
             </motion.p>
             <div className="mt-4 space-y-1 text-sm text-slate-600 dark:text-slate-400">
-              <Row label="Mensuel" value="1 semaine gratuite" />
+              <Row label="Mensuel" value="3 jours gratuits" />
               <Row label="Annuel" value={`${formatEuro(stats.annualPerMonth)}/mois (1 mois gratuit)`} />
             </div>
             <div className="mt-4 border-t border-brand-200 pt-4 dark:border-brand-800/40">

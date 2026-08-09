@@ -54,6 +54,10 @@ export async function POST(req: NextRequest) {
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        trial_period_days: 3,
+        metadata: { supabase_user_id: user.id, tier: String(tier) },
+      },
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=cancelled`,
       metadata: { supabase_user_id: user.id, tier: String(tier) },

@@ -1,12 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
-import { AlertTriangle, Lock, X, Mail, Phone, Gift, GraduationCap, Zap, Check, TrendingDown, Users, Euro, BarChart3 } from 'lucide-react';
+import {
+  AlertTriangle, Lock, X, Mail, Gift, GraduationCap, Zap, Check, TrendingDown, Users, Euro,
+  BarChart3, Clock, Sparkles, ShieldCheck, Target,
+} from 'lucide-react';
 import { calcPrice, formatEuro as formatEuroShared } from '@/lib/pricing';
 
 interface Profile {
@@ -17,6 +20,7 @@ interface Profile {
   monthly_revenue: number | null;
   industry: string | null;
   churn_rate: number | null;
+  trial_end: string | null;
 }
 
 interface AnalysisRow {
@@ -52,6 +56,13 @@ function riskBadge(score: number): { label: string; className: string } {
   if (score >= 40) return { label: `${score}% Surveiller`, className: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400' };
   return { label: `${score}% Stable`, className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' };
 }
+
+const INDUSTRY_BENCHMARKS: Record<string, { label: string; rate: number }> = {
+  saas: { label: 'SaaS', rate: 5 },
+  agency: { label: 'agences', rate: 8 },
+  ecommerce: { label: 'e-commerce', rate: 10 },
+  other: { label: 'votre secteur', rate: 7 },
+};
 
 const EMAIL_TEMPLATES = [
   { id: 'direct', label: 'Direct — Appel d\'urgence', icon: Zap, subject: 'On résout tes problèmes en 48h', tone: 'Professionnel + solution', forWho: 'Clients avec problèmes techniques' },
@@ -191,80 +202,15 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
   );
 }
 
-function PaywallModal({
-  atRisk,
-  price,
-  onClose,
-  onSubscribe,
-  loading,
-  error,
-}: {
-  atRisk: number;
-  price: number;
-  onClose: () => void;
-  onSubscribe: () => void;
-  loading: boolean;
-  error: string;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ duration: 0.3, ease: EASE_OUT }}
-        className="relative w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl dark:bg-slate-900"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button onClick={onClose} className="absolute right-5 top-5 text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-200">
-          <X className="h-5 w-5" />
-        </button>
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/10">
-          <Lock className="h-8 w-8 text-amber-500" />
-        </div>
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{atRisk} client{atRisk > 1 ? 's' : ''} à risque détecté{atRisk > 1 ? 's' : ''}</h3>
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-          Ces clients sont projetés au churn. Pour voir qui ils sont, pourquoi ils sont à risque,
-          et comment les sauver — passez à Churnly Premium.
-        </p>
-        <div className="mt-6 rounded-2xl bg-gradient-to-b from-brand-50/60 to-white p-5 dark:from-brand-500/10 dark:to-slate-900">
-          <p className="text-3xl font-extrabold text-brand-700 dark:text-brand-400">{formatEuro(price)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">/mois</span></p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Annulable à tout moment</p>
-        </div>
-        <button
-          onClick={onSubscribe}
-          disabled={loading}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-        >
-          {loading ? (
-            <>
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Redirection…
-            </>
-          ) : (
-            'S\'abonner maintenant'
-          )}
-        </button>
-        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <button onClick={onClose} className="mt-3 text-xs text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-300">
-          Plus tard
-        </button>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onEmailSent: () => void }) {
   const [emailClient, setEmailClient] = useState<AnalysisRow | null>(null);
 
   if (!clients.length) {
-    return <div className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Aucun client analysé pour l'instant.</div>;
+    return (
+      <div className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+        Aucun client analysé pour l'instant. Importez un CSV pour voir vos clients à risque ici.
+      </div>
+    );
   }
 
   return (
@@ -317,6 +263,131 @@ function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onE
   );
 }
 
+const TEASER_CLIENTS = [
+  { name: 'A••••• M•••••', revenue: 1200, score: 82, reason: 'Aucune connexion depuis 21 jours, 3 tickets support non résolus.' },
+  { name: 'B••• & C••', revenue: 2400, score: 67, reason: 'Usage en baisse de 40% ce mois-ci par rapport à la moyenne.' },
+  { name: 'D•••••• S••', revenue: 890, score: 58, reason: 'Facture en retard de paiement, aucune réponse aux relances.' },
+];
+
+function LockedClientsTeaser({ atRisk, onSubscribe, loading, error }: { atRisk: number; onSubscribe: () => void; loading: boolean; error: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="pointer-events-none select-none overflow-hidden blur-[3px]" aria-hidden="true">
+        <table className="w-full min-w-[840px] text-left text-sm">
+          <thead className="border-b border-slate-100 bg-slate-50/60 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-400">
+            <tr>
+              <th className="px-5 py-3 font-semibold">Client</th>
+              <th className="px-5 py-3 font-semibold">Revenue</th>
+              <th className="px-5 py-3 font-semibold">Risque</th>
+              <th className="px-5 py-3 font-semibold">Raison</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {TEASER_CLIENTS.map((c) => {
+              const badge = riskBadge(c.score);
+              return (
+                <tr key={c.name}>
+                  <td className="px-5 py-4 font-medium text-slate-900 dark:text-white">{c.name}</td>
+                  <td className="px-5 py-4 text-slate-700 dark:text-slate-300">{formatEuro(c.revenue)}</td>
+                  <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}>{badge.label}</span></td>
+                  <td className="max-w-[260px] px-5 py-4 text-slate-600 dark:text-slate-400">{c.reason}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/70 p-8 text-center dark:bg-slate-900/80">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/10">
+          <Lock className="h-6 w-6 text-amber-500" />
+        </div>
+        <p className="text-base font-bold text-slate-900 dark:text-white">
+          {atRisk > 0 ? `${atRisk} client${atRisk > 1 ? 's' : ''} à risque détecté${atRisk > 1 ? 's' : ''} chez vous` : 'Débloquez la liste détaillée de vos clients'}
+        </p>
+        <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
+          Noms, scores de risque, raisons précises et emails prêts à envoyer — inclus dans l'essai gratuit de 3 jours, sans engagement.
+        </p>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onSubscribe}
+          disabled={loading}
+          className="mt-1 flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+        >
+          {loading ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Redirection…
+            </>
+          ) : (
+            'Démarrer mon essai gratuit'
+          )}
+        </motion.button>
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
+function ChurnEducationSection({ industry, churnRate }: { industry: string | null; churnRate: number }) {
+  const benchmark = INDUSTRY_BENCHMARKS[industry ?? ''] ?? INDUSTRY_BENCHMARKS.other;
+  const cards = [
+    {
+      icon: Sparkles,
+      title: 'Qu\'est-ce que le churn ?',
+      body: 'Le pourcentage de clients qui arrêtent d\'utiliser votre produit chaque mois. Un churn de 5% semble faible — mais sur un an, c\'est près de 50% de votre base qui disparaît.',
+    },
+    {
+      icon: Target,
+      title: 'Agir avant l\'annulation',
+      body: 'La plupart des dirigeants découvrent le problème quand le client a déjà parti. Les signaux faibles (inactivité, tickets support, retard de paiement) apparaissent 30 à 60 jours avant.',
+    },
+    {
+      icon: ShieldCheck,
+      title: 'Rétention > Acquisition',
+      body: 'Un client retenu continue de payer, recommande votre produit, et coûte zéro en acquisition. La rétention génère jusqu\'à 10x plus de valeur que l\'acquisition de nouveaux clients.',
+    },
+  ];
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
+      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Comprendre le churn</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {cards.map((card, i) => (
+          <motion.div
+            key={card.title}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.1 }}
+            className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          >
+            <card.icon className="mb-3 h-5 w-5 text-brand-600 dark:text-brand-400" />
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{card.title}</p>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{card.body}</p>
+          </motion.div>
+        ))}
+      </div>
+      {churnRate > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.3 }}
+          className="mt-4 rounded-2xl border border-brand-100 bg-brand-50/50 p-5 text-sm dark:border-brand-800/40 dark:bg-brand-500/5"
+        >
+          <p className="text-slate-700 dark:text-slate-300">
+            Votre churn est de <strong className="text-brand-700 dark:text-brand-400">{churnRate.toFixed(1)}%/mois</strong>, contre une moyenne
+            d'environ <strong>{benchmark.rate}%/mois</strong> pour les {benchmark.label}.{' '}
+            {churnRate > benchmark.rate
+              ? "Vous perdez des clients plus vite que la moyenne de votre secteur — c'est le moment d'agir."
+              : "Vous êtes déjà en dessous de la moyenne de votre secteur — continuez à surveiller vos signaux faibles."}
+          </p>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; created_at?: string } | null>(null);
@@ -325,7 +396,6 @@ export default function Dashboard() {
   const [clients, setClients] = useState<AnalysisRow[]>([]);
   const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [actionLog, setActionLog] = useState<ActionRow[]>([]);
-  const [showPaywall, setShowPaywall] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
@@ -406,7 +476,14 @@ export default function Dashboard() {
     }
   }
 
-  const isSubscribed = profile?.subscription_status === 'active';
+  const status = profile?.subscription_status ?? 'inactive';
+  const hasAccess = status === 'active' || status === 'trialing';
+
+  const trialDaysLeft = useMemo(() => {
+    if (status !== 'trialing' || !profile?.trial_end) return 0;
+    const diff = new Date(profile.trial_end).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [status, profile]);
 
   const metrics = useMemo(() => {
     const clientCount = profile?.client_count ?? clients.length ?? 0;
@@ -414,7 +491,10 @@ export default function Dashboard() {
     const churnRate = profile?.churn_rate ?? 0;
     const atRisk = Math.round((clientCount * churnRate) / 100);
     const ltv = clientCount ? mrr / clientCount : 0;
-    return { mrr, churnRate, ltv, clientCount, atRisk };
+    const monthlyLoss = (mrr * churnRate) / 100;
+    const annualLoss = monthlyLoss * 12;
+    const potentialSavings = monthlyLoss * 0.5;
+    return { mrr, churnRate, ltv, clientCount, atRisk, monthlyLoss, annualLoss, potentialSavings };
   }, [clients, profile]);
 
   const chartData = useMemo(() => {
@@ -466,76 +546,12 @@ export default function Dashboard() {
     );
   }
 
-  if (!isSubscribed) {
-    return (
-      <>
-        <Navigation user={user} />
-        <main className="mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: EASE_OUT }}
-            className="rounded-3xl border border-slate-100 bg-white p-12 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.2 }}
-              className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/10"
-            >
-              <AlertTriangle className="h-8 w-8 text-amber-500" />
-            </motion.div>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              className="text-5xl font-extrabold text-slate-900 dark:text-white"
-            >
-              {metrics.atRisk}
-            </motion.p>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-              className="mt-2 text-lg font-medium text-slate-600 dark:text-slate-400"
-            >
-              client{metrics.atRisk > 1 ? 's' : ''} à risque détecté{metrics.atRisk > 1 ? 's' : ''}
-            </motion.p>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-              className="mt-4 text-sm text-slate-500 dark:text-slate-400"
-            >
-              Sur vos {metrics.clientCount} clients, {metrics.atRisk} sont projetés au churn ({metrics.churnRate.toFixed(1)}%/mois).
-            </motion.p>
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7, duration: 0.5 }}
-              onClick={() => setShowPaywall(true)}
-              className="mt-8 rounded-full bg-brand-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
-            >
-              Voir les détails
-            </motion.button>
-          </motion.div>
-        </main>
-
-        <AnimatePresence>
-          {showPaywall && (
-            <PaywallModal
-              atRisk={metrics.atRisk}
-              price={calcPrice(Number(profile?.client_count ?? 0), Number(profile?.monthly_revenue ?? 0), Number(profile?.churn_rate ?? 5))}
-              onClose={() => setShowPaywall(false)}
-              onSubscribe={handleSubscribe}
-              loading={checkoutLoading}
-              error={checkoutError}
-            />
-          )}
-        </AnimatePresence>
-      </>
-    );
-  }
+  const planLabel =
+    status === 'active' ? `Plan €${profile?.subscription_tier}/mois · Actif`
+    : status === 'trialing' ? `Essai gratuit · ${trialDaysLeft}j restant${trialDaysLeft > 1 ? 's' : ''}`
+    : status === 'past_due' ? 'Paiement en attente'
+    : status === 'canceled' ? 'Abonnement annulé'
+    : 'Version gratuite';
 
   const metricCards = [
     { label: 'MRR Total', value: formatEuro(metrics.mrr), icon: Euro, accent: 'text-slate-900 dark:text-white' },
@@ -567,10 +583,60 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{profile?.company_name || 'Dashboard'}</h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Plan €{profile?.subscription_tier}/mois · Actif</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{planLabel}</p>
             </div>
           </div>
         </motion.div>
+
+        {status === 'trialing' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 flex items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50/60 px-5 py-4 dark:border-brand-800/40 dark:bg-brand-500/5"
+          >
+            <Clock className="h-5 w-5 flex-shrink-0 text-brand-600 dark:text-brand-400" />
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              <strong className="text-brand-700 dark:text-brand-400">{trialDaysLeft} jour{trialDaysLeft > 1 ? 's' : ''} restant{trialDaysLeft > 1 ? 's' : ''}</strong> sur votre essai gratuit — toutes les fonctionnalités Premium sont débloquées, sans engagement.
+            </p>
+          </motion.div>
+        )}
+
+        {(status === 'inactive' || status === 'canceled') && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 flex flex-col items-start gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Débloquez la liste complète de vos clients à risque, les emails générés par IA et bien plus —
+              <strong className="text-slate-900 dark:text-white"> 3 jours d'essai gratuit, sans engagement.</strong>
+            </p>
+            <button
+              onClick={handleSubscribe}
+              disabled={checkoutLoading}
+              className="flex flex-shrink-0 items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+            >
+              {checkoutLoading ? 'Redirection…' : 'Démarrer mon essai gratuit'}
+            </button>
+          </motion.div>
+        )}
+
+        {status === 'past_due' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-500/10 dark:text-amber-400"
+          >
+            Un problème est survenu avec votre dernier paiement. Merci de vérifier votre méthode de paiement sur Stripe pour ne pas perdre l'accès à Churnly Premium.
+          </motion.div>
+        )}
+
+        {checkoutError && (status === 'inactive' || status === 'canceled') && (
+          <p className="relative z-10 -mt-4 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
+        )}
 
         <div className="relative z-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {metricCards.map((card, i) => (
@@ -590,6 +656,24 @@ export default function Dashboard() {
             </motion.div>
           ))}
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }}
+          className="relative z-10 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        >
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Vos insights</h2>
+          </div>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+            À votre rythme actuel, vous perdez environ <strong className="text-red-600 dark:text-red-400">{formatEuro(metrics.monthlyLoss)}/mois</strong> à
+            cause du churn, soit <strong className="text-red-600 dark:text-red-400">{formatEuro(metrics.annualLoss)}/an</strong>. En réduisant votre churn de
+            moitié grâce aux actions ciblées de Churnly, vous pourriez récupérer jusqu'à{' '}
+            <strong className="text-emerald-600 dark:text-emerald-400">{formatEuro(metrics.potentialSavings)}/mois</strong>.
+          </p>
+        </motion.div>
 
         <div className="relative z-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
@@ -612,9 +696,15 @@ export default function Dashboard() {
           </motion.div>
         </div>
 
+        <ChurnEducationSection industry={profile?.industry ?? null} churnRate={metrics.churnRate} />
+
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
           <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Clients à risque</h2>
-          <PaidClientTable clients={clients} onEmailSent={() => user && loadData(user.id)} />
+          {hasAccess ? (
+            <PaidClientTable clients={clients} onEmailSent={() => user && loadData(user.id)} />
+          ) : (
+            <LockedClientsTeaser atRisk={metrics.atRisk} onSubscribe={handleSubscribe} loading={checkoutLoading} error={checkoutError} />
+          )}
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
