@@ -82,17 +82,49 @@ export default function AnimatedHero() {
     const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
     group.add(lines);
 
-    let frameId: number;
+    let frameId: number | null = null;
+    let isVisible = true;
+    let isTabVisible = document.visibilityState === 'visible';
     const clock = new THREE.Clock();
 
-    function animate() {
+    function renderFrame() {
       const t = clock.getElapsedTime();
       group.rotation.y = t * 0.12;
       group.rotation.x = Math.sin(t * 0.15) * 0.15;
       renderer.render(scene, camera);
-      frameId = requestAnimationFrame(animate);
+      frameId = requestAnimationFrame(renderFrame);
     }
-    animate();
+
+    // Only burn CPU/GPU on this continuous WebGL render while the hero is
+    // actually on screen and the tab is focused — this was previously
+    // running forever regardless, a major source of jank on the rest of
+    // the site.
+    function updateLoop() {
+      const shouldRun = isVisible && isTabVisible;
+      if (shouldRun && frameId === null) {
+        frameId = requestAnimationFrame(renderFrame);
+      } else if (!shouldRun && frameId !== null) {
+        cancelAnimationFrame(frameId);
+        frameId = null;
+      }
+    }
+
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting;
+        updateLoop();
+      },
+      { threshold: 0.01 },
+    );
+    intersectionObserver.observe(canvas);
+
+    function handleVisibilityChange() {
+      isTabVisible = document.visibilityState === 'visible';
+      updateLoop();
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    updateLoop();
 
     function handleResize() {
       if (!canvasRef.current) return;
@@ -105,7 +137,9 @@ export default function AnimatedHero() {
     window.addEventListener('resize', handleResize);
 
     return () => {
-      cancelAnimationFrame(frameId);
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      intersectionObserver.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('resize', handleResize);
       nodeGeometry.dispose();
       nodeMaterial.dispose();
