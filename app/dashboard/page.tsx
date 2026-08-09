@@ -568,6 +568,18 @@ export default function Dashboard() {
   const [checkoutError, setCheckoutError] = useState('');
   const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
 
+  const [activating, setActivating] = useState(false);
+  const [activationDelayed, setActivationDelayed] = useState(false);
+
+  const fetchProfile = useCallback(async (userId: string) => {
+    const { data: profileData } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    return profileData as Profile | null;
+  }, []);
+
   const loadData = useCallback(async (userId: string) => {
     const { data: results } = await supabase
       .from('analysis_results')
@@ -601,12 +613,8 @@ export default function Dashboard() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) { router.replace('/login'); return; }
       setUser(data.user);
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', data.user.id)
-        .maybeSingle();
-      setProfile(profileData as Profile);
+      let profileData = await fetchProfile(data.user.id);
+      setProfile(profileData);
       await loadData(data.user.id);
       setLoading(false);
 
@@ -615,9 +623,28 @@ export default function Dashboard() {
         setShowSuccessToast(true);
         setTimeout(() => setShowSuccessToast(false), 5000);
         window.history.replaceState({}, '', '/dashboard');
+
+        // Stripe redirige ici avant que le webhook n'ait forcément fini de
+        // marquer l'abonnement actif côté base — sans ça l'utilisateur revient
+        // sur un dashboard qui a l'air toujours verrouillé juste après avoir payé.
+        const isUnlocked = (p: Profile | null) => p?.subscription_status === 'active' || p?.subscription_status === 'trialing';
+        if (!isUnlocked(profileData)) {
+          setActivating(true);
+          for (let attempt = 0; attempt < 10 && !isUnlocked(profileData); attempt += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            profileData = await fetchProfile(data.user.id);
+            setProfile(profileData);
+          }
+          if (isUnlocked(profileData)) {
+            await loadData(data.user.id);
+          } else {
+            setActivationDelayed(true);
+          }
+          setActivating(false);
+        }
       }
     });
-  }, [router, loadData]);
+  }, [router, loadData, fetchProfile]);
 
   async function handleSubscribe() {
     setCheckoutLoading(true);
@@ -797,7 +824,32 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {(status === 'inactive' || status === 'canceled') && (
+        {activating && (status === 'inactive' || status === 'canceled') && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 flex items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50/60 px-5 py-4 dark:border-brand-800/40 dark:bg-brand-500/5"
+          >
+            <div className="h-4 w-4 flex-shrink-0 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600 dark:border-brand-800 dark:border-t-brand-500" />
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              Paiement reçu — activation de votre essai gratuit en cours, ça ne prend que quelques secondes...
+            </p>
+          </motion.div>
+        )}
+
+        {!activating && activationDelayed && (status === 'inactive' || status === 'canceled') && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-500/10 dark:text-amber-400"
+          >
+            Votre paiement a bien été reçu, mais l'activation prend un peu plus de temps que d'habitude. Rafraîchissez cette page dans quelques instants — inutile de payer à nouveau.
+          </motion.div>
+        )}
+
+        {!activating && !activationDelayed && (status === 'inactive' || status === 'canceled') && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
