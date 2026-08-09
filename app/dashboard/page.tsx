@@ -158,7 +158,7 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
         <AnimatePresence>
           {loading && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700" />
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700 dark:border-t-brand-500" />
               Génération de l'email personnalisé…
             </motion.div>
           )}
@@ -460,7 +460,7 @@ export default function Dashboard() {
       <>
         <Navigation user={user} />
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700 dark:border-t-brand-500" />
         </div>
       </>
     );

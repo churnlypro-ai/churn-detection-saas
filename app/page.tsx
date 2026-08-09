@@ -83,7 +83,7 @@ function RealitySection() {
           ))}
         </div>
 
-        <div className="relative mt-20 h-32">
+        <div className="no-theme-transition relative mt-20 h-32">
           {Array.from({ length: 12 }).map((_, i) => (
             <motion.div
               key={i}
@@ -242,7 +242,7 @@ function ChurnDefinitionSection() {
         </motion.p>
 
         <div className="relative mt-16 h-40 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-900">
-          <div className="absolute left-0 top-0 flex h-full w-full items-center">
+          <div className="no-theme-transition absolute left-0 top-0 flex h-full w-full items-center">
             {Array.from({ length: 20 }).map((_, i) => (
               <motion.div
                 key={`in-${i}`}
@@ -333,7 +333,7 @@ function CTASection() {
 
   return (
     <section ref={ctaRef} className="relative overflow-hidden bg-brand-600 px-6 py-28 text-center">
-      <div className="pointer-events-none absolute inset-0 opacity-10">
+      <div className="no-theme-transition pointer-events-none absolute inset-0 opacity-10">
         {Array.from({ length: 8 }).map((_, i) => (
           <motion.div
             key={i}
