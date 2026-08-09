@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
+  console.log('[stripe-webhook] received event', event.type, event.id);
 
   try {
     switch (event.type) {
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
         const tier = session.metadata?.tier;
         if (userId && tier && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
-          await supabaseAdmin
+          const { error, data } = await supabaseAdmin
             .from('users')
             .update({
               subscription_tier: tier,
@@ -47,20 +48,39 @@ export async function POST(req: NextRequest) {
               stripe_subscription_id: subscription.id,
               trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
             })
-            .eq('id', userId);
+            .eq('id', userId)
+            .select('id');
+          if (error) {
+            console.error('[stripe-webhook] checkout.session.completed: supabase update failed', JSON.stringify({ userId, error }));
+          } else if (!data || data.length === 0) {
+            console.error('[stripe-webhook] checkout.session.completed: no user row matched', JSON.stringify({ userId }));
+          } else {
+            console.log('[stripe-webhook] checkout.session.completed: subscription activated', JSON.stringify({ userId, status: mapStripeStatus(subscription.status) }));
+          }
+        } else {
+          console.error(
+            '[stripe-webhook] checkout.session.completed: missing metadata, skipped',
+            JSON.stringify({ hasUserId: !!userId, hasTier: !!tier, hasSubscription: !!session.subscription }),
+          );
         }
         break;
       }
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
-        await supabaseAdmin
+        const { error, data } = await supabaseAdmin
           .from('users')
           .update({
             subscription_status: mapStripeStatus(subscription.status),
             trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
           })
-          .eq('stripe_subscription_id', subscription.id);
+          .eq('stripe_subscription_id', subscription.id)
+          .select('id');
+        if (error) {
+          console.error('[stripe-webhook] customer.subscription.updated: supabase update failed', JSON.stringify({ subscriptionId: subscription.id, error }));
+        } else if (!data || data.length === 0) {
+          console.error('[stripe-webhook] customer.subscription.updated: no user row matched', JSON.stringify({ subscriptionId: subscription.id }));
+        }
         break;
       }
 
