@@ -55,8 +55,9 @@ export async function POST(req: NextRequest) {
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/preview?checkout=cancelled`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=cancelled`,
       metadata: { supabase_user_id: user.id, tier: String(tier) },
+      locale: 'fr',
     });
 
     return NextResponse.json({ url: session.url });
