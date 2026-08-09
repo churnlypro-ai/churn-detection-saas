@@ -107,7 +107,7 @@ export default function Calculator() {
         <p className="mt-3 text-slate-600 dark:text-slate-400">Aucune inscription nécessaire. Bougez les curseurs, le prix se calcule en direct.</p>
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
         <motion.div
           initial={{ opacity: 0, x: -32 }}
           whileInView={{ opacity: 1, x: 0 }}
