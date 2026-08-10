@@ -113,12 +113,20 @@ export default function ImpactPage() {
   const clientsLostPerMonth = (clients * churn) / 100;
   const clientsLostPerYear = clientsLostPerMonth * 12;
 
+  // Un compteur rond affiche "0 client" dès que la valeur réelle est sous
+  // 0.5 (ex: 1 client à 5% de churn) — trompeur puisque le risque n'est pas
+  // nul. On plafonne l'affichage à au moins 1 dès qu'il y a un churn réel
+  // sur au moins un client, sans changer les montants de revenue (précis).
+  const hasRealRisk = clients > 0 && churn > 0;
+  const clientsLostPerMonthDisplay = hasRealRisk ? Math.max(1, clientsLostPerMonth) : clientsLostPerMonth;
+  const clientsLostPerYearDisplay = hasRealRisk ? Math.max(1, clientsLostPerYear) : clientsLostPerYear;
+
   const arpu = clients > 0 ? revenue / clients : 0;
   const revenueLostPerDay = arpu * clientsLostPerDay;
   const revenueLostPerMonth = arpu * clientsLostPerMonth;
   const revenueLostPerYear = arpu * clientsLostPerYear;
 
-  const savedClientsPerMonth = clientsLostPerMonth * 0.5;
+  const savedClientsPerMonth = clientsLostPerMonthDisplay * 0.5;
   const savedRevenuePerMonth = revenueLostPerMonth * 0.5;
   const roi = pricing.monthly > 0 ? Math.round(savedRevenuePerMonth / pricing.monthly) : 0;
   const breakEvenWeeks = savedRevenuePerMonth > 0 ? Math.max(1, Math.ceil((pricing.monthly * 4) / (savedRevenuePerMonth * 4) * 2)) : 0;
@@ -126,8 +134,8 @@ export default function ImpactPage() {
   const realTimeLoss = useRealTimeCounter(revenueLostPerDay / 86400, inView);
 
   const animatedClientsDay = useCountUp(clientsLostPerDay, 1.5, inView);
-  const animatedClientsMonth = useCountUp(clientsLostPerMonth, 1.5, inView);
-  const animatedClientsYear = useCountUp(clientsLostPerYear, 1.5, inView);
+  const animatedClientsMonth = useCountUp(clientsLostPerMonthDisplay, 1.5, inView);
+  const animatedClientsYear = useCountUp(clientsLostPerYearDisplay, 1.5, inView);
   const animatedRevDay = useCountUp(revenueLostPerDay, 1.5, inView);
   const animatedRevMonth = useCountUp(revenueLostPerMonth, 1.5, inView);
   const animatedRevYear = useCountUp(revenueLostPerYear, 1.5, inView);

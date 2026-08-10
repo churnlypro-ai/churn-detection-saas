@@ -685,7 +685,9 @@ export default function Dashboard() {
     const clientCount = profile?.client_count ?? clients.length ?? 0;
     const mrr = profile?.monthly_revenue ?? clients.reduce((sum, c) => sum + (Number(c.revenue_monthly) || 0), 0);
     const churnRate = profile?.churn_rate ?? 0;
-    const atRisk = Math.round((clientCount * churnRate) / 100);
+    // Voir la note dans app/signup/page.tsx : un arrondi classique affiche
+    // "0 client à risque" alors qu'il y a un churn réel non nul, ce qui est trompeur.
+    const atRisk = clientCount > 0 && churnRate > 0 ? Math.max(1, Math.round((clientCount * churnRate) / 100)) : 0;
     const ltv = clientCount ? mrr / clientCount : 0;
     const monthlyLoss = (mrr * churnRate) / 100;
     const annualLoss = monthlyLoss * 12;

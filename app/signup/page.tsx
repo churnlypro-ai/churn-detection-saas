@@ -237,7 +237,11 @@ export default function Signup() {
 
   const pricing = calcPricing({ clients: clientCount, revenue: monthlyRevenue, churn: churnRate });
   const displayedTier = isManager ? calcManagerPrice(clientCount) : pricing.monthly;
-  const atRisk = Math.round((clientCount * churnRate) / 100);
+  // Un arrondi classique affiche "0 client à risque" dès que clientCount*churnRate < 0.5
+  // (ex: 1 client à 30% de churn) — techniquement correct mais trompeur, puisque le
+  // risque réel n'est pas nul. On affiche donc au moins 1 dès qu'il y a un churn non nul
+  // sur au moins un client, sans jamais inventer de risque qui n'existe pas.
+  const atRisk = clientCount > 0 && churnRate > 0 ? Math.max(1, Math.round((clientCount * churnRate) / 100)) : 0;
   const monthlyLoss = (monthlyRevenue * churnRate) / 100;
   const annualLoss = monthlyLoss * 12;
   const arpu = clientCount > 0 ? monthlyRevenue / clientCount : 0;
