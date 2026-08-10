@@ -13,6 +13,7 @@ interface NormalizedRow {
   support_tickets_open: number;
   avg_session_duration_days: number;
   payment_status: string;
+  renewal_date: string;
 }
 
 export default function Upload() {
@@ -52,6 +53,7 @@ export default function Upload() {
       support_tickets_open: Number(row.support_tickets_open || row.open_tickets || 0),
       avg_session_duration_days: Number(row.avg_session_duration_days || 0),
       payment_status: row.payment_status || 'ok',
+      renewal_date: row.renewal_date || row.next_renewal || row.subscription_end || row.renewal || row.contract_end || '',
     };
   }
 
@@ -129,7 +131,7 @@ export default function Upload() {
             {status === 'parsing' || status === 'analyzing' ? 'Traitement en cours…' : 'Télécharger un CSV'}
           </span>
           <span className="text-xs text-slate-400 dark:text-slate-500">
-            {fileName || 'name, revenue_monthly, days_since_last_login, support_tickets_open, payment_status'}
+            {fileName || 'name, revenue_monthly, days_since_last_login, support_tickets_open, payment_status, renewal_date'}
           </span>
           <input
             type="file"

@@ -19,6 +19,7 @@ Pour CHAQUE client, retourne:
    - factor: nom court du facteur (ex: "Inactivité", "Support", "Paiement", "Usage en baisse")
    - evidence: la valeur réelle des données qui justifie ce facteur, citée précisément (ex: "23 jours sans connexion" si days_since_last_login=23 dans l'input) — jamais une évidence inventée
    - weight: "low" | "medium" | "high" selon l'impact de ce facteur sur le score
+   - si un renewal_date (ou champ équivalent) est présent et proche (moins de 30 jours), traite-le comme un facteur d'urgence à part entière — un client à risque avec un renouvellement imminent doit avoir un weight plus élevé qu'un client au profil de risque identique mais sans échéance proche
 5. recommended_actions: liste de 1 à 3 actions concrètes classées par priorité, CHACUNE avec:
    - type: "email" | "call" | "offer" | "other"
    - detail: action précise et actionnable (montant d'une offre, délai, angle d'approche) — jamais générique du type "vérifier l'engagement"
