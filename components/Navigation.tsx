@@ -1,20 +1,32 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function Navigation({ user }: { user: { id?: string; email?: string } | null }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   async function handleLogout() {
+    setMenuOpen(false);
     await supabase.auth.signOut();
     router.push('/login');
   }
 
   const isAuthPage = pathname === '/signup' || pathname === '/login';
+
+  const linkClass = 'hover:text-slate-900 dark:hover:text-white';
+  const mobileLinkClass = 'block w-full rounded-xl px-4 py-3 text-base font-medium text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800';
 
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
@@ -23,19 +35,16 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
           Churn<span className="text-brand-600">ly</span>
         </Link>
 
-        <div className="flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
+        {/* Desktop nav */}
+        <div className="hidden items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
           <ThemeToggle />
 
           {isAuthPage ? null : user ? (
             <>
-              <Link href="/dashboard" className="hover:text-slate-900 dark:hover:text-white">
-                Dashboard
-              </Link>
-              <Link href="/settings" className="hover:text-slate-900 dark:hover:text-white">
-                Réglages
-              </Link>
+              <Link href="/dashboard" className={linkClass}>Dashboard</Link>
+              <Link href="/settings" className={linkClass}>Réglages</Link>
               {user.email && (
-                <span className="hidden text-slate-400 dark:text-slate-500 sm:inline">{user.email}</span>
+                <span className="hidden text-slate-400 dark:text-slate-500 lg:inline">{user.email}</span>
               )}
               <button
                 onClick={handleLogout}
@@ -46,14 +55,8 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
             </>
           ) : (
             <>
-              {pathname !== '/pricing' && (
-                <Link href="/pricing" className="hover:text-slate-900 dark:hover:text-white">
-                  Tarifs
-                </Link>
-              )}
-              <Link href="/login" className="hover:text-slate-900 dark:hover:text-white">
-                Se connecter
-              </Link>
+              {pathname !== '/pricing' && <Link href="/pricing" className={linkClass}>Tarifs</Link>}
+              <Link href="/login" className={linkClass}>Se connecter</Link>
               <Link
                 href="/signup"
                 className="rounded-full bg-brand-700 px-4 py-2 text-white transition hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
@@ -63,7 +66,61 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
             </>
           )}
         </div>
+
+        {/* Mobile controls */}
+        <div className="flex items-center gap-1 md:hidden">
+          <ThemeToggle />
+          {!isAuthPage && (
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Mobile dropdown */}
+      <AnimatePresence>
+        {menuOpen && !isAuthPage && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden border-t border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950 md:hidden"
+          >
+            <div className="flex flex-col gap-1 px-4 py-3">
+              {user ? (
+                <>
+                  <Link href="/dashboard" className={mobileLinkClass}>Dashboard</Link>
+                  <Link href="/settings" className={mobileLinkClass}>Réglages</Link>
+                  {user.email && (
+                    <p className="px-4 py-1 text-sm text-slate-400 dark:text-slate-500">{user.email}</p>
+                  )}
+                  <button onClick={handleLogout} className={`${mobileLinkClass} text-left`}>
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <>
+                  {pathname !== '/pricing' && <Link href="/pricing" className={mobileLinkClass}>Tarifs</Link>}
+                  <Link href="/login" className={mobileLinkClass}>Se connecter</Link>
+                  <Link
+                    href="/signup"
+                    className="mt-1 block w-full rounded-xl bg-brand-700 px-4 py-3 text-center text-base font-semibold text-white transition hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
+                  >
+                    Commencer gratuitement
+                  </Link>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
