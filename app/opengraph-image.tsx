@@ -18,9 +18,16 @@ export default function OpengraphImage() {
           background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 55%, #fef3c7 100%)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', fontSize: 108, fontWeight: 800, letterSpacing: -2 }}>
-          <span style={{ color: '#0f172a' }}>Churn</span>
-          <span style={{ color: '#d97706' }}>ly</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          <div style={{ width: 96, height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #fde68a', display: 'flex' }} />
+            <div style={{ position: 'absolute', width: '68%', height: '68%', borderRadius: '50%', border: '7px solid #fbbf24', display: 'flex' }} />
+            <div style={{ position: 'absolute', width: '34%', height: '34%', borderRadius: '50%', background: '#d97706', display: 'flex' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', fontSize: 108, fontWeight: 800, letterSpacing: -2 }}>
+            <span style={{ color: '#0f172a' }}>Churn</span>
+            <span style={{ color: '#d97706' }}>ly</span>
+          </div>
         </div>
         <div style={{ display: 'flex', marginTop: 28, fontSize: 34, color: '#475569', fontWeight: 500 }}>
           Prédisez qui va partir avant qu&apos;il ne parte
