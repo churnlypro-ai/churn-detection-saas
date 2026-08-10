@@ -75,6 +75,7 @@ const INDUSTRY_BENCHMARKS: Record<string, { label: string; rate: number }> = {
   saas: { label: 'SaaS', rate: 5 },
   agency: { label: 'agences', rate: 8 },
   ecommerce: { label: 'e-commerce', rate: 10 },
+  manager: { label: 'votre secteur', rate: 15 },
   other: { label: 'votre secteur', rate: 7 },
 };
 
@@ -857,15 +858,15 @@ export default function Dashboard() {
             className="relative z-10 flex flex-col items-start gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between"
           >
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Débloquez la liste complète de vos clients à risque, les emails générés par IA et bien plus —
-              <strong className="text-slate-900 dark:text-white"> 3 jours d'essai gratuit, sans engagement.</strong>
+              Débloquez la liste complète de vos clients à risque, les emails générés par IA et bien plus
+              {profile?.industry === 'manager' ? '.' : <> — <strong className="text-slate-900 dark:text-white">3 jours d'essai gratuit, sans engagement.</strong></>}
             </p>
             <button
               onClick={handleSubscribe}
               disabled={checkoutLoading}
               className="flex flex-shrink-0 items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
             >
-              {checkoutLoading ? 'Redirection…' : 'Démarrer mon essai gratuit'}
+              {checkoutLoading ? 'Redirection…' : profile?.industry === 'manager' ? 'Démarrer mon abonnement' : 'Démarrer mon essai gratuit'}
             </button>
           </motion.div>
         )}

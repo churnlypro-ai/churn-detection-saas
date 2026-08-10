@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const user = userData.user;
   const { data: profile } = await supabaseAdmin
     .from('users')
-    .select('stripe_customer_id')
+    .select('stripe_customer_id, industry')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -50,12 +50,15 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from('users').update({ stripe_customer_id: customerId }).eq('id', user.id);
     }
 
+    // Ce profil paie directement, sans période d'essai.
+    const isManagerProfile = (profile as { industry?: string })?.industry === 'manager';
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        trial_period_days: 3,
+        ...(isManagerProfile ? {} : { trial_period_days: 3 }),
         metadata: { supabase_user_id: user.id, tier: String(tier) },
       },
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
