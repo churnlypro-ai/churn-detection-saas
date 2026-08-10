@@ -29,6 +29,17 @@ export function calcPrice(clients: number, revenue: number, churn: number): numb
   return 800;
 }
 
+// Palier dédié aux comptes gérant un portefeuille de "modèles" plutôt qu'une
+// base de clients classique — le prix dépend uniquement du nombre géré,
+// pas du CA ni du churn. Réutilise les mêmes 5 paliers Stripe existants.
+export function calcManagerPrice(modelCount: number): number {
+  if (modelCount <= 1) return 150;
+  if (modelCount <= 3) return 250;
+  if (modelCount <= 6) return 400;
+  if (modelCount <= 10) return 600;
+  return 800;
+}
+
 export function tierName(price: number): string {
   if (price <= 150) return 'Petit';
   if (price <= 250) return 'Petit-Moyen';

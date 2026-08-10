@@ -7,15 +7,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, Briefcase, ArrowRight, ArrowLeft, Check, Loader2, TrendingDown, AlertTriangle, Mail } from 'lucide-react';
-import { calcPricing, formatEuro } from '@/lib/pricing';
+import { Building2, Users, Euro, Briefcase, Star, ArrowRight, ArrowLeft, Check, Loader2, TrendingDown, AlertTriangle, Mail } from 'lucide-react';
+import { calcPricing, calcPrice, calcManagerPrice, formatEuro } from '@/lib/pricing';
 
-type Industry = 'saas' | 'agency' | 'ecommerce' | 'other';
+type Industry = 'saas' | 'agency' | 'ecommerce' | 'manager' | 'other';
 
 const INDUSTRY_LABELS: Record<Industry, string> = {
   saas: 'SaaS',
   agency: 'Agence',
   ecommerce: 'E-commerce',
+  manager: 'Manager / Talents',
   other: 'Autre',
 };
 
@@ -178,7 +179,7 @@ export default function Signup() {
       if (updateError) {
         setError('Compte créé, mais impossible d\'enregistrer votre profil. Vous pourrez le compléter dans les Réglages.');
         setLoading(false);
-        router.push('/impact');
+        router.push(isManager ? '/dashboard' : '/impact');
         return;
       }
 
@@ -193,13 +194,46 @@ export default function Signup() {
           // best-effort enrichment, never blocks signup
         });
       }
+
+      // Ce profil paie directement (pas d'essai gratuit) : direction Stripe
+      // sans passer par la page d'accroche "3 jours gratuits".
+      if (isManager) {
+        if (!token) {
+          setError('Compte créé, mais impossible de démarrer le paiement. Réessayez depuis le dashboard.');
+          setLoading(false);
+          router.push('/dashboard');
+          return;
+        }
+        try {
+          const tier = String(calcManagerPrice(clientCount));
+          const response = await fetch('/api/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ tier }),
+          });
+          if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
+          const { url } = await response.json();
+          window.location.href = url;
+          return;
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Compte créé, mais le paiement a échoué. Réessayez depuis le dashboard.');
+          setLoading(false);
+          router.push('/dashboard');
+          return;
+        }
+      }
     }
 
     setLoading(false);
     router.push('/impact');
   }
 
+  const isManager = industry === 'manager';
+  const clientCountMin = isManager ? 1 : 5;
+  const clientCountMax = isManager ? 50 : 10000;
+
   const pricing = calcPricing({ clients: clientCount, revenue: monthlyRevenue, churn: churnRate });
+  const displayedTier = isManager ? calcManagerPrice(clientCount) : pricing.monthly;
   const atRisk = Math.round((clientCount * churnRate) / 100);
   const monthlyLoss = (monthlyRevenue * churnRate) / 100;
   const annualLoss = monthlyLoss * 12;
@@ -323,10 +357,20 @@ export default function Signup() {
                       <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Type d&apos;industrie</label>
                       <div className="grid grid-cols-2 gap-2">
                         {(Object.keys(INDUSTRY_LABELS) as Industry[]).map((key) => (
-                          <button key={key} onClick={() => setIndustry(key)} className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-medium transition ${industry === key ? 'border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-200 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-800' : 'border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600'}`}>
+                          <button
+                            key={key}
+                            onClick={() => {
+                              setIndustry(key);
+                              const nextMin = key === 'manager' ? 1 : 5;
+                              const nextMax = key === 'manager' ? 50 : 10000;
+                              setClientCount((c) => Math.max(nextMin, Math.min(nextMax, c)));
+                            }}
+                            className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-medium transition ${industry === key ? 'border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-200 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-800' : 'border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600'}`}
+                          >
                             {key === 'saas' && <Briefcase className="h-5 w-5" />}
                             {key === 'agency' && <Users className="h-5 w-5" />}
                             {key === 'ecommerce' && <Building2 className="h-5 w-5" />}
+                            {key === 'manager' && <Star className="h-5 w-5" />}
                             {key === 'other' && <Building2 className="h-5 w-5" />}
                             {INDUSTRY_LABELS[key]}
                           </button>
@@ -334,11 +378,19 @@ export default function Signup() {
                       </div>
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">Nombre de clients</label>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">{industry === 'manager' ? 'Nombre de modèles gérés' : 'Nombre de clients'}</label>
                       <div className="flex items-center gap-3">
                         <Users className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                        <input type="range" min={5} max={10000} step={1} value={clientCount} onChange={(e) => setClientCount(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
-                        <input type="number" min={5} max={10000} value={clientCount} onChange={(e) => setClientCount(Math.max(5, Math.min(10000, Number(e.target.value))))} className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400" />
+                        <input type="range" min={clientCountMin} max={clientCountMax} step={1} value={clientCount} onChange={(e) => setClientCount(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
+                        <input
+                          type="number"
+                          min={clientCountMin}
+                          max={clientCountMax}
+                          value={clientCount}
+                          onChange={(e) => setClientCount(Number(e.target.value) || 0)}
+                          onBlur={(e) => setClientCount(Math.max(clientCountMin, Math.min(clientCountMax, Number(e.target.value) || clientCountMin)))}
+                          className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
+                        />
                       </div>
                     </div>
                     <div>
@@ -415,10 +467,12 @@ export default function Signup() {
                   </motion.div>
                   <div className="mb-4 rounded-xl border border-brand-100 bg-brand-50/50 p-4 dark:border-brand-800/40 dark:bg-brand-500/5">
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Votre prix Churnly</p>
-                    <motion.p key={pricing.monthly} initial={{ opacity: 0.5, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mt-1 text-2xl font-extrabold text-brand-700 dark:text-brand-400">
-                      {formatEuro(pricing.monthly)}<span className="text-sm font-medium text-slate-400 dark:text-slate-500">/mois</span>
+                    <motion.p key={displayedTier} initial={{ opacity: 0.5, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mt-1 text-2xl font-extrabold text-brand-700 dark:text-brand-400">
+                      {formatEuro(displayedTier)}<span className="text-sm font-medium text-slate-400 dark:text-slate-500">/mois</span>
                     </motion.p>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Score: {pricing.score.toFixed(1)} · Palier: {pricing.tierName} · Annulable à tout moment.</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {isManager ? `${clientCount} modèle${clientCount > 1 ? 's' : ''} géré${clientCount > 1 ? 's' : ''} · Annulable à tout moment.` : `Score: ${pricing.score.toFixed(1)} · Palier: ${pricing.tierName} · Annulable à tout moment.`}
+                    </p>
                   </div>
                   <div className="mb-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400">
                     <p>ARPU: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatEuro(arpu)}</span> / client</p>
@@ -428,7 +482,7 @@ export default function Signup() {
                   <div className="mt-6 flex gap-3">
                     <button onClick={() => setStep(3)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> Retour</button>
                     <button onClick={handleCreateAccount} disabled={loading} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60">
-                      {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Création…</> : <>Voir mon impact <ArrowRight className="h-4 w-4" /></>}
+                      {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> {isManager ? 'Redirection…' : 'Création…'}</> : isManager ? <>Continuer vers le paiement <ArrowRight className="h-4 w-4" /></> : <>Voir mon impact <ArrowRight className="h-4 w-4" /></>}
                     </button>
                   </div>
                 </motion.div>
