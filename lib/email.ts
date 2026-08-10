@@ -84,6 +84,79 @@ export async function sendWelcomeEmail({
   });
 }
 
+interface RiskAlertClient {
+  name: string;
+  churnScore: number;
+  reason: string;
+  revenueMonthly: number;
+  daysUntilRenewal: number | null;
+}
+
+interface RiskAlertParams {
+  to: string;
+  companyName: string;
+  clients: RiskAlertClient[];
+  dashboardUrl: string;
+}
+
+export async function sendRiskAlertEmail({
+  to,
+  companyName,
+  clients,
+  dashboardUrl,
+}: RiskAlertParams) {
+  const resend = getResend();
+
+  const urgentCount = clients.filter((c) => c.daysUntilRenewal !== null && c.daysUntilRenewal <= 14).length;
+  const subject = urgentCount > 0
+    ? `${urgentCount} client${urgentCount > 1 ? 's' : ''} à risque avant leur renouvellement`
+    : `${clients.length} client${clients.length > 1 ? 's' : ''} à risque de partir bientôt`;
+
+  const rowsHtml = clients.map((c) => {
+    const renewalText = c.daysUntilRenewal === null
+      ? ''
+      : c.daysUntilRenewal <= 0
+        ? '<br><span style="color: #dc2626; font-weight: 600;">Renouvellement dépassé</span>'
+        : c.daysUntilRenewal <= 14
+          ? `<br><span style="color: #dc2626; font-weight: 600;">Renouvellement dans ${c.daysUntilRenewal} jour${c.daysUntilRenewal > 1 ? 's' : ''}</span>`
+          : `<br><span style="color: #6b7280;">Renouvellement dans ${c.daysUntilRenewal} jours</span>`;
+
+    return `
+      <div style="margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <strong>${c.name}</strong>
+          <span style="color: #dc2626; font-weight: 600;">${c.churnScore}% de risque</span>
+        </div>
+        <p style="margin: 6px 0 0; font-size: 14px; color: #374151;">${c.reason}</p>
+        <p style="margin: 4px 0 0; font-size: 13px;">€${c.revenueMonthly.toLocaleString('fr-FR')}/mois menacé${renewalText}</p>
+      </div>
+    `;
+  }).join('');
+
+  const html = `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>Salut ${companyName || ''},</p>
+      <p>Churnly a détecté ${clients.length > 1 ? 'des clients' : 'un client'} avec un risque de churn élevé :</p>
+      <div style="margin: 24px 0;">
+        ${rowsHtml}
+      </div>
+      <p style="margin-top: 24px;">
+        <a href="${dashboardUrl}" style="background: #2148ec; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+          Voir les détails et agir
+        </a>
+      </p>
+    </div>
+  `;
+
+  return resend.emails.send({
+    from: process.env.EMAIL_FROM || 'Churnly <alerts@yourdomain.com>',
+    to,
+    subject,
+    html,
+  });
+}
+
 export async function sendWeeklyReportEmail({
   to,
   companyName,

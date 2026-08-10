@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { analyzeChurnRisk, generateClientEmail } from '@/lib/claude';
 
+function parseDateOrNull(value: unknown): string | null {
+  if (!value || typeof value !== 'string') return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) {
@@ -58,12 +65,16 @@ export async function POST(req: NextRequest) {
         Number(c.revenue_monthly) || 0,
       ]),
     );
+    const renewalByName = new Map(
+      clients.map((c: { name: string; renewal_date?: string }) => [c.name, parseDateOrNull(c.renewal_date)]),
+    );
 
     const rows = analysis.map((item) => ({
       user_id: userId,
       upload_id: upload.id,
       client_name: item.client_name,
       revenue_monthly: revenueByName.get(item.client_name) ?? 0,
+      renewal_date: renewalByName.get(item.client_name) ?? null,
       churn_score: item.churn_score,
       reason: item.summary_reason,
       solution: item.recommended_actions[0]?.detail ?? '',
