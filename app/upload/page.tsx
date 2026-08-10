@@ -39,8 +39,13 @@ export default function Upload() {
     });
   }, [router]);
 
-  function normalizeRow(row: Record<string, string>): NormalizedRow {
+  function normalizeRow(row: Record<string, string>): NormalizedRow & Record<string, unknown> {
     return {
+      // Colonnes non reconnues (propres au métier de chaque client, ex:
+      // jours depuis le dernier contenu publié, ancienneté, etc.) passent
+      // telles quelles jusqu'à Claude plutôt que d'être perdues ici — le
+      // prompt d'analyse est déjà conçu pour utiliser tout champ présent.
+      ...row,
       name: row.name || row.client_name || row.Client || '',
       revenue_monthly: Number(row.revenue_monthly || row.revenue || 0),
       days_since_last_login: Number(row.days_since_last_login || row.days_inactive || 0),

@@ -231,6 +231,9 @@ export default function Signup() {
   const isManager = industry === 'manager';
   const clientCountMin = isManager ? 1 : 5;
   const clientCountMax = isManager ? 50 : 10000;
+  const revenueMin = isManager ? 100 : 1000;
+  const revenueMax = isManager ? 500000 : 2000000;
+  const revenueStep = isManager ? 100 : 1000;
 
   const pricing = calcPricing({ clients: clientCount, revenue: monthlyRevenue, churn: churnRate });
   const displayedTier = isManager ? calcManagerPrice(clientCount) : pricing.monthly;
@@ -364,6 +367,9 @@ export default function Signup() {
                               const nextMin = key === 'manager' ? 1 : 5;
                               const nextMax = key === 'manager' ? 50 : 10000;
                               setClientCount((c) => Math.max(nextMin, Math.min(nextMax, c)));
+                              const nextRevMin = key === 'manager' ? 100 : 1000;
+                              const nextRevMax = key === 'manager' ? 500000 : 2000000;
+                              setMonthlyRevenue((r) => Math.max(nextRevMin, Math.min(nextRevMax, r)));
                             }}
                             className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-medium transition ${industry === key ? 'border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-200 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-800' : 'border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600'}`}
                           >
@@ -394,18 +400,18 @@ export default function Signup() {
                       </div>
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">CA mensuel (€)</label>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">{isManager ? 'CA mensuel par modèle (€)' : 'CA mensuel (€)'}</label>
                       <div className="flex items-center gap-3">
                         <Euro className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                        <input type="range" min={1000} max={2000000} step={1000} value={monthlyRevenue} onChange={(e) => setMonthlyRevenue(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
+                        <input type="range" min={revenueMin} max={revenueMax} step={revenueStep} value={monthlyRevenue} onChange={(e) => setMonthlyRevenue(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
                         <input
                           type="number"
-                          min={1000}
-                          max={2000000}
-                          step={1000}
+                          min={revenueMin}
+                          max={revenueMax}
+                          step={revenueStep}
                           value={monthlyRevenue}
                           onChange={(e) => setMonthlyRevenue(Number(e.target.value) || 0)}
-                          onBlur={(e) => setMonthlyRevenue(Math.max(1000, Math.min(2000000, Number(e.target.value) || 1000)))}
+                          onBlur={(e) => setMonthlyRevenue(Math.max(revenueMin, Math.min(revenueMax, Number(e.target.value) || revenueMin)))}
                           className="w-24 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
                         />
                       </div>
