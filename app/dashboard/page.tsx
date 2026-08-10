@@ -1005,22 +1005,28 @@ export default function Dashboard() {
   );
 }
 
+// Hauteurs en pixels fixes plutôt qu'en %: dans un flex container avec
+// items-end, un enfant flex-col n'a pas de hauteur resolvable pour ses
+// propres enfants en %, donc les barres restaient bloquees a 0px de haut.
+const REVENUE_BAR_AREA_HEIGHT = 170;
+const RISK_BAR_AREA_HEIGHT = 140;
+
 function ResponsiveRevenueChart({ data }: { data: { month: string; revenue: number; loss: number }[] }) {
   const maxRev = Math.max(...data.map((d) => d.revenue), 1);
   return (
     <div className="flex h-full items-end gap-1">
       {data.map((d, i) => (
         <div key={i} className="flex flex-1 flex-col items-center gap-1">
-          <div className="flex w-full flex-col items-center justify-end gap-0.5" style={{ height: '100%' }}>
+          <div className="flex w-full flex-col items-center justify-end gap-0.5" style={{ height: REVENUE_BAR_AREA_HEIGHT }}>
             <motion.div
               initial={{ height: 0 }}
-              animate={{ height: `${(d.revenue / maxRev) * 100}%` }}
+              animate={{ height: `${(d.revenue / maxRev) * REVENUE_BAR_AREA_HEIGHT}px` }}
               transition={{ duration: 0.8, ease: EASE_OUT, delay: i * 0.05 }}
               className="w-full rounded-t bg-brand-500/80"
             />
             <motion.div
               initial={{ height: 0 }}
-              animate={{ height: `${(d.loss / maxRev) * 100}%` }}
+              animate={{ height: `${(d.loss / maxRev) * REVENUE_BAR_AREA_HEIGHT}px` }}
               transition={{ duration: 0.8, ease: EASE_OUT, delay: i * 0.05 + 0.1 }}
               className="w-full rounded-t bg-red-400/60"
             />
@@ -1037,13 +1043,13 @@ function ResponsiveRiskChart({ data }: { data: { range: string; count: number; c
   return (
     <div className="flex h-full items-end justify-around gap-3">
       {data.map((d, i) => (
-        <div key={i} className="flex flex-1 flex-col items-center gap-2">
+        <div key={i} className="flex flex-1 flex-col items-center justify-end gap-2" style={{ height: RISK_BAR_AREA_HEIGHT + 36 }}>
           <motion.div
             initial={{ height: 0 }}
-            animate={{ height: `${(d.count / max) * 80}%` }}
+            animate={{ height: `${Math.max(d.count > 0 ? 8 : 0, (d.count / max) * RISK_BAR_AREA_HEIGHT)}px` }}
             transition={{ duration: 0.7, ease: EASE_OUT, delay: i * 0.1 }}
             className="w-full rounded-t-lg"
-            style={{ backgroundColor: d.color, minHeight: d.count > 0 ? '8px' : '0' }}
+            style={{ backgroundColor: d.color }}
           />
           <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">{d.range}</span>
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{d.count}</span>
