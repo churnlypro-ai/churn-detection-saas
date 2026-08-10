@@ -5,15 +5,12 @@ import ThemeProviderClient from '@/components/ThemeProviderClient';
 import './globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://churn-detection-saas.vercel.app'),
   title: 'Churnly — Sauvez votre revenue',
   description:
     'Prédisez qui va partir avant qu\'il ne parte. Analyse de churn par IA pour SaaS, agences et startups.',
-  openGraph: {
-    images: [{ url: 'https://bolt.new/static/og_default.png' }],
-  },
   twitter: {
     card: 'summary_large_image',
-    images: [{ url: 'https://bolt.new/static/og_default.png' }],
   },
 };
 
