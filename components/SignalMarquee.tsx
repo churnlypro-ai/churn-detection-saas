@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, TrendingDown, CreditCard, AlertTriangle, Calendar, ArrowUpRight, Mail,
   UserCog, Euro, ShoppingCart, Rocket, History, Clock3, Ticket, RotateCcw, WifiOff, Frown,
+  MailOpen, BellOff, ArrowDownRight, Undo2, ThumbsDown, HelpCircle, UserMinus, PhoneOff,
+  Layers, Activity, RefreshCw, ExternalLink, Download, Timer, UserX, Smartphone, Receipt,
+  Hourglass, Shuffle, Percent,
 } from 'lucide-react';
 import { EASE_OUT } from '@/lib/animations';
 
@@ -26,6 +29,26 @@ const SIGNALS = [
   { icon: Clock3, label: 'Délai de réponse aux emails en hausse', detail: 'Un client qui met de plus en plus de temps à répondre montre que la relation devient moins prioritaire pour lui.' },
   { icon: Ticket, label: 'Tickets support en augmentation', detail: 'Une multiplication des tickets sur une courte période traduit souvent une frustration croissante, pas juste plus de questions.' },
   { icon: RotateCcw, label: 'Contrat précédent non renouvelé', detail: 'Un client qui a déjà laissé filer un renouvellement par le passé, même régularisé ensuite, garde un profil de risque plus élevé.' },
+  { icon: MailOpen, label: 'Baisse du taux d\'ouverture des emails', detail: 'Un client qui n\'ouvre plus vos emails a réduit son attention au strict minimum — le lien s\'effiloche avant même l\'annulation.' },
+  { icon: BellOff, label: 'Désabonnement des communications', detail: 'Se désinscrire des newsletters produit est souvent un signe précoce de désengagement, bien avant de penser à annuler l\'abonnement.' },
+  { icon: ArrowDownRight, label: 'Downgrade vers une offre inférieure', detail: 'Réduire son plan est rarement anodin : c\'est souvent la dernière étape avant l\'annulation complète.' },
+  { icon: Undo2, label: 'Demande de remboursement récente', detail: 'Une demande de remboursement, même ponctuelle, révèle une insatisfaction qu\'il faut traiter immédiatement.' },
+  { icon: ThumbsDown, label: 'Note de satisfaction basse', detail: 'Un score de satisfaction (NPS/CSAT) en baisse est un indicateur avancé, souvent visible des semaines avant l\'annulation.' },
+  { icon: HelpCircle, label: 'Absence de réponse à une enquête', detail: 'Ne pas répondre à une enquête de satisfaction peut sembler anodin, mais reflète souvent un désintérêt déjà installé.' },
+  { icon: UserMinus, label: 'Réduction du nombre de licences', detail: 'Un compte qui retire des sièges/licences réduit son engagement avant, parfois, de tout arrêter.' },
+  { icon: PhoneOff, label: 'Absence à un appel de renouvellement', detail: 'Un client qui esquive les échanges autour du renouvellement a souvent déjà pris sa décision.' },
+  { icon: Layers, label: 'Usage limité à une seule fonctionnalité', detail: 'Un client qui n\'explore jamais au-delà d\'une fonctionnalité de base n\'a pas découvert toute la valeur du produit — et reste fragile.' },
+  { icon: Activity, label: 'Pic d\'activité suivi d\'un arrêt brutal', detail: 'Un usage intense qui s\'arrête net est parfois plus inquiétant qu\'un déclin progressif : quelque chose a changé du jour au lendemain.' },
+  { icon: RefreshCw, label: 'Même ticket signalé plusieurs fois', detail: 'Un même problème signalé à plusieurs reprises montre que la première réponse n\'a pas suffi — la frustration s\'accumule.' },
+  { icon: ExternalLink, label: 'Mention d\'un concurrent en support', detail: 'Quand un client compare ouvertement avec une alternative, il a déjà commencé à regarder ailleurs.' },
+  { icon: Download, label: 'Export de données massif', detail: 'Exporter ses données en masse précède souvent, de peu, une migration vers un autre outil.' },
+  { icon: Timer, label: 'Durée de session en baisse', detail: 'Des sessions de plus en plus courtes traduisent un désintérêt progressif, même si la fréquence de connexion reste stable.' },
+  { icon: UserX, label: 'Aucun utilisateur actif sur le compte', detail: 'Un compte payé mais dont plus personne ne se connecte est un signal fort, quel que soit le nombre de licences.' },
+  { icon: Smartphone, label: 'Arrêt de l\'usage mobile', detail: 'Un client qui utilisait l\'app mobile et ne le fait plus a modifié ses habitudes — un changement à comprendre.' },
+  { icon: Receipt, label: 'Changement de contact facturation', detail: 'Un changement de contact côté facturation accompagne souvent une réorganisation interne qui met la relation à risque.' },
+  { icon: Hourglass, label: 'Essai jamais transformé en usage réel', detail: 'Un compte resté au stade de l\'essai sans jamais vraiment démarrer n\'a jamais eu la chance de voir la valeur du produit.' },
+  { icon: Shuffle, label: 'Fréquence de connexion très irrégulière', detail: 'Des pics suivis de longs silences trahissent une relation devenue occasionnelle plutôt que régulière.' },
+  { icon: Percent, label: 'Historique de renégociation tarifaire', detail: 'Un client qui a déjà demandé une réduction par le passé reste plus sensible au prix, et donc plus à risque.' },
 ];
 
 export default function SignalMarquee() {
