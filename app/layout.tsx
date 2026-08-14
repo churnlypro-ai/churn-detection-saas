@@ -5,7 +5,7 @@ import ThemeProviderClient from '@/components/ThemeProviderClient';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://churn-detection-saas.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://churnly.fr'),
   title: 'Churnly — Sauvez votre revenue',
   description:
     'Prédisez qui va partir avant qu\'il ne parte. Analyse de churn par IA pour SaaS, agences et startups.',
