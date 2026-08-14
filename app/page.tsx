@@ -6,6 +6,7 @@ import Navigation from '@/components/Navigation';
 import AnimatedHero from '@/components/AnimatedHero';
 import Calculator from '@/components/Calculator';
 import SectionDivider from '@/components/SectionDivider';
+import SectionToc from '@/components/SectionToc';
 import { EASE_OUT } from '@/lib/animations';
 import { ShieldCheck, Zap, LineChart, Lock, ArrowRight, TrendingDown, Building2, Users, Euro, AlertTriangle } from 'lucide-react';
 
@@ -53,7 +54,7 @@ function RealitySection() {
   const pulseInView = useInView(pulseRef, { once: false, amount: 0.1 });
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/30 px-6 py-28 dark:from-slate-950 dark:to-slate-900">
+    <section id="constat" className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/30 px-6 py-28 dark:from-slate-950 dark:to-slate-900">
       <div className="mx-auto max-w-4xl">
         <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
           Le constat
@@ -108,7 +109,7 @@ function StrategySection() {
   const shieldInView = useInView(shieldRef, { once: false, amount: 0.3 });
 
   return (
-    <section className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
+    <section id="strategie" className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
       <div className="mx-auto max-w-4xl">
         <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
           Le levier
@@ -191,7 +192,7 @@ const STEPS = [
 
 function HowItWorksSection() {
   return (
-    <section className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
+    <section id="comment-ca-marche" className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
       <div className="mx-auto max-w-5xl">
         <motion.h2 {...reveal} className="mb-4 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           Comment ça marche
@@ -235,7 +236,7 @@ function ChurnDefinitionSection() {
   const flowInView = useInView(flowRef, { once: false, amount: 0.1 });
 
   return (
-    <section className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
+    <section id="churn" className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
       <div className="mx-auto max-w-3xl">
         <motion.h2 {...reveal} className="text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           Qu&apos;est-ce que le churn ?
@@ -302,7 +303,7 @@ const CASES = [
 
 function CaseStudiesSection() {
   return (
-    <section className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
+    <section id="cas-reels" className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
       <div className="mx-auto max-w-5xl">
         <motion.h2 {...reveal} className="mb-16 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           Cas réels
@@ -403,6 +404,15 @@ function CTASection() {
   );
 }
 
+const TOC_ITEMS = [
+  { id: 'constat', label: 'Le constat' },
+  { id: 'strategie', label: 'Votre stratégie' },
+  { id: 'tarif', label: 'Votre tarif' },
+  { id: 'comment-ca-marche', label: 'Comment ça marche' },
+  { id: 'churn', label: 'Le churn' },
+  { id: 'cas-reels', label: 'Cas réels' },
+];
+
 export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
@@ -412,6 +422,7 @@ export default function Home() {
   return (
     <>
       <Navigation user={null} />
+      <SectionToc items={TOC_ITEMS} />
       <main className="relative">
         <motion.div ref={heroRef} style={{ opacity: heroOpacity, scale: heroScale }} className="relative">
           <AnimatedHero />
@@ -424,7 +435,7 @@ export default function Home() {
         <StrategySection />
         <SectionDivider />
 
-        <div className="relative bg-slate-50 dark:bg-slate-900">
+        <div id="tarif" className="relative bg-slate-50 dark:bg-slate-900">
           <Calculator />
         </div>
         <SectionDivider />
