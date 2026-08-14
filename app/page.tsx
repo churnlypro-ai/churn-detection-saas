@@ -7,6 +7,7 @@ import AnimatedHero from '@/components/AnimatedHero';
 import Calculator from '@/components/Calculator';
 import SectionDivider from '@/components/SectionDivider';
 import SectionToc from '@/components/SectionToc';
+import SignalMarquee from '@/components/SignalMarquee';
 import { EASE_OUT } from '@/lib/animations';
 import { ShieldCheck, Zap, LineChart, Lock, ArrowRight, TrendingDown, Building2, Users, Euro, AlertTriangle } from 'lucide-react';
 
@@ -226,6 +227,13 @@ function HowItWorksSection() {
             </motion.div>
           ))}
         </div>
+
+        <motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }} className="mt-20">
+          <p className="mb-8 text-center text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
+            Les signaux que Churnly détecte
+          </p>
+          <SignalMarquee />
+        </motion.div>
       </div>
     </section>
   );
