@@ -473,7 +473,7 @@ function ChurnEducationSection({
     : passive
     ? `Votre churn est de ${churnRate.toFixed(1)}%/mois, au-dessus de la moyenne de ${benchmark.rate}%/mois pour les ${benchmark.label} — et aucune action de rétention n'a encore été engagée. Ça veut dire que ${formatEuro(annualLoss)}/an partent aujourd'hui sans qu'aucune tentative de les retenir ne soit faite. C'est la plus grosse marge de progression disponible chez vous, avant même de penser acquisition.`
     : alreadyActing
-    ? `Vous avez déjà ${completedActions} action${completedActions > 1 ? 's' : ''} de rétention engagée${completedActions > 1 ? 's' : ''} — c'est exactement ce levier qui génère jusqu'à 10x plus de valeur que l'acquisition. Chaque client retenu en plus, chez vous, représente en moyenne ${formatEuro(clientCount ? annualLoss / Math.max(1, atRisk || 1) : 0)}/an de revenu préservé.`
+    ? `Vous avez déjà ${completedActions} action${completedActions > 1 ? 's' : ''} de rétention engagée${completedActions > 1 ? 's' : ''} — chaque client retenu en plus, chez vous, représente en moyenne ${formatEuro(clientCount ? annualLoss / Math.max(1, atRisk || 1) : 0)}/an de revenu préservé.`
     : `Votre churn de ${churnRate.toFixed(1)}%/mois est déjà à ou sous la moyenne de ${benchmark.rate}%/mois pour les ${benchmark.label} — vous êtes déjà globalement dans la bonne direction. Continuez à surveiller : chaque point de churn gagné en plus représente une part quasi entièrement en marge, contrairement à un nouveau client acquis.`;
 
   const cards = [
@@ -767,7 +767,7 @@ export default function Dashboard() {
       value: `${metrics.churnRate.toFixed(1)}%`,
       icon: TrendingDown,
       accent: 'text-red-500 dark:text-red-400',
-      detail: `${metrics.churnRate.toFixed(1)}% de vos clients partent chaque mois, contre une moyenne d'environ ${benchmark.rate}%/mois pour les ${benchmark.label}. ${metrics.churnRate > benchmark.rate ? "Vous êtes au-dessus de la moyenne de votre secteur." : 'Vous êtes en dessous de la moyenne de votre secteur.'} Sur un an, ce rythme représente environ ${Math.min(100, Math.round((1 - Math.pow(1 - metrics.churnRate / 100, 12)) * 100))}% de votre base qui renouvelle.`,
+      detail: `${metrics.churnRate.toFixed(1)}% de vos clients partent chaque mois. Sur un an, avec l'effet composé, ce rythme représente environ ${Math.min(100, Math.round((1 - Math.pow(1 - metrics.churnRate / 100, 12)) * 100))}% de votre base qui renouvelle — bien plus qu'une simple multiplication par 12 ne le laisserait penser.`,
     },
     {
       label: 'LTV Moyen',
