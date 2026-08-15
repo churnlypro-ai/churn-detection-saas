@@ -5,6 +5,7 @@ import { motion, useInView } from 'framer-motion';
 import { EASE_OUT } from '@/lib/animations';
 import { calcPricing, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
 import { ArrowRight } from 'lucide-react';
+import { useLanguage, useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 
 function SliderField({ label, value, min, max, step, onChange, display, inputSuffix }: {
   label: string;
@@ -66,6 +67,9 @@ function Row({ label, value, bold, valueClassName = '' }: { label: string; value
 export default function Calculator() {
   const [clientCount, setClientCount] = useState(100);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
+  const t = useTranslations('calculator');
+  const { localeTag } = useLanguage();
+  const tierName = useTierName();
 
   const priceCardRef = useRef<HTMLDivElement>(null);
   const priceCardInView = useInView(priceCardRef, { once: false, amount: 0.3 });
@@ -109,9 +113,9 @@ export default function Calculator() {
         className="mb-14 text-center"
       >
         <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-          Découvrez votre tarif en 30 secondes
+          {t.title}
         </h2>
-        <p className="mt-3 text-slate-600 dark:text-slate-400">Aucune inscription nécessaire. Bougez les curseurs, le prix se calcule en direct.</p>
+        <p className="mt-3 text-slate-600 dark:text-slate-400">{t.subtitle}</p>
       </motion.div>
 
       <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
@@ -123,27 +127,26 @@ export default function Calculator() {
           className="space-y-8 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
           <SliderField
-            label="Nombre de clients"
+            label={t.clientCountLabel}
             value={clientCount}
             min={1}
             max={10000}
             step={1}
             onChange={setClientCount}
-            display={`Clients: ${clientCount.toLocaleString('fr-FR')}`}
+            display={`${t.clientsWord}: ${clientCount.toLocaleString(localeTag)}`}
           />
           <SliderField
-            label="CA mensuel"
+            label={t.revenueLabel}
             value={monthlyRevenue}
             min={1000}
             max={2000000}
             step={1000}
             onChange={setMonthlyRevenue}
-            display={`CA: ${formatEuro(monthlyRevenue)}/mois`}
+            display={`${t.revenueWord}: ${formatEuro(monthlyRevenue)}${t.perMonth}`}
             inputSuffix="€"
           />
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            Le prix dépend uniquement de votre CA. Pas besoin de connaître votre taux de churn —
-            c&apos;est Churnly qui le calcule, à partir de vos vraies données.
+            {t.helper}
           </p>
         </motion.div>
 
@@ -162,7 +165,7 @@ export default function Calculator() {
             transition={{ opacity: { duration: 0.4 }, scale: { duration: 3, repeat: priceCardInView ? Infinity : 0, ease: 'easeInOut' } }}
             className="rounded-3xl border border-brand-100 bg-brand-50/50 p-8 dark:border-brand-800/40 dark:bg-brand-500/5"
           >
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Votre tarif estimé</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">{t.estimatedPrice}</p>
             <motion.p
               key={stats.monthly}
               initial={{ opacity: 0.5, y: 8 }}
@@ -170,23 +173,23 @@ export default function Calculator() {
               transition={{ duration: 0.4 }}
               className="text-4xl font-extrabold text-brand-700 dark:text-brand-400"
             >
-              {formatEuro(stats.monthly)}<span className="text-lg font-medium text-slate-400 dark:text-slate-500">/mois</span>
+              {formatEuro(stats.monthly)}<span className="text-lg font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
             </motion.p>
             <div className="mt-4 space-y-1 text-sm text-slate-600 dark:text-slate-400">
-              <Row label="Mensuel" value="3 jours gratuits" />
-              <Row label="Annuel" value={`${formatEuro(stats.annualPerMonth)}/mois (1 mois gratuit)`} />
+              <Row label={t.monthlyLabel} value={t.monthlyValue} />
+              <Row label={t.annualLabel} value={`${formatEuro(stats.annualPerMonth)}${t.annualSuffix}`} />
             </div>
             <div className="mt-4 border-t border-brand-200 pt-4 dark:border-brand-800/40">
-              <Row label="Gain vs perte churn" value={`${formatEuro(stats.monthlySavings)}/mois`} bold valueClassName="text-emerald-600 dark:text-emerald-400" />
+              <Row label={t.gainLabel} value={`${formatEuro(stats.monthlySavings)}${t.perMonth}`} bold valueClassName="text-emerald-600 dark:text-emerald-400" />
             </div>
             <a
               href="/signup"
               className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
             >
-              Commencer — {formatEuro(stats.monthly)}/mois <ArrowRight className="h-4 w-4" />
+              {t.startButton} — {formatEuro(stats.monthly)}{t.perMonth} <ArrowRight className="h-4 w-4" />
             </a>
             <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
-              Palier: {stats.tierName}
+              {t.tierLabel}: {tierName(stats.tierName)}
             </p>
           </motion.div>
 
@@ -198,14 +201,14 @@ export default function Calculator() {
             className="grid grid-cols-2 divide-x divide-slate-100 overflow-hidden rounded-3xl border border-slate-100 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="p-5 text-center">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-500 dark:text-red-400">Sans Churnly</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-500 dark:text-red-400">{t.withoutTitle}</p>
               <p className="text-2xl font-extrabold text-red-600 dark:text-red-400">-{formatEuro(stats.annualLoss)}</p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">perte annuelle projetée</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t.withoutSub}</p>
             </div>
             <div className="p-5 text-center">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Avec Churnly</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">{t.withTitle}</p>
               <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">+{formatEuro(stats.annualSavings)}</p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">économisés/an · ROI {stats.roi}x</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t.withSub} {stats.roi}x</p>
             </div>
           </motion.div>
         </motion.div>
