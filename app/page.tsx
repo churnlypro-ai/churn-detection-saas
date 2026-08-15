@@ -121,8 +121,8 @@ function StrategySection() {
         <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
           Vous investissez en acquisition. Vos équipes optimisent les campagnes, les funnels,
           les coûts par lead. Mais chaque client acquis repart par la porte de sortie sans
-          que personne ne l'ait vu partir. La rétention génère 10x plus de valeur que
-          l'acquisition — pourtant, elle reçoit une fraction de l'attention.
+          que personne ne l'ait vu partir — et la rétention reçoit une fraction de
+          l'attention que reçoit l'acquisition.
         </motion.p>
 
         <div className="relative mt-16 flex items-center justify-center gap-8 py-12">
@@ -255,9 +255,8 @@ function ChurnDefinitionSection() {
           de votre base clients qui disparaît.
         </motion.p>
         <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-4 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-          La plupart des dirigeants le découvrent trop tard, quand le client a déjà annulé.
           Churnly identifie les signaux d&apos;alerte <em>avant</em> l&apos;annulation, pendant
-          qu&apos;il est encore temps d&apos;agir.
+          qu&apos;il est encore temps d&apos;agir — pas après.
         </motion.p>
 
         <div ref={flowRef} className="relative mt-16 h-40 overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-900">
