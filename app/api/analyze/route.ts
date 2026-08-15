@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
   if (!Array.isArray(clients) || clients.length === 0) {
     return NextResponse.json({ error: 'No client data provided' }, { status: 400 });
   }
+  // Sans plafond, un seul appel authentifié pourrait déclencher un nombre
+  // arbitraire d'appels à l'API Claude (coût direct, sans rapport avec la
+  // taille réelle d'une base clients).
+  if (clients.length > 2000) {
+    return NextResponse.json({ error: 'Trop de clients en une seule fois (max 2000).' }, { status: 400 });
+  }
 
   try {
     const analysis = await analyzeChurnRisk(clients);
