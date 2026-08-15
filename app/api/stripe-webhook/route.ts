@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
               subscription_status: mapStripeStatus(subscription.status),
               stripe_subscription_id: subscription.id,
               trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+              ...(subscription.trial_end ? { trial_used: true } : {}),
             })
             .eq('id', userId)
             .select('id');
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
           .update({
             subscription_status: mapStripeStatus(subscription.status),
             trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+            ...(subscription.trial_end ? { trial_used: true } : {}),
           })
           .eq('stripe_subscription_id', subscription.id)
           .select('id');

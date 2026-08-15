@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const user = userData.user;
   const { data: profile } = await supabaseAdmin
     .from('users')
-    .select('stripe_customer_id, industry')
+    .select('stripe_customer_id, industry, trial_used')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -52,13 +52,17 @@ export async function POST(req: NextRequest) {
 
     // Ce profil paie directement, sans période d'essai.
     const isManagerProfile = (profile as { industry?: string })?.industry === 'manager';
+    // Un compte ne reçoit son essai gratuit qu'une seule fois : trial_used est
+    // posé de façon permanente au premier essai (voir stripe-webhook) et n'est
+    // jamais effacé, contrairement à trial_end qui repart à null à l'annulation.
+    const trialAlreadyUsed = (profile as { trial_used?: boolean })?.trial_used === true;
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        ...(isManagerProfile ? {} : { trial_period_days: 3 }),
+        ...(isManagerProfile || trialAlreadyUsed ? {} : { trial_period_days: 3 }),
         metadata: { supabase_user_id: user.id, tier: String(tier) },
       },
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
