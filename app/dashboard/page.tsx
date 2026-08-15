@@ -10,7 +10,7 @@ import {
   AlertTriangle, Lock, X, Mail, Gift, GraduationCap, Zap, Check, TrendingDown, Users, Euro,
   BarChart3, Clock, Sparkles, ShieldCheck, Target, ChevronDown, Info,
 } from 'lucide-react';
-import { calcPrice, formatEuro as formatEuroShared } from '@/lib/pricing';
+import { formatEuro as formatEuroShared } from '@/lib/pricing';
 
 interface Profile {
   company_name: string;
@@ -655,12 +655,13 @@ export default function Dashboard() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-      const tier = String(calcPrice(Number(profile?.client_count ?? 0), Number(profile?.monthly_revenue ?? 0), Number(profile?.churn_rate ?? 5)));
 
+      // Le palier facturé est calculé côté serveur à partir du profil en
+      // base (voir /api/create-checkout-session) — pas besoin de l'envoyer.
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) throw new Error('Impossible de démarrer le paiement.');

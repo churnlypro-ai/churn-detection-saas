@@ -93,6 +93,19 @@ export async function POST(req: NextRequest) {
 
     const atRiskCount = analysis.filter((item) => item.churn_score >= 60).length;
 
+    // On ne demande jamais le taux de churn à l'inscription — une entreprise
+    // qui vient chez Churnly ne le connaît généralement pas elle-même,
+    // c'est exactement ce que l'analyse résout. C'est donc ici, à partir du
+    // vrai résultat, que le chiffre est calculé et enregistré sur le compte.
+    const computedChurnRate = clients.length > 0 ? (atRiskCount / clients.length) * 100 : 0;
+    const { error: churnUpdateError } = await supabaseAdmin
+      .from('users')
+      .update({ churn_rate: Number(computedChurnRate.toFixed(1)) })
+      .eq('id', userId);
+    if (churnUpdateError) {
+      console.error('[analyze] churn_rate update failed', JSON.stringify({ userId, churnUpdateError }));
+    }
+
     return NextResponse.json({
       uploadId: upload.id,
       clientCount: clients.length,

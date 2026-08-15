@@ -1,44 +1,29 @@
-export interface PricingInput {
-  clients: number;
-  revenue: number;
-  churn: number;
-}
-
 export interface PricingResult {
-  score: number;
   monthly: number;
   annual: number;
   annualPerMonth: number;
   tierName: string;
-  monthlyLoss: number;
-  annualLoss: number;
-  savingsPerMonth: number;
-  roi: number;
 }
 
-export function calcScore(clients: number, revenue: number, churn: number): number {
-  return (clients / 100) + (revenue / 50000) + Math.max(0, churn - 5);
-}
-
-export function calcPrice(clients: number, revenue: number, churn: number): number {
-  const score = calcScore(clients, revenue, churn);
-  if (score <= 5) return 150;
-  if (score <= 7) return 250;
-  if (score <= 9) return 400;
-  if (score <= 11) return 600;
+// Le prix ne dépend que du CA mensuel — demander le taux de churn à
+// l'inscription n'avait pas de sens : une entreprise qui vient chez nous
+// ne connaît généralement pas son propre taux de churn (c'est précisément
+// le problème que Churnly résout). C'est Churnly qui le calcule, à partir
+// de la vraie analyse des données une fois importées — jamais demandé en
+// amont. Paliers de 2000€ de CA mensuel, sur les 5 prix Stripe existants.
+export function calcPrice(revenue: number): number {
+  if (revenue < 2000) return 150;
+  if (revenue < 4000) return 250;
+  if (revenue < 6000) return 400;
+  if (revenue < 8000) return 600;
   return 800;
 }
 
-// Palier dédié aux comptes gérant un portefeuille de "modèles" plutôt qu'une
-// base de clients classique — le prix dépend uniquement du nombre géré,
-// pas du CA ni du churn. Réutilise les mêmes 5 paliers Stripe existants.
-export function calcManagerPrice(modelCount: number): number {
-  if (modelCount <= 1) return 150;
-  if (modelCount <= 3) return 250;
-  if (modelCount <= 6) return 400;
-  if (modelCount <= 10) return 600;
-  return 800;
-}
+// Taux de churn moyen utilisé uniquement à titre d'illustration sur les
+// pages publiques (calculateur pré-inscription) pour donner un ordre de
+// grandeur de perte potentielle — jamais présenté comme le vrai chiffre
+// du visiteur, qui n'est calculé qu'après sa première analyse réelle.
+export const ASSUMED_CHURN_RATE = 5;
 
 export function tierName(price: number): string {
   if (price <= 150) return 'Petit';
@@ -48,34 +33,28 @@ export function tierName(price: number): string {
   return 'Enterprise';
 }
 
-export function calcPricing(input: PricingInput): PricingResult {
-  const { clients, revenue, churn } = input;
-  const monthly = calcPrice(clients, revenue, churn);
+export function calcPricing(revenue: number): PricingResult {
+  const monthly = calcPrice(revenue);
   const annual = monthly * 12;
   const annualPerMonth = Math.round((annual - monthly) / 12);
-  const monthlyLoss = (revenue * churn) / 100;
-  const annualLoss = monthlyLoss * 12;
-  const savingsPerMonth = monthlyLoss * 0.5;
-  const roi = monthly > 0 ? Math.round(savingsPerMonth / monthly) : 0;
 
   return {
-    score: calcScore(clients, revenue, churn),
     monthly,
     annual,
     annualPerMonth,
     tierName: tierName(monthly),
-    monthlyLoss,
-    annualLoss,
-    savingsPerMonth,
-    roi,
   };
 }
 
-export function priceBreakdown(clients: number, revenue: number, churn: number): { label: string; amount: number }[] {
-  const items: { label: string; amount: number }[] = [];
-  const score = calcScore(clients, revenue, churn);
-  items.push({ label: `Score: ${score.toFixed(1)}`, amount: calcPrice(clients, revenue, churn) });
-  return items;
+// Palier dédié aux comptes gérant un portefeuille de "modèles" plutôt qu'une
+// base de clients classique — le prix dépend uniquement du nombre géré,
+// pas du CA. Réutilise les mêmes 5 paliers Stripe existants.
+export function calcManagerPrice(modelCount: number): number {
+  if (modelCount <= 1) return 150;
+  if (modelCount <= 3) return 250;
+  if (modelCount <= 6) return 400;
+  if (modelCount <= 10) return 600;
+  return 800;
 }
 
 export function formatEuro(value: number): string {
