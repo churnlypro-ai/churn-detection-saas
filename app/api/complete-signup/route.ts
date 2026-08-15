@@ -10,7 +10,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 // no account.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { email, password, companyName, clientCount, monthlyRevenue, industry, churnRate } = body ?? {};
+  const { email, password, companyName, clientCount, monthlyRevenue, industry } = body ?? {};
 
   if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
     return NextResponse.json({ error: 'Email et mot de passe requis.' }, { status: 400 });
@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
       client_count: clientCount ?? null,
       monthly_revenue: monthlyRevenue ?? null,
       industry: industry ?? null,
-      churn_rate: churnRate ?? null,
+      // churn_rate n'est jamais fourni à l'inscription — Churnly le calcule
+      // lui-même à partir de la première analyse réelle (voir /api/analyze).
     })
     .eq('id', created.user.id);
 

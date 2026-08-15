@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
-import { calcPrice, calcPricing, formatEuro } from '@/lib/pricing';
+import { calcPricing, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
 import { TrendingDown, Users, Euro, ShieldCheck, ArrowRight, AlertTriangle, Clock } from 'lucide-react';
 
 interface Profile {
@@ -83,15 +83,12 @@ export default function ImpactPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
-      const rev = profile?.monthly_revenue ?? 0;
-      const churn = profile?.churn_rate ?? 5;
-      const clientCountForTier = profile?.client_count ?? 0;
-      const tier = String(calcPrice(Number(clientCountForTier), Number(rev), Number(churn)));
-
+      // Le palier facturé est calculé côté serveur à partir du profil en
+      // base (voir /api/create-checkout-session) — pas besoin de l'envoyer.
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
@@ -106,8 +103,11 @@ export default function ImpactPage() {
 
   const clients = Number(profile?.client_count ?? 100);
   const revenue = Number(profile?.monthly_revenue ?? 50000);
-  const churn = Number(profile?.churn_rate ?? 5);
-  const pricing = calcPricing({ clients, revenue, churn });
+  // Pas encore d'analyse à ce stade la plupart du temps : le churn_rate réel
+  // n'existe qu'une fois de vraies données importées (voir /api/analyze).
+  // En attendant, on illustre avec une moyenne sectorielle assumée.
+  const churn = Number(profile?.churn_rate ?? ASSUMED_CHURN_RATE);
+  const pricing = calcPricing(revenue);
 
   const clientsLostPerDay = (clients * churn) / 100 / 30;
   const clientsLostPerMonth = (clients * churn) / 100;

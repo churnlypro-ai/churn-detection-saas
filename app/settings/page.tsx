@@ -22,7 +22,7 @@ interface Profile {
   intercom_connected: boolean;
 }
 
-import { calcPrice, formatEuro, priceBreakdown, tierName } from '@/lib/pricing';
+import { calcPrice, formatEuro } from '@/lib/pricing';
 
 function EditField({
   label, value, onChange, suffix, min, max, step, icon: Icon,
@@ -66,7 +66,6 @@ export default function Settings() {
 
   const [editClients, setEditClients] = useState(100);
   const [editRevenue, setEditRevenue] = useState(50000);
-  const [editChurn, setEditChurn] = useState(5);
   const [editCompany, setEditCompany] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
 
@@ -88,7 +87,6 @@ export default function Settings() {
       setProfile(p);
       setEditClients(p?.client_count ?? 100);
       setEditRevenue(p?.monthly_revenue ?? 50000);
-      setEditChurn(p?.churn_rate ?? 5);
       setEditCompany(p?.company_name ?? '');
       setEditIndustry(p?.industry ?? '');
       setLoading(false);
@@ -106,7 +104,6 @@ export default function Settings() {
         company_name: editCompany,
         client_count: editClients,
         monthly_revenue: editRevenue,
-        churn_rate: editChurn,
         industry: editIndustry,
       })
       .eq('id', user.id);
@@ -122,7 +119,7 @@ export default function Settings() {
       setTimeout(() => setSavedToast(false), 3000);
       setTimeout(() => setHexStatus('idle'), 2500);
     }
-  }, [user, editCompany, editClients, editRevenue, editChurn, editIndustry]);
+  }, [user, editCompany, editClients, editRevenue, editIndustry]);
 
   async function handlePasswordChange(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -150,15 +147,18 @@ export default function Settings() {
     );
   }
 
-  const currentPrice = calcPrice(editClients, editRevenue, editChurn);
-  const breakdown = priceBreakdown(editClients, editRevenue, editChurn);
+  const currentPrice = calcPrice(editRevenue);
 
   const staticInfo = [
     { label: 'Entreprise', value: profile?.company_name || '—', icon: Building2 },
     { label: 'Clients', value: (profile?.client_count ?? 0).toString(), icon: Users },
     { label: 'Revenue mensuel', value: formatEuro(profile?.monthly_revenue ?? 0), icon: Euro },
     { label: 'Industry', value: profile?.industry || '—', icon: Building2 },
-    { label: 'Taux de churn', value: `${(profile?.churn_rate ?? 0).toFixed(1)}%`, icon: TrendingDown },
+    {
+      label: 'Taux de churn (calculé par Churnly)',
+      value: profile?.churn_rate != null ? `${profile.churn_rate.toFixed(1)}%` : 'Pas encore analysé',
+      icon: TrendingDown,
+    },
   ];
 
   return (
@@ -205,19 +205,7 @@ export default function Settings() {
               >
                 {formatEuro(currentPrice)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">/mois</span>
               </motion.p>
-              <div className="mt-4 space-y-1.5">
-                {breakdown.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                    <span>{item.label}</span>
-                    <span className="font-medium">+{formatEuro(item.amount)}</span>
-                  </div>
-                ))}
-                <div className="mt-2 flex items-center justify-between border-t border-brand-100 pt-2 text-sm font-semibold text-slate-900 dark:border-brand-800/40 dark:text-white">
-                  <span>Total</span>
-                  <span>{formatEuro(currentPrice)}</span>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">Modifiez vos chiffres à droite pour voir le prix changer en direct.</p>
+              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">Basé sur votre CA mensuel. Modifiez-le à droite pour voir le prix changer en direct.</p>
             </div>
           </motion.div>
 
@@ -230,7 +218,7 @@ export default function Settings() {
             <div className="relative h-[400px] w-full overflow-hidden rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
               <MagicHexagon
                 clientCount={editClients}
-                churnRate={editChurn}
+                churnRate={profile?.churn_rate ?? undefined}
                 monthlyRevenue={editRevenue}
                 isLocked={isLocked}
                 status={hexStatus}
@@ -278,7 +266,10 @@ export default function Settings() {
                 </div>
                 <EditField label="Nombre de clients" value={editClients} onChange={setEditClients} min={1} max={10000} step={1} icon={Users} />
                 <EditField label="Revenue mensuel" value={editRevenue} onChange={setEditRevenue} min={0} max={1000000} step={1000} suffix="€" icon={Euro} />
-                <EditField label="Taux de churn" value={editChurn} onChange={setEditChurn} min={0} max={50} step={0.5} suffix="%" icon={TrendingDown} />
+                <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                  <TrendingDown className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                  Le taux de churn n&apos;est pas à saisir — Churnly le calcule automatiquement à partir de vos vraies données, à chaque nouvelle analyse.
+                </p>
                 <div>
                   <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                     <Building2 className="h-3.5 w-3.5" /> Industrie

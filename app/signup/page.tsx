@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, Briefcase, Star, ArrowRight, ArrowLeft, Check, Loader2, TrendingDown, AlertTriangle, Mail } from 'lucide-react';
-import { calcPricing, calcPrice, calcManagerPrice, formatEuro } from '@/lib/pricing';
+import { Building2, Users, Euro, Briefcase, Star, ArrowRight, ArrowLeft, Check, Loader2, AlertTriangle, Mail } from 'lucide-react';
+import { calcPricing, calcManagerPrice, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
 
 type Industry = 'saas' | 'agency' | 'ecommerce' | 'manager' | 'other';
 
@@ -30,7 +30,6 @@ export default function Signup() {
   const [companyName, setCompanyName] = useState('');
   const [clientCount, setClientCount] = useState(100);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
-  const [churnRate, setChurnRate] = useState(5);
   const [industry, setIndustry] = useState<Industry>('saas');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -154,7 +153,7 @@ export default function Signup() {
     const completeRes = await fetch('/api/complete-signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, companyName, clientCount, monthlyRevenue, industry, churnRate }),
+      body: JSON.stringify({ email, password, companyName, clientCount, monthlyRevenue, industry }),
     });
 
     if (!completeRes.ok) {
@@ -173,7 +172,7 @@ export default function Signup() {
         fetch('/api/verify-company', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ companyName, clientCount, monthlyRevenue, churnRate }),
+          body: JSON.stringify({ companyName, clientCount, monthlyRevenue }),
         }).catch(() => {
           // best-effort enrichment, never blocks signup
         });
@@ -219,14 +218,14 @@ export default function Signup() {
   const revenueMax = isManager ? 500000 : 2000000;
   const revenueStep = isManager ? 100 : 1000;
 
-  const pricing = calcPricing({ clients: clientCount, revenue: monthlyRevenue, churn: churnRate });
+  const pricing = calcPricing(monthlyRevenue);
   const displayedTier = isManager ? calcManagerPrice(clientCount) : pricing.monthly;
-  // Un arrondi classique affiche "0 client à risque" dès que clientCount*churnRate < 0.5
-  // (ex: 1 client à 30% de churn) — techniquement correct mais trompeur, puisque le
-  // risque réel n'est pas nul. On affiche donc au moins 1 dès qu'il y a un churn non nul
-  // sur au moins un client, sans jamais inventer de risque qui n'existe pas.
-  const atRisk = clientCount > 0 && churnRate > 0 ? Math.max(1, Math.round((clientCount * churnRate) / 100)) : 0;
-  const monthlyLoss = (monthlyRevenue * churnRate) / 100;
+  // On ne demande jamais le vrai taux de churn avant l'inscription (personne
+  // ne le connaît). Cet écran est une illustration basée sur une moyenne
+  // sectorielle — le vrai chiffre, calculé par Churnly, n'arrive qu'après
+  // la première analyse réelle des données.
+  const atRisk = clientCount > 0 ? Math.max(1, Math.round((clientCount * ASSUMED_CHURN_RATE) / 100)) : 0;
+  const monthlyLoss = (monthlyRevenue * ASSUMED_CHURN_RATE) / 100;
   const annualLoss = monthlyLoss * 12;
   const arpu = clientCount > 0 ? monthlyRevenue / clientCount : 0;
 
@@ -337,11 +336,11 @@ export default function Signup() {
                   <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Configurez votre profil</h1>
                   <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">Analyse personnalisée.</p>
                   <div className="space-y-5">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Nom de l&apos;entreprise</label>
+                    <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-4 dark:border-brand-800/40 dark:bg-brand-500/5">
+                      <label className="mb-2 block text-sm font-semibold text-brand-700 dark:text-brand-400">Nom de l&apos;entreprise</label>
                       <div className="relative">
-                        <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input type="text" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white" placeholder="Acme Inc" />
+                        <Building2 className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400 dark:text-brand-500" />
+                        <input type="text" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full rounded-xl border border-brand-200 bg-white py-3.5 pl-12 pr-4 text-lg font-semibold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-brand-800/60 dark:bg-slate-900 dark:text-white" placeholder="Acme Inc" />
                       </div>
                     </div>
                     <div>
@@ -404,16 +403,10 @@ export default function Signup() {
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">Taux de churn mensuel (%)</label>
-                      <div className="flex items-center gap-3">
-                        <TrendingDown className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                        <input type="range" min={1} max={50} step={0.5} value={churnRate} onChange={(e) => setChurnRate(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
-                        <input type="number" min={1} max={50} step={0.5} value={churnRate} onChange={(e) => setChurnRate(Math.max(1, Math.min(50, Number(e.target.value))))} className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400" />
-                      </div>
-                      {churnRate > 50 && <p className="mt-2 text-xs font-medium text-red-500">Vous souffrez vraiment. Churnly peut vous aider.</p>}
-                    </div>
                   </div>
+                  <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
+                    Pas besoin de connaître votre taux de churn — c&apos;est justement ce que Churnly calcule pour vous, à partir de vos vraies données.
+                  </p>
                   {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
                   <div className="mt-6 flex gap-3">
                     <button onClick={() => setStep(2)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> Retour</button>
@@ -434,10 +427,10 @@ export default function Signup() {
                     <p className="mt-2 text-3xl font-extrabold text-red-600 dark:text-red-400">{formatEuro(annualLoss)}</p>
                     <p className="mt-1 text-xs text-red-500 dark:text-red-400">perte annuelle projetée</p>
                   </motion.div>
-                  <div className="mb-4 grid grid-cols-3 gap-3">
+                  <div className="mb-3 grid grid-cols-3 gap-3">
                     {[
-                      { label: 'Churn', value: `${churnRate}%`, icon: TrendingDown, color: 'text-red-500 dark:text-red-400' },
-                      { label: 'Clients à risque', value: `${atRisk}`, icon: Users, color: 'text-amber-600 dark:text-amber-400' },
+                      { label: 'Clients', value: `${clientCount}`, icon: Users, color: 'text-slate-700 dark:text-slate-300' },
+                      { label: 'À risque (estimé)', value: `${atRisk}`, icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400' },
                       { label: 'MRR', value: formatEuro(monthlyRevenue), icon: Euro, color: 'text-slate-700 dark:text-slate-300' },
                     ].map((stat, i) => (
                       <motion.div key={stat.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.1 }} className="rounded-xl border border-slate-100 bg-white p-4 text-center dark:border-slate-800 dark:bg-slate-900">
@@ -447,6 +440,9 @@ export default function Signup() {
                       </motion.div>
                     ))}
                   </div>
+                  <p className="mb-4 text-xs text-slate-400 dark:text-slate-500">
+                    Estimation basée sur un taux de churn moyen de {ASSUMED_CHURN_RATE}% — votre vrai chiffre sera calculé après votre première analyse.
+                  </p>
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mb-4 rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-900/60">
                     <p className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400">Projection sur 12 mois (revenue perdue cumulée)</p>
                     <div className="flex h-24 items-end gap-1">
@@ -465,7 +461,7 @@ export default function Signup() {
                       {formatEuro(displayedTier)}<span className="text-sm font-medium text-slate-400 dark:text-slate-500">/mois</span>
                     </motion.p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {isManager ? `${clientCount} modèle${clientCount > 1 ? 's' : ''} géré${clientCount > 1 ? 's' : ''} · Annulable à tout moment.` : `Score: ${pricing.score.toFixed(1)} · Palier: ${pricing.tierName} · Annulable à tout moment.`}
+                      {isManager ? `${clientCount} modèle${clientCount > 1 ? 's' : ''} géré${clientCount > 1 ? 's' : ''} · Annulable à tout moment.` : `Palier ${pricing.tierName} · Annulable à tout moment.`}
                     </p>
                   </div>
                   <div className="mb-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400">

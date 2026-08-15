@@ -18,25 +18,23 @@ export async function POST(req: NextRequest) {
   const user = userData.user;
   const { data: profile } = await supabaseAdmin
     .from('users')
-    .select('stripe_customer_id, industry, trial_used, client_count, monthly_revenue, churn_rate')
+    .select('stripe_customer_id, industry, trial_used, client_count, monthly_revenue')
     .eq('id', user.id)
     .maybeSingle();
 
   // Le palier est calculé côté serveur à partir des données du profil en
   // base, jamais à partir de ce que le client envoie dans le body — sinon
   // n'importe qui pourrait appeler cette route avec un tier arbitraire (ex:
-  // "150") et payer moins cher que ce que son propre volume de clients/CA
-  // justifie.
+  // "150") et payer moins cher que ce que son propre CA ne le justifie.
   const p = profile as {
     industry?: string;
     client_count?: number | null;
     monthly_revenue?: number | null;
-    churn_rate?: number | null;
   } | null;
   const isManagerProfile = p?.industry === 'manager';
   const tier = isManagerProfile
     ? calcManagerPrice(Number(p?.client_count) || 0)
-    : calcPrice(Number(p?.client_count) || 0, Number(p?.monthly_revenue) || 0, Number(p?.churn_rate) || 5);
+    : calcPrice(Number(p?.monthly_revenue) || 0);
   const priceId = PRICE_IDS[String(tier)];
   if (!priceId) {
     console.error(

@@ -23,11 +23,11 @@ const INCLUDED_FEATURES = [
 const FAQ_ITEMS = [
   {
     q: 'Comment le prix est-il calculé ?',
-    a: 'Votre prix dépend de votre chiffre d\'affaires mensuel, de votre taux de churn et du nombre de clients. Plus votre risque de churn est élevé, plus l\'analyse a de valeur — le prix s\'ajuste automatiquement à votre situation.',
+    a: 'Votre prix dépend uniquement de votre chiffre d\'affaires mensuel — pas besoin de connaître votre taux de churn à l\'avance, c\'est justement ce que Churnly calcule pour vous à partir de vos vraies données.',
   },
   {
     q: 'Puis-je changer de palier plus tard ?',
-    a: 'Oui. Votre palier est recalculé automatiquement à chaque mise à jour de vos données (CA, churn, nombre de clients) — vous n\'avez rien à faire manuellement.',
+    a: 'Oui. Votre palier est recalculé automatiquement à chaque mise à jour de votre CA — vous n\'avez rien à faire manuellement.',
   },
   {
     q: 'Y a-t-il un engagement ?',
@@ -52,13 +52,6 @@ const TIER_EXAMPLES = [
   { name: 'Moyen', price: 400, description: 'Pour les entreprises avec un risque de churn actif.', highlight: true },
   { name: 'Enterprise', price: 800, description: 'Pour les bases clients larges ou à fort enjeu.', highlight: false },
 ];
-
-function getChurnLabel(rate: number): { label: string; className: string } {
-  if (rate < 5) return { label: 'Excellent', className: 'text-emerald-600 dark:text-emerald-400' };
-  if (rate < 10) return { label: 'Bon', className: 'text-lime-600 dark:text-lime-400' };
-  if (rate < 15) return { label: 'À surveiller', className: 'text-orange-600 dark:text-orange-400' };
-  return { label: 'Critique', className: 'text-red-600 dark:text-red-400' };
-}
 
 function FaqAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -99,9 +92,8 @@ function FaqAccordion() {
 export default function PricingPage() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [monthlyRevenue, setMonthlyRevenue] = useState(100000);
-  const [churnRate, setChurnRate] = useState(5);
   const [isCalculating, setIsCalculating] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
@@ -112,14 +104,13 @@ export default function PricingPage() {
     });
   }, []);
 
-  const pricing = calcPricing({ clients: DEFAULT_CLIENT_COUNT, revenue: monthlyRevenue, churn: churnRate });
-  const churnLabel = getChurnLabel(churnRate);
+  const pricing = calcPricing(monthlyRevenue);
 
   function handleCalculate() {
     setIsCalculating(true);
     setTimeout(() => {
       setIsCalculating(false);
-      setStep(3);
+      setStep(2);
     }, 2200);
   }
 
@@ -142,7 +133,7 @@ export default function PricingPage() {
       // facturé corresponde bien à ce qui vient d'être affiché à l'écran.
       await supabase
         .from('users')
-        .update({ client_count: DEFAULT_CLIENT_COUNT, monthly_revenue: monthlyRevenue, churn_rate: churnRate })
+        .update({ client_count: DEFAULT_CLIENT_COUNT, monthly_revenue: monthlyRevenue })
         .eq('id', user.id);
 
       const response = await fetch('/api/create-checkout-session', {
@@ -203,112 +194,59 @@ export default function PricingPage() {
               transition={{ duration: 0.6, ease: EASE_OUT }}
               className="flex w-full max-w-md flex-col items-center text-center"
             >
-              <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">Étape 1/3</p>
+              <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">Étape 1/2</p>
               <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
                 Quel est votre chiffre d&apos;affaires mensuel ?
-              </h2>
-
-              <input
-                type="range"
-                min={1000}
-                max={2000000}
-                step={5000}
-                value={monthlyRevenue}
-                onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
-                className="mt-10 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700"
-              />
-
-              <div className="mt-6 flex items-center gap-3">
-                <motion.p
-                  key={monthlyRevenue}
-                  initial={{ scale: 0.9, opacity: 0.6 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-4xl font-extrabold text-brand-600 dark:text-brand-400"
-                >
-                  {formatEuro(monthlyRevenue)}
-                </motion.p>
-                <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900">
-                  <input
-                    type="number"
-                    min={1000}
-                    max={2000000}
-                    step={5000}
-                    value={monthlyRevenue}
-                    onChange={(e) => setMonthlyRevenue(Number(e.target.value) || 0)}
-                    onBlur={(e) => setMonthlyRevenue(Math.max(1000, Math.min(2000000, Number(e.target.value) || 1000)))}
-                    className="w-24 bg-transparent text-right text-sm font-semibold text-slate-700 focus:outline-none dark:text-slate-200"
-                    aria-label="Chiffre d'affaires mensuel en euros"
-                  />
-                  <span className="text-sm text-slate-400 dark:text-slate-500">€</span>
-                </div>
-              </div>
-
-              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                Cela nous aide à calculer votre risque de churn.
-              </p>
-
-              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-                <strong>📊 C&apos;est une moyenne :</strong> ce chiffre représente votre CA mensuel moyen. Votre
-                prix réel dépendra aussi de votre taux de churn et de la taille de votre client base. Ne vous
-                inquiétez pas si ce n&apos;est pas parfait — nous adapterons automatiquement lors de la facturation.
-              </div>
-
-              <motion.button
-                onClick={() => setStep(2)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="mt-12 flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
-              >
-                Suivant <ArrowRight className="h-4 w-4" />
-              </motion.button>
-            </motion.div>
-          )}
-
-          {step === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.6, ease: EASE_OUT }}
-              className="flex w-full max-w-md flex-col items-center text-center"
-            >
-              <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">Étape 2/3</p>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-                Quel est votre taux de churn mensuel ?
               </h2>
 
               {!isCalculating ? (
                 <>
                   <input
                     type="range"
-                    min={1}
-                    max={50}
-                    step={1}
-                    value={churnRate}
-                    onChange={(e) => setChurnRate(Number(e.target.value))}
+                    min={1000}
+                    max={2000000}
+                    step={5000}
+                    value={monthlyRevenue}
+                    onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
                     className="mt-10 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700"
                   />
-                  <motion.p
-                    key={churnRate}
-                    initial={{ scale: 0.9, opacity: 0.6 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className={`mt-6 text-4xl font-extrabold ${churnLabel.className}`}
-                  >
-                    {churnRate}%<span className="ml-2 text-lg text-slate-500 dark:text-slate-400">{churnLabel.label}</span>
-                  </motion.p>
 
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
-                  >
-                    <strong>Si vous ne savez pas :</strong> le churn moyen est d&apos;environ 5 à 8 % par mois
-                    (~50 % par an).
-                  </motion.div>
+                  <div className="mt-6 flex items-center gap-3">
+                    <motion.p
+                      key={monthlyRevenue}
+                      initial={{ scale: 0.9, opacity: 0.6 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-4xl font-extrabold text-brand-600 dark:text-brand-400"
+                    >
+                      {formatEuro(monthlyRevenue)}
+                    </motion.p>
+                    <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900">
+                      <input
+                        type="number"
+                        min={1000}
+                        max={2000000}
+                        step={5000}
+                        value={monthlyRevenue}
+                        onChange={(e) => setMonthlyRevenue(Number(e.target.value) || 0)}
+                        onBlur={(e) => setMonthlyRevenue(Math.max(1000, Math.min(2000000, Number(e.target.value) || 1000)))}
+                        className="w-24 bg-transparent text-right text-sm font-semibold text-slate-700 focus:outline-none dark:text-slate-200"
+                        aria-label="Chiffre d'affaires mensuel en euros"
+                      />
+                      <span className="text-sm text-slate-400 dark:text-slate-500">€</span>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+                    C&apos;est le seul chiffre nécessaire pour calculer votre prix.
+                  </p>
+
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                    <strong>📊 C&apos;est une moyenne :</strong> ce chiffre représente votre CA mensuel moyen. Ne
+                    vous inquiétez pas si ce n&apos;est pas parfait — nous adapterons automatiquement lors de la
+                    facturation. Pas besoin de connaître votre taux de churn : c&apos;est Churnly qui le calcule,
+                    à partir de vos vraies données, une fois inscrit.
+                  </div>
 
                   <motion.button
                     onClick={handleCalculate}
@@ -326,23 +264,23 @@ export default function PricingPage() {
                   transition={{ duration: 0.4 }}
                   className="mt-12 flex flex-col items-center"
                 >
-                  <MagicHexagon variant="large" churnRate={churnRate} status="loading" />
+                  <MagicHexagon variant="large" status="loading" />
                   <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">On calcule votre prix…</p>
                 </motion.div>
               )}
             </motion.div>
           )}
 
-          {step === 3 && (
+          {step === 2 && (
             <motion.div
-              key="step3"
+              key="step2-result"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE_OUT }}
               className="relative flex w-full max-w-lg flex-col items-center text-center"
             >
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.08]">
-                <MagicHexagon variant="large" churnRate={churnRate} status="success" />
+                <MagicHexagon variant="large" status="success" />
               </div>
 
               <div className="relative z-10 w-full rounded-3xl border border-slate-100 bg-white p-10 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
@@ -361,7 +299,7 @@ export default function PricingPage() {
                 </motion.p>
 
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  Score de risque {pricing.score.toFixed(1)} · Palier {pricing.tierName}
+                  Palier {pricing.tierName}
                 </p>
 
                 <div className="mt-8 space-y-2.5 text-left">

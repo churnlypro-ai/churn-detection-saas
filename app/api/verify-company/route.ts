@@ -52,9 +52,9 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { companyName, clientCount, monthlyRevenue, churnRate } = body ?? {};
+  const { companyName, monthlyRevenue } = body ?? {};
 
-  const tier = calcPrice(Number(clientCount) || 0, Number(monthlyRevenue) || 0, Number(churnRate) || 5);
+  const tier = calcPrice(Number(monthlyRevenue) || 0);
   const leadTier = tierName(tier);
 
   let registry = { verified: false, legalName: null as string | null, siret: null as string | null };

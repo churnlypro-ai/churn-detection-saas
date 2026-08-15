@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { EASE_OUT } from '@/lib/animations';
-import { calcPricing, formatEuro } from '@/lib/pricing';
+import { calcPricing, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
 import { ArrowRight } from 'lucide-react';
 
 function SliderField({ label, value, min, max, step, onChange, display, inputSuffix }: {
@@ -66,14 +66,16 @@ function Row({ label, value, bold, valueClassName = '' }: { label: string; value
 export default function Calculator() {
   const [clientCount, setClientCount] = useState(100);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
-  const [churnRate, setChurnRate] = useState(5);
 
   const priceCardRef = useRef<HTMLDivElement>(null);
   const priceCardInView = useInView(priceCardRef, { once: false, amount: 0.3 });
 
   const stats = useMemo(() => {
-    const pricing = calcPricing({ clients: clientCount, revenue: monthlyRevenue, churn: churnRate });
-    const clientsLostPerMonth = (clientCount * churnRate) / 100;
+    const pricing = calcPricing(monthlyRevenue);
+    // Le prix ne dépend que du CA — le taux de churn n'est jamais demandé
+    // (personne ne le connaît avant sa première analyse). Ces pertes sont
+    // une illustration basée sur une moyenne sectorielle assumée.
+    const clientsLostPerMonth = (clientCount * ASSUMED_CHURN_RATE) / 100;
     const arpu = clientCount > 0 ? monthlyRevenue / clientCount : 0;
     const revenueLostPerMonth = arpu * clientsLostPerMonth;
     const annualLoss = revenueLostPerMonth * 12;
@@ -81,6 +83,7 @@ export default function Calculator() {
     const improvedRevenueLost = arpu * improvedClientsLost;
     const annualSavings = (revenueLostPerMonth - improvedRevenueLost) * 12;
     const monthlySavings = revenueLostPerMonth - improvedRevenueLost;
+    const roi = pricing.monthly > 0 ? Math.round(monthlySavings / pricing.monthly) : 0;
 
     return {
       ...pricing,
@@ -92,8 +95,9 @@ export default function Calculator() {
       improvedRevenueLost,
       annualSavings,
       monthlySavings,
+      roi,
     };
-  }, [clientCount, monthlyRevenue, churnRate]);
+  }, [clientCount, monthlyRevenue]);
 
   return (
     <section className="mx-auto max-w-5xl px-6 py-24">
@@ -137,16 +141,10 @@ export default function Calculator() {
             display={`CA: ${formatEuro(monthlyRevenue)}/mois`}
             inputSuffix="€"
           />
-          <SliderField
-            label="Taux de churn"
-            value={churnRate}
-            min={1}
-            max={50}
-            step={0.5}
-            onChange={setChurnRate}
-            display={`Churn: ${churnRate}%`}
-            inputSuffix="%"
-          />
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Le prix dépend uniquement de votre CA. Pas besoin de connaître votre taux de churn —
+            c&apos;est Churnly qui le calcule, à partir de vos vraies données.
+          </p>
         </motion.div>
 
         <motion.div
@@ -179,7 +177,7 @@ export default function Calculator() {
               <Row label="Annuel" value={`${formatEuro(stats.annualPerMonth)}/mois (1 mois gratuit)`} />
             </div>
             <div className="mt-4 border-t border-brand-200 pt-4 dark:border-brand-800/40">
-              <Row label="Gain vs perte churn" value={`${formatEuro(stats.savingsPerMonth)}/mois`} bold valueClassName="text-emerald-600 dark:text-emerald-400" />
+              <Row label="Gain vs perte churn" value={`${formatEuro(stats.monthlySavings)}/mois`} bold valueClassName="text-emerald-600 dark:text-emerald-400" />
             </div>
             <a
               href="/signup"
@@ -188,7 +186,7 @@ export default function Calculator() {
               Commencer — {formatEuro(stats.monthly)}/mois <ArrowRight className="h-4 w-4" />
             </a>
             <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
-              Score: {stats.score.toFixed(1)} · Palier: {stats.tierName}
+              Palier: {stats.tierName}
             </p>
           </motion.div>
 

@@ -16,7 +16,7 @@ interface Profile {
   churn_rate: number | null;
 }
 
-import { calcPrice, formatEuro, priceBreakdown } from '@/lib/pricing';
+import { calcPrice, tierName, formatEuro } from '@/lib/pricing';
 
 function PreviewContent() {
   const router = useRouter();
@@ -75,16 +75,12 @@ function PreviewContent() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
-      const rev = profile?.monthly_revenue ?? 0;
-      const churn = profile?.churn_rate ?? 5;
-      const clients = profile?.client_count ?? 0;
-      const dynamicPrice = calcPrice(Number(clients), Number(rev), Number(churn));
-      const tier = String(dynamicPrice);
-
+      // Le palier facturé est calculé côté serveur à partir du profil en
+      // base (voir /api/create-checkout-session) — pas besoin de l'envoyer.
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
@@ -109,10 +105,7 @@ function PreviewContent() {
   }
 
   const rev = Number(profile?.monthly_revenue ?? 0);
-  const churn = Number(profile?.churn_rate ?? 5);
-  const clients = Number(profile?.client_count ?? 0);
-  const dynamicPrice = calcPrice(clients, rev, churn);
-  const breakdown = priceBreakdown(clients, rev, churn);
+  const dynamicPrice = calcPrice(rev);
 
   return (
     <>
@@ -213,18 +206,7 @@ function PreviewContent() {
                     <span className="text-lg font-medium text-slate-400 dark:text-slate-500">/mois</span>
                   </motion.p>
 
-                  <div className="mt-5 space-y-1.5">
-                    {breakdown.map((item) => (
-                      <div key={item.label} className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                        <span>{item.label}</span>
-                        <span className="font-medium">+{formatEuro(item.amount)}</span>
-                      </div>
-                    ))}
-                    <div className="mt-2 flex items-center justify-between border-t border-brand-100 pt-2 text-sm font-semibold text-slate-900 dark:border-brand-800/40 dark:text-white">
-                      <span>Total</span>
-                      <span>{formatEuro(dynamicPrice)}</span>
-                    </div>
-                  </div>
+                  <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">Palier {tierName(dynamicPrice)} · basé sur votre CA mensuel</p>
                 </motion.div>
 
                 <div className="mt-6 space-y-2.5">
