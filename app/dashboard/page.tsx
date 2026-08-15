@@ -21,6 +21,7 @@ interface Profile {
   industry: string | null;
   churn_rate: number | null;
   trial_end: string | null;
+  trial_used: boolean | null;
 }
 
 interface RiskFactor {
@@ -861,14 +862,16 @@ export default function Dashboard() {
           >
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Débloquez la liste complète de vos clients à risque, les emails générés par IA et bien plus
-              {profile?.industry === 'manager' ? '.' : <> — <strong className="text-slate-900 dark:text-white">3 jours d'essai gratuit, sans engagement.</strong></>}
+              {profile?.industry === 'manager' || profile?.trial_used
+                ? '.'
+                : <> — <strong className="text-slate-900 dark:text-white">3 jours d'essai gratuit, sans engagement.</strong></>}
             </p>
             <button
               onClick={handleSubscribe}
               disabled={checkoutLoading}
               className="flex flex-shrink-0 items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
             >
-              {checkoutLoading ? 'Redirection…' : profile?.industry === 'manager' ? 'Démarrer mon abonnement' : 'Démarrer mon essai gratuit'}
+              {checkoutLoading ? 'Redirection…' : profile?.industry === 'manager' || profile?.trial_used ? 'Démarrer mon abonnement' : 'Démarrer mon essai gratuit'}
             </button>
           </motion.div>
         )}
