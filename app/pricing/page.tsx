@@ -9,56 +9,22 @@ import { EASE_OUT } from '@/lib/animations';
 import { supabase } from '@/lib/supabase';
 import { calcPricing, formatEuro } from '@/lib/pricing';
 import { ArrowRight, Check, ChevronDown } from 'lucide-react';
+import { useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 
 const DEFAULT_CLIENT_COUNT = 100;
 
-const INCLUDED_FEATURES = [
-  'Liste complète des clients à risque',
-  'Score de churn détaillé par client',
-  '5 templates d\'email personnalisés',
-  'Actions recommandées par IA',
-  'Support par email',
+const TIER_EXAMPLE_META = [
+  { name: 'Petit', price: 150, highlight: false },
+  { name: 'Moyen', price: 400, highlight: true },
+  { name: 'Enterprise', price: 800, highlight: false },
 ];
 
-const FAQ_ITEMS = [
-  {
-    q: 'Comment le prix est-il calculé ?',
-    a: 'Votre prix dépend uniquement de votre chiffre d\'affaires mensuel — pas besoin de connaître votre taux de churn à l\'avance, c\'est justement ce que Churnly calcule pour vous à partir de vos vraies données.',
-  },
-  {
-    q: 'Puis-je changer de palier plus tard ?',
-    a: 'Oui. Votre palier est recalculé automatiquement à chaque mise à jour de votre CA — vous n\'avez rien à faire manuellement.',
-  },
-  {
-    q: 'Y a-t-il un engagement ?',
-    a: 'Aucun. Vous pouvez annuler à tout moment depuis vos réglages, sans frais ni préavis.',
-  },
-  {
-    q: 'Qu\'est-ce qui est inclus dans tous les plans ?',
-    a: 'Tous les paliers incluent la liste complète de vos clients à risque, un score de churn détaillé, des templates d\'email personnalisés, des actions recommandées par IA, et le support par email.',
-  },
-  {
-    q: 'Proposez-vous une remise à l\'engagement annuel ?',
-    a: 'Oui — l\'engagement annuel revient à environ un mois offert par rapport au paiement mensuel.',
-  },
-  {
-    q: 'Que se passe-t-il si mes chiffres changent après l\'inscription ?',
-    a: 'Votre prix se recalcule automatiquement à partir de vos données réelles. Aucune surprise, aucune renégociation nécessaire.',
-  },
-];
-
-const TIER_EXAMPLES = [
-  { name: 'Petit', price: 150, description: 'Pour les équipes qui démarrent le suivi du churn.', highlight: false },
-  { name: 'Moyen', price: 400, description: 'Pour les entreprises avec un risque de churn actif.', highlight: true },
-  { name: 'Enterprise', price: 800, description: 'Pour les bases clients larges ou à fort enjeu.', highlight: false },
-];
-
-function FaqAccordion() {
+function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <div className="mx-auto max-w-2xl divide-y divide-slate-100 dark:divide-slate-800">
-      {FAQ_ITEMS.map((item, i) => (
+      {items.map((item, i) => (
         <div key={item.q} className="py-4">
           <button
             type="button"
@@ -97,6 +63,9 @@ export default function PricingPage() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const t = useTranslations('pricing');
+  const tFooter = useTranslations('home').footer;
+  const tierName = useTierName();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -142,12 +111,12 @@ export default function PricingPage() {
         body: JSON.stringify({}),
       });
 
-      if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
+      if (!response.ok) throw new Error(t.checkoutErrorStart);
 
       const { url } = await response.json();
       window.location.href = url;
     } catch (err) {
-      setCheckoutError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+      setCheckoutError(err instanceof Error ? err.message : t.checkoutErrorFallback);
       setCheckoutLoading(false);
     }
   }
@@ -163,7 +132,7 @@ export default function PricingPage() {
           transition={{ duration: 0.5, ease: EASE_OUT }}
           className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400"
         >
-          Tarifs
+          {t.eyebrow}
         </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 16 }}
@@ -171,7 +140,7 @@ export default function PricingPage() {
           transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }}
           className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl"
         >
-          Un prix qui s&apos;adapte à votre taille
+          {t.title}
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 16 }}
@@ -179,7 +148,7 @@ export default function PricingPage() {
           transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }}
           className="mx-auto mt-4 max-w-lg text-lg text-slate-600 dark:text-slate-400"
         >
-          Payez ce que vous utilisez. Zéro engagement.
+          {t.subtitle}
         </motion.p>
       </section>
 
@@ -194,9 +163,9 @@ export default function PricingPage() {
               transition={{ duration: 0.6, ease: EASE_OUT }}
               className="flex w-full max-w-md flex-col items-center text-center"
             >
-              <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">Étape 1/2</p>
+              <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">{t.step1Label}</p>
               <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-                Quel est votre chiffre d&apos;affaires mensuel ?
+                {t.step1Title}
               </h2>
 
               {!isCalculating ? (
@@ -231,21 +200,18 @@ export default function PricingPage() {
                         onChange={(e) => setMonthlyRevenue(Number(e.target.value) || 0)}
                         onBlur={(e) => setMonthlyRevenue(Math.max(1000, Math.min(2000000, Number(e.target.value) || 1000)))}
                         className="w-24 bg-transparent text-right text-sm font-semibold text-slate-700 focus:outline-none dark:text-slate-200"
-                        aria-label="Chiffre d'affaires mensuel en euros"
+                        aria-label={t.revenueAriaLabel}
                       />
                       <span className="text-sm text-slate-400 dark:text-slate-500">€</span>
                     </div>
                   </div>
 
                   <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                    C&apos;est le seul chiffre nécessaire pour calculer votre prix.
+                    {t.helperText}
                   </p>
 
                   <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-                    <strong>📊 C&apos;est une moyenne :</strong> ce chiffre représente votre CA mensuel moyen. Ne
-                    vous inquiétez pas si ce n&apos;est pas parfait — nous adapterons automatiquement lors de la
-                    facturation. Pas besoin de connaître votre taux de churn : c&apos;est Churnly qui le calcule,
-                    à partir de vos vraies données, une fois inscrit.
+                    <strong>{t.averageNoteBold}</strong> {t.averageNoteBody}
                   </div>
 
                   <motion.button
@@ -254,7 +220,7 @@ export default function PricingPage() {
                     whileTap={{ scale: 0.98 }}
                     className="mt-12 flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
                   >
-                    Calculer mon prix <ArrowRight className="h-4 w-4" />
+                    {t.calculateButton} <ArrowRight className="h-4 w-4" />
                   </motion.button>
                 </>
               ) : (
@@ -265,7 +231,7 @@ export default function PricingPage() {
                   className="mt-12 flex flex-col items-center"
                 >
                   <MagicHexagon variant="large" status="loading" />
-                  <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">On calcule votre prix…</p>
+                  <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">{t.calculatingLabel}</p>
                 </motion.div>
               )}
             </motion.div>
@@ -285,7 +251,7 @@ export default function PricingPage() {
 
               <div className="relative z-10 w-full rounded-3xl border border-slate-100 bg-white p-10 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
                 <p className="text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">
-                  Votre plan personnalisé
+                  {t.yourPlan}
                 </p>
 
                 <motion.p
@@ -295,15 +261,15 @@ export default function PricingPage() {
                   className="mt-3 text-6xl font-extrabold text-slate-900 dark:text-white"
                 >
                   {formatEuro(pricing.monthly)}
-                  <span className="text-2xl font-medium text-slate-400 dark:text-slate-500">/mois</span>
+                  <span className="text-2xl font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
                 </motion.p>
 
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  Palier {pricing.tierName}
+                  {t.tierPrefix} {tierName(pricing.tierName)}
                 </p>
 
                 <div className="mt-8 space-y-2.5 text-left">
-                  {INCLUDED_FEATURES.map((feature, i) => (
+                  {t.features.map((feature, i) => (
                     <motion.div
                       key={feature}
                       initial={{ opacity: 0, x: -12 }}
@@ -326,9 +292,9 @@ export default function PricingPage() {
                   className="mt-8 rounded-2xl border border-brand-100 bg-brand-50/60 p-5 dark:border-brand-800/40 dark:bg-brand-500/10"
                 >
                   <p className="font-semibold text-brand-700 dark:text-brand-400">
-                    Ou {formatEuro(pricing.annualPerMonth)}/mois en annuel
+                    {t.annualOfferPrefix} {formatEuro(pricing.annualPerMonth)}{t.annualOfferSuffix}
                   </p>
-                  <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">1 mois offert sur l&apos;engagement annuel</p>
+                  <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">{t.annualOfferNote}</p>
                 </motion.div>
 
                 <motion.div
@@ -347,12 +313,12 @@ export default function PricingPage() {
                     {checkoutLoading ? (
                       <>
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        Redirection…
+                        {t.redirecting}
                       </>
                     ) : user ? (
-                      "S'abonner maintenant"
+                      t.subscribeNow
                     ) : (
-                      'Créer un compte pour continuer'
+                      t.createAccount
                     )}
                   </motion.button>
                   <motion.button
@@ -361,7 +327,7 @@ export default function PricingPage() {
                     onClick={() => router.push('/')}
                     className="rounded-full border-2 border-brand-600 px-8 py-4 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10"
                   >
-                    Voir la démo
+                    {t.seeDemo}
                   </motion.button>
                   {checkoutError && (
                     <p className="text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
@@ -369,7 +335,7 @@ export default function PricingPage() {
                 </motion.div>
 
                 <p className="mt-5 text-xs text-slate-400 dark:text-slate-500">
-                  Engagement 0 · Annulez quand vous voulez
+                  {t.noCommitment}
                 </p>
               </div>
             </motion.div>
@@ -385,7 +351,7 @@ export default function PricingPage() {
           transition={{ duration: 0.6, ease: EASE_OUT }}
           className="mb-4 text-center text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
         >
-          Des paliers à titre d&apos;exemple
+          {t.tierExamplesTitle}
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -394,11 +360,11 @@ export default function PricingPage() {
           transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }}
           className="mx-auto mb-12 max-w-lg text-center text-sm text-slate-500 dark:text-slate-400"
         >
-          Votre prix exact est calculé ci-dessus à partir de vos vrais chiffres — voici des repères pour situer votre palier.
+          {t.tierExamplesSubtitle}
         </motion.p>
 
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-3">
-          {TIER_EXAMPLES.map((tier, i) => (
+          {TIER_EXAMPLE_META.map((tier, i) => (
             <motion.div
               key={tier.name}
               initial={{ opacity: 0, y: 24 }}
@@ -411,13 +377,13 @@ export default function PricingPage() {
                   : 'border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900'
               }`}
             >
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{tier.name}</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{tierName(tier.name)}</p>
               <p className="mt-2 text-4xl font-extrabold text-slate-900 dark:text-white">
-                {formatEuro(tier.price)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">/mois</span>
+                {formatEuro(tier.price)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
               </p>
-              <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{tier.description}</p>
+              <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.tierExamples[i].description}</p>
               <ul className="mt-6 space-y-2 text-left text-sm text-slate-600 dark:text-slate-400">
-                {INCLUDED_FEATURES.slice(0, 3).map((f) => (
+                {t.features.slice(0, 3).map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <Check className="h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
                     {f}
@@ -437,18 +403,18 @@ export default function PricingPage() {
           transition={{ duration: 0.6, ease: EASE_OUT }}
           className="mb-12 text-center text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
         >
-          Questions fréquentes
+          {t.faqTitle}
         </motion.h2>
-        <FaqAccordion />
+        <FaqAccordion items={t.faq} />
       </section>
 
       <footer className="border-t border-slate-100 bg-white py-10 dark:border-slate-800 dark:bg-slate-950">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 dark:text-slate-500 sm:flex-row">
           <span>© {new Date().getFullYear()} Churnly</span>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">Confidentialité</a>
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">Conditions</a>
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">Contact</a>
+            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.privacy}</a>
+            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.terms}</a>
+            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.contact}</a>
           </div>
         </div>
       </footer>
