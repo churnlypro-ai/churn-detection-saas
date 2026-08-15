@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
   try {
     const { email, action, code: submittedCode } = await req.json();
 
-    if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'Email requis.' }, { status: 400 });
+    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: 'Email invalide.' }, { status: 400 });
     }
 
     if (action === 'send') {

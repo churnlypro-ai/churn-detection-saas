@@ -687,9 +687,16 @@ export default function Dashboard() {
     const clientCount = profile?.client_count ?? clients.length ?? 0;
     const mrr = profile?.monthly_revenue ?? clients.reduce((sum, c) => sum + (Number(c.revenue_monthly) || 0), 0);
     const churnRate = profile?.churn_rate ?? 0;
-    // Voir la note dans app/signup/page.tsx : un arrondi classique affiche
-    // "0 client à risque" alors qu'il y a un churn réel non nul, ce qui est trompeur.
-    const atRisk = clientCount > 0 && churnRate > 0 ? Math.max(1, Math.round((clientCount * churnRate) / 100)) : 0;
+    // Une fois une vraie analyse disponible, le nombre de clients à risque
+    // vient directement des résultats réels (churn_score >= 60), pas d'une
+    // formule qui multiplie le taux réel par client_count — un chiffre
+    // auto-déclaré à l'inscription qui peut ne plus correspondre du tout au
+    // nombre de clients réellement importés/analysés. Avant toute analyse,
+    // on garde l'estimation ; voir la note dans app/signup/page.tsx sur le
+    // Math.max(1, ...) qui évite d'afficher "0 client à risque" trompeur.
+    const atRisk = clients.length > 0
+      ? clients.filter((c) => c.churn_score >= 60).length
+      : (clientCount > 0 && churnRate > 0 ? Math.max(1, Math.round((clientCount * churnRate) / 100)) : 0);
     const ltv = clientCount ? mrr / clientCount : 0;
     const monthlyLoss = (mrr * churnRate) / 100;
     const annualLoss = monthlyLoss * 12;
@@ -698,12 +705,20 @@ export default function Dashboard() {
   }, [clients, profile]);
 
   const chartData = useMemo(() => {
-    const monthlyLoss = (metrics.mrr * metrics.churnRate) / 100;
-    return Array.from({ length: 12 }, (_, i) => ({
-      month: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'][i],
-      revenue: Math.round(metrics.mrr - monthlyLoss * (i + 1)),
-      loss: Math.round(monthlyLoss * (i + 1)),
-    }));
+    // Une soustraction linéaire (mrr - monthlyLoss * mois) part dans le
+    // négatif dès que le churn réel est élevé (ex: 40%/mois sur 3 mois de
+    // suite dépasse déjà le mrr de départ), ce qui casse visuellement les
+    // barres. Même modèle à effet composé que le reste du dashboard
+    // (ChurnEducationSection) : le revenu restant ne descend jamais sous 0.
+    const retention = 1 - metrics.churnRate / 100;
+    return Array.from({ length: 12 }, (_, i) => {
+      const revenue = metrics.mrr * Math.pow(Math.max(0, retention), i + 1);
+      return {
+        month: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'][i],
+        revenue: Math.round(revenue),
+        loss: Math.round(metrics.mrr - revenue),
+      };
+    });
   }, [metrics]);
 
   const riskDistribution = useMemo(() => {
@@ -957,7 +972,7 @@ export default function Dashboard() {
               <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Projection de revenue</h2>
             </div>
             <div className="h-[220px]">
-              <ResponsiveRevenueChart data={chartData} />
+              <ResponsiveRevenueChart data={chartData} mrr={metrics.mrr} />
             </div>
           </motion.div>
           <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.15 }} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -1018,8 +1033,11 @@ export default function Dashboard() {
 const REVENUE_BAR_AREA_HEIGHT = 170;
 const RISK_BAR_AREA_HEIGHT = 140;
 
-function ResponsiveRevenueChart({ data }: { data: { month: string; revenue: number; loss: number }[] }) {
-  const maxRev = Math.max(...data.map((d) => d.revenue), 1);
+function ResponsiveRevenueChart({ data, mrr }: { data: { month: string; revenue: number; loss: number }[]; mrr: number }) {
+  // Normalise sur le mrr de départ (revenue + loss vaut toujours ~mrr avec
+  // le modèle à effet composé) plutôt que sur le max de la série : un churn
+  // extrême (proche de 100%) ne fait alors jamais déborder les barres.
+  const total = Math.max(mrr, 1);
   return (
     <div className="flex h-full items-end gap-1">
       {data.map((d, i) => (
@@ -1027,13 +1045,13 @@ function ResponsiveRevenueChart({ data }: { data: { month: string; revenue: numb
           <div className="flex w-full flex-col items-center justify-end gap-0.5" style={{ height: REVENUE_BAR_AREA_HEIGHT }}>
             <motion.div
               initial={{ height: 0 }}
-              animate={{ height: `${(d.revenue / maxRev) * REVENUE_BAR_AREA_HEIGHT}px` }}
+              animate={{ height: `${Math.min(1, d.revenue / total) * REVENUE_BAR_AREA_HEIGHT}px` }}
               transition={{ duration: 0.8, ease: EASE_OUT, delay: i * 0.05 }}
               className="w-full rounded-t bg-brand-500/80"
             />
             <motion.div
               initial={{ height: 0 }}
-              animate={{ height: `${(d.loss / maxRev) * REVENUE_BAR_AREA_HEIGHT}px` }}
+              animate={{ height: `${Math.min(1, d.loss / total) * REVENUE_BAR_AREA_HEIGHT}px` }}
               transition={{ duration: 0.8, ease: EASE_OUT, delay: i * 0.05 + 0.1 }}
               className="w-full rounded-t bg-red-400/60"
             />
