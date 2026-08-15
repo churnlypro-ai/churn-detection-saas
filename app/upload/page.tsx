@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
-import { useTranslations } from '@/lib/i18n/LanguageContext';
+import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
 
 interface NormalizedRow {
   name: string;
@@ -25,6 +25,7 @@ export default function Upload() {
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
   const t = useTranslations('upload');
+  const { language } = useLanguage();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -93,7 +94,7 @@ export default function Upload() {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ clients, filename: file.name }),
+            body: JSON.stringify({ clients, filename: file.name, language }),
           });
 
           if (!response.ok) {

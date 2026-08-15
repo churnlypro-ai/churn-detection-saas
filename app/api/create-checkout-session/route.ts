@@ -87,7 +87,10 @@ export async function POST(req: NextRequest) {
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=cancelled`,
       metadata: { supabase_user_id: user.id, tier: String(tier) },
-      locale: 'fr',
+      // 'auto' laisse Stripe détecter la langue du navigateur du client au
+      // moment du checkout plutôt que de forcer le français — nécessaire
+      // maintenant que l'app est utilisable en anglais.
+      locale: 'auto',
     });
 
     return NextResponse.json({ url: session.url });

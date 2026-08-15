@@ -90,6 +90,7 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const t = useTranslations('dashboard');
+  const { language } = useLanguage();
   const EMAIL_TEMPLATES = t.emailTemplates.map((tpl, i) => ({ ...tpl, id: String(i), icon: EMAIL_TEMPLATE_ICONS[i] }));
 
   async function generateEmail(templateId: string) {
@@ -102,7 +103,7 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: 'generate_email', templateId, client }),
+        body: JSON.stringify({ action: 'generate_email', templateId, client, language }),
       });
       if (res.ok) {
         const data = await res.json();

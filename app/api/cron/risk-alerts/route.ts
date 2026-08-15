@@ -31,7 +31,7 @@ function daysBetween(from: number, to: number): number {
 
 async function processUserAlerts(
   supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
-  user: { id: string; email: string; company_name: string | null },
+  user: { id: string; email: string; company_name: string | null; language: string | null },
 ): Promise<number> {
   const { data: results } = await supabaseAdmin
     .from('analysis_results')
@@ -89,6 +89,7 @@ async function processUserAlerts(
     companyName: user.company_name || '',
     clients: clientsForEmail,
     dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+    language: user.language === 'en' ? 'en' : 'fr',
   });
 
   const upsertRows = toAlert.map((c) => ({
@@ -117,7 +118,7 @@ async function handleCron(req: NextRequest) {
 
   const { data: users, error: usersError } = await supabaseAdmin
     .from('users')
-    .select('id, email, company_name, subscription_status')
+    .select('id, email, company_name, subscription_status, language')
     .in('subscription_status', ['active', 'trialing']);
 
   if (usersError) {
@@ -127,7 +128,7 @@ async function handleCron(req: NextRequest) {
 
   const results: { userId: string; alerted: number }[] = [];
 
-  for (const user of (users ?? []) as { id: string; email: string; company_name: string | null }[]) {
+  for (const user of (users ?? []) as { id: string; email: string; company_name: string | null; language: string | null }[]) {
     try {
       const alerted = await processUserAlerts(supabaseAdmin, user);
       results.push({ userId: user.id, alerted });

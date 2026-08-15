@@ -10,7 +10,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 // no account.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { email, password, companyName, clientCount, monthlyRevenue, industry } = body ?? {};
+  const { email, password, companyName, clientCount, monthlyRevenue, industry, language } = body ?? {};
 
   if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
     return NextResponse.json({ error: 'Email et mot de passe requis.' }, { status: 400 });
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     email,
     password,
     email_confirm: true,
-    user_metadata: { company_name: companyName ?? '' },
+    user_metadata: { company_name: companyName ?? '', language: language === 'en' ? 'en' : 'fr' },
   });
 
   if (createError || !created?.user) {

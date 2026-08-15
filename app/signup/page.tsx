@@ -9,7 +9,7 @@ import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
 import { Building2, Users, Euro, Briefcase, Star, ArrowRight, ArrowLeft, Check, Loader2, AlertTriangle, Mail } from 'lucide-react';
 import { calcPricing, calcManagerPrice, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
-import { useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
+import { useLanguage, useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 
 type Industry = 'saas' | 'agency' | 'ecommerce' | 'manager' | 'other';
 
@@ -31,6 +31,7 @@ export default function Signup() {
   const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
   const t = useTranslations('signup');
   const tierName = useTierName();
+  const { language } = useLanguage();
 
   const steps = t.steps;
   const INDUSTRY_LABELS = t.industries;
@@ -159,7 +160,7 @@ export default function Signup() {
     const completeRes = await fetch('/api/complete-signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, companyName, clientCount, monthlyRevenue, industry }),
+      body: JSON.stringify({ email, password, companyName, clientCount, monthlyRevenue, industry, language }),
     });
 
     if (!completeRes.ok) {

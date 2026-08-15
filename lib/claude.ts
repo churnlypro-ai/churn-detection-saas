@@ -1,5 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+export type AnalysisLanguage = 'fr' | 'en';
+
+function languageInstruction(language: AnalysisLanguage): string {
+  return language === 'en'
+    ? '\n\nIMPORTANT: Write every text value in your response (summary_reason, factor, evidence, detail, expected_impact) in English. Keep the JSON keys and structure exactly as specified above.'
+    : '';
+}
+
 let anthropicClient: Anthropic | null = null;
 
 function getClient(): Anthropic {
@@ -109,6 +117,7 @@ export async function generateClientEmail(
     risk_factors?: RiskFactor[];
     recommended_actions?: RecommendedAction[];
   },
+  language: AnalysisLanguage = 'fr',
 ): Promise<EmailTemplate> {
   const client_for = TEMPLATE_PROMPTS[templateId] ?? TEMPLATE_PROMPTS.direct;
   const clientInstance = getClient();
@@ -122,7 +131,7 @@ Règles:
 - Inclus l'offre ou la proposition de manière naturelle
 - Maximum 150 mots, concis et percutant
 - Pas de "Dear" ou formules rigides, tutoiement
-- Réponds UNIQUEMENT avec un JSON: {"subject": "...", "body": "..."}`;
+- Réponds UNIQUEMENT avec un JSON: {"subject": "...", "body": "..."}${language === 'en' ? '\n- Write the subject and body in English, not French.' : ''}`;
 
   const riskFactorsText = client.risk_factors?.length
     ? client.risk_factors.map((f) => `- ${f.factor} (${f.weight}): ${f.evidence}`).join('\n')
@@ -207,13 +216,13 @@ function normalizeAnalysisItem(item: Partial<ChurnAnalysisItem> & Record<string,
   };
 }
 
-async function analyzeChurnRiskBatch(clients: Array<Record<string, unknown>>): Promise<ChurnAnalysisItem[]> {
+async function analyzeChurnRiskBatch(clients: Array<Record<string, unknown>>, language: AnalysisLanguage): Promise<ChurnAnalysisItem[]> {
   const client = getClient();
 
   const message = await client.messages.create({
     model: 'claude-opus-5',
     max_tokens: 8192,
-    system: ANALYSIS_SYSTEM_PROMPT,
+    system: ANALYSIS_SYSTEM_PROMPT + languageInstruction(language),
     messages: [
       {
         role: 'user',
@@ -248,12 +257,13 @@ async function analyzeChurnRiskBatch(clients: Array<Record<string, unknown>>): P
 // Cost is not a constraint here; correctness and depth are the priority.
 export async function analyzeChurnRisk(
   clients: Array<Record<string, unknown>>,
+  language: AnalysisLanguage = 'fr',
 ): Promise<ChurnAnalysisItem[]> {
   const batches: Array<Record<string, unknown>>[] = [];
   for (let i = 0; i < clients.length; i += BATCH_SIZE) {
     batches.push(clients.slice(i, i + BATCH_SIZE));
   }
 
-  const results = await Promise.all(batches.map((batch) => analyzeChurnRiskBatch(batch)));
+  const results = await Promise.all(batches.map((batch) => analyzeChurnRiskBatch(batch, language)));
   return results.flat();
 }

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { analyzeChurnRisk, generateClientEmail } from '@/lib/claude';
+import { analyzeChurnRisk, generateClientEmail, type AnalysisLanguage } from '@/lib/claude';
+
+function parseLanguage(value: unknown): AnalysisLanguage {
+  return value === 'en' ? 'en' : 'fr';
+}
 
 function parseDateOrNull(value: unknown): string | null {
   if (!value || typeof value !== 'string') return null;
@@ -26,7 +30,7 @@ export async function POST(req: NextRequest) {
   const { action } = body ?? {};
 
   if (action === 'generate_email') {
-    const { templateId, client } = body;
+    const { templateId, client, language } = body;
     if (!templateId || !client) {
       return NextResponse.json({ error: 'Missing templateId or client data' }, { status: 400 });
     }
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
         ...client,
         risk_factors: client.details?.risk_factors,
         recommended_actions: client.details?.recommended_actions,
-      });
+      }, parseLanguage(language));
       return NextResponse.json({ subject: email.subject, body: email.body });
     } catch (err) {
       console.error('[analyze] email generation failed', err);
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const { clients, filename } = body ?? {};
+  const { clients, filename, language } = body ?? {};
   if (!Array.isArray(clients) || clients.length === 0) {
     return NextResponse.json({ error: 'No client data provided' }, { status: 400 });
   }
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const analysis = await analyzeChurnRisk(clients);
+    const analysis = await analyzeChurnRisk(clients, parseLanguage(language));
 
     const { data: upload, error: uploadError } = await supabaseAdmin
       .from('csv_uploads')

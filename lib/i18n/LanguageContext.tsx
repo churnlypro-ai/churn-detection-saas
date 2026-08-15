@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { dictionaries, isLocale, type Locale } from './index';
 import type { Dictionary } from './dictionaries/fr';
+import { supabase } from '@/lib/supabase';
 
 const STORAGE_KEY = 'language-preference';
 
@@ -32,6 +33,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = useCallback((lang: Locale) => {
     setLanguageState(lang);
     window.localStorage.setItem(STORAGE_KEY, lang);
+
+    // Best-effort: keeps the preference on the account so server-side jobs
+    // with no live request to read from (weekly report, welcome offer, risk
+    // alerts — see app/api/cron/risk-alerts and app/api/send-email) know
+    // which language to write in. Never blocks the UI toggle on this.
+    supabase.auth.getSession().then(({ data }) => {
+      const userId = data.session?.user?.id;
+      if (!userId) return;
+      supabase.from('users').update({ language: lang }).eq('id', userId).then(() => {});
+    });
   }, []);
 
   const value = useMemo(

@@ -1,5 +1,7 @@
 import { Resend } from 'resend';
 
+export type EmailLanguage = 'fr' | 'en';
+
 let resendClient: Resend | null = null;
 
 function getResend(): Resend {
@@ -18,6 +20,7 @@ interface WeeklyReportParams {
   churnRateNow: number;
   churnRateBefore: number;
   dashboardUrl: string;
+  language?: EmailLanguage;
 }
 
 interface WelcomeEmailParams {
@@ -25,6 +28,7 @@ interface WelcomeEmailParams {
   companyName: string;
   monthlyPrice: number;
   appUrl: string;
+  language?: EmailLanguage;
 }
 
 export async function sendWelcomeEmail({
@@ -32,6 +36,7 @@ export async function sendWelcomeEmail({
   companyName,
   monthlyPrice,
   appUrl,
+  language = 'fr',
 }: WelcomeEmailParams) {
   const resend = getResend();
 
@@ -40,14 +45,45 @@ export async function sendWelcomeEmail({
   const offer3 = monthlyPrice;
   const offer5 = Math.round(monthlyPrice * 0.13);
 
-  const expiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'long',
-  });
+  const expiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(
+    language === 'en' ? 'en-US' : 'fr-FR',
+    { day: '2-digit', month: 'long' },
+  );
 
-  const html = `
+  const subject = language === 'en' ? 'Welcome gift: pick your offer' : 'Cadeau de bienvenue : choisissez votre offre';
+
+  const html = language === 'en' ? `
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
-      <h2 style="font-weight: 600;">Cadeau de bienvenue : choisissez votre offre</h2>
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>It's been 14 days since you joined Churnly. Thanks, ${companyName}!</p>
+      <p>Here are 5 offers. Pick the one that works for you:</p>
+      <div style="margin: 24px 0;">
+        <div style="margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">
+          <strong>Option 1:</strong> -$${offer1} this month
+        </div>
+        <div style="margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">
+          <strong>Option 2:</strong> -$${offer2} this month (3-month commitment)
+        </div>
+        <div style="margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">
+          <strong>Option 3:</strong> +1 month free ($${offer3} credited)
+        </div>
+        <div style="margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">
+          <strong>Option 4:</strong> Free priority support for 2 months
+        </div>
+        <div style="margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">
+          <strong>Option 5:</strong> Free detailed analysis + -$${offer5} this month
+        </div>
+      </div>
+      <p style="margin-top: 24px;">
+        <a href="${appUrl}/settings" style="background: #2148ec; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+          Choose my offer
+        </a>
+      </p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Valid until ${expiryDate}.</p>
+    </div>
+  ` : `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
       <p>Ça fait 14 jours que vous êtes chez Churnly. Merci ${companyName} !</p>
       <p>Voici 5 offres. Choisissez celle qui vous convient :</p>
       <div style="margin: 24px 0;">
@@ -79,7 +115,7 @@ export async function sendWelcomeEmail({
   return resend.emails.send({
     from: process.env.EMAIL_FROM || 'Churnly <welcome@yourdomain.com>',
     to,
-    subject: 'Cadeau de bienvenue : choisissez votre offre',
+    subject,
     html,
   });
 }
@@ -97,6 +133,7 @@ interface RiskAlertParams {
   companyName: string;
   clients: RiskAlertClient[];
   dashboardUrl: string;
+  language?: EmailLanguage;
 }
 
 export async function sendRiskAlertEmail({
@@ -104,36 +141,65 @@ export async function sendRiskAlertEmail({
   companyName,
   clients,
   dashboardUrl,
+  language = 'fr',
 }: RiskAlertParams) {
   const resend = getResend();
+  const locale = language === 'en' ? 'en-US' : 'fr-FR';
 
   const urgentCount = clients.filter((c) => c.daysUntilRenewal !== null && c.daysUntilRenewal <= 14).length;
-  const subject = urgentCount > 0
-    ? `${urgentCount} client${urgentCount > 1 ? 's' : ''} à risque avant leur renouvellement`
-    : `${clients.length} client${clients.length > 1 ? 's' : ''} à risque de partir bientôt`;
+  const subject = language === 'en'
+    ? (urgentCount > 0
+      ? `${urgentCount} at-risk customer${urgentCount > 1 ? 's' : ''} before their renewal`
+      : `${clients.length} customer${clients.length > 1 ? 's' : ''} at risk of leaving soon`)
+    : (urgentCount > 0
+      ? `${urgentCount} client${urgentCount > 1 ? 's' : ''} à risque avant leur renouvellement`
+      : `${clients.length} client${clients.length > 1 ? 's' : ''} à risque de partir bientôt`);
 
   const rowsHtml = clients.map((c) => {
     const renewalText = c.daysUntilRenewal === null
       ? ''
-      : c.daysUntilRenewal <= 0
-        ? '<br><span style="color: #dc2626; font-weight: 600;">Renouvellement dépassé</span>'
-        : c.daysUntilRenewal <= 14
-          ? `<br><span style="color: #dc2626; font-weight: 600;">Renouvellement dans ${c.daysUntilRenewal} jour${c.daysUntilRenewal > 1 ? 's' : ''}</span>`
-          : `<br><span style="color: #6b7280;">Renouvellement dans ${c.daysUntilRenewal} jours</span>`;
+      : language === 'en'
+        ? (c.daysUntilRenewal <= 0
+          ? '<br><span style="color: #dc2626; font-weight: 600;">Renewal date passed</span>'
+          : c.daysUntilRenewal <= 14
+            ? `<br><span style="color: #dc2626; font-weight: 600;">Renews in ${c.daysUntilRenewal} day${c.daysUntilRenewal > 1 ? 's' : ''}</span>`
+            : `<br><span style="color: #6b7280;">Renews in ${c.daysUntilRenewal} days</span>`)
+        : (c.daysUntilRenewal <= 0
+          ? '<br><span style="color: #dc2626; font-weight: 600;">Renouvellement dépassé</span>'
+          : c.daysUntilRenewal <= 14
+            ? `<br><span style="color: #dc2626; font-weight: 600;">Renouvellement dans ${c.daysUntilRenewal} jour${c.daysUntilRenewal > 1 ? 's' : ''}</span>`
+            : `<br><span style="color: #6b7280;">Renouvellement dans ${c.daysUntilRenewal} jours</span>`);
+
+    const riskLabel = language === 'en' ? 'risk' : 'de risque';
+    const threatenedLabel = language === 'en' ? '/mo at stake' : '/mois menacé';
 
     return `
       <div style="margin-bottom: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: baseline;">
           <strong>${c.name}</strong>
-          <span style="color: #dc2626; font-weight: 600;">${c.churnScore}% de risque</span>
+          <span style="color: #dc2626; font-weight: 600;">${c.churnScore}% ${riskLabel}</span>
         </div>
         <p style="margin: 6px 0 0; font-size: 14px; color: #374151;">${c.reason}</p>
-        <p style="margin: 4px 0 0; font-size: 13px;">€${c.revenueMonthly.toLocaleString('fr-FR')}/mois menacé${renewalText}</p>
+        <p style="margin: 4px 0 0; font-size: 13px;">€${c.revenueMonthly.toLocaleString(locale)}${threatenedLabel}${renewalText}</p>
       </div>
     `;
   }).join('');
 
-  const html = `
+  const html = language === 'en' ? `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>Hi ${companyName || ''},</p>
+      <p>Churnly detected ${clients.length > 1 ? 'customers' : 'a customer'} with a high churn risk:</p>
+      <div style="margin: 24px 0;">
+        ${rowsHtml}
+      </div>
+      <p style="margin-top: 24px;">
+        <a href="${dashboardUrl}" style="background: #2148ec; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+          See details and act
+        </a>
+      </p>
+    </div>
+  ` : `
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
       <h2 style="font-weight: 600;">${subject}</h2>
       <p>Salut ${companyName || ''},</p>
@@ -166,17 +232,37 @@ export async function sendWeeklyReportEmail({
   churnRateNow,
   churnRateBefore,
   dashboardUrl,
+  language = 'fr',
 }: WeeklyReportParams) {
   const resend = getResend();
+  const locale = language === 'en' ? 'en-US' : 'fr-FR';
+  const subject = language === 'en' ? 'Your Churnly report this week' : 'Votre bilan Churnly cette semaine';
 
-  const html = `
+  const html = language === 'en' ? `
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
-      <h2 style="font-weight: 600;">Votre bilan Churnly cette semaine</h2>
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>Hi ${companyName},</p>
+      <p>Here's how this week went:</p>
+      <ul style="line-height: 1.8;">
+        <li>✓ Customers saved: <strong>${clientsSaved}</strong></li>
+        <li>✓ Revenue saved: <strong>€${revenueSaved.toLocaleString(locale)}</strong></li>
+        <li>✓ ROI this week: <strong>${roiPercent}%</strong></li>
+      </ul>
+      <p>Current churn rate: <strong>${churnRateNow}%</strong> (vs ${churnRateBefore}% last week)</p>
+      <p style="margin-top: 24px;">
+        <a href="${dashboardUrl}" style="background: #2148ec; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+          See my dashboard
+        </a>
+      </p>
+    </div>
+  ` : `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
       <p>Salut ${companyName},</p>
       <p>Cette semaine, voici vos résultats :</p>
       <ul style="line-height: 1.8;">
         <li>✓ Clients sauvés : <strong>${clientsSaved}</strong></li>
-        <li>✓ Revenue sauvée : <strong>€${revenueSaved.toLocaleString('fr-FR')}</strong></li>
+        <li>✓ Revenue sauvée : <strong>€${revenueSaved.toLocaleString(locale)}</strong></li>
         <li>✓ ROI cette semaine : <strong>${roiPercent}%</strong></li>
       </ul>
       <p>Taux de churn actuel : <strong>${churnRateNow}%</strong> (vs ${churnRateBefore}% semaine passée)</p>
@@ -191,7 +277,7 @@ export async function sendWeeklyReportEmail({
   return resend.emails.send({
     from: process.env.EMAIL_FROM || 'Churnly <reports@yourdomain.com>',
     to,
-    subject: 'Votre bilan Churnly cette semaine',
+    subject,
     html,
   });
 }

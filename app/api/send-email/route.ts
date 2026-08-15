@@ -78,7 +78,7 @@ async function handleCron(req: NextRequest) {
 
   const { data: users, error: usersError } = await supabaseAdmin
     .from('users')
-    .select('id, email, company_name, subscription_status, subscription_tier, created_at')
+    .select('id, email, company_name, subscription_status, subscription_tier, created_at, language')
     .eq('subscription_status', 'active');
 
   if (usersError) {
@@ -90,7 +90,7 @@ async function handleCron(req: NextRequest) {
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const results: { userId: string; sent: boolean; type: string }[] = [];
 
-  for (const user of (users ?? []) as { id: string; email: string; company_name: string; subscription_tier: string | null; created_at: string }[]) {
+  for (const user of (users ?? []) as { id: string; email: string; company_name: string; subscription_tier: string | null; created_at: string; language: string | null }[]) {
     try {
       const { data: recentAnalysis } = await supabaseAdmin
         .from('analysis_results')
@@ -112,15 +112,18 @@ async function handleCron(req: NextRequest) {
       const revenueSaved = atRisk.reduce((sum, r) => sum + (Number(r.revenue_monthly) || 0), 0);
       const roiPercent = rows.length ? Math.round((clientsSaved / rows.length) * 100) : 0;
 
+      const language = user.language === 'en' ? 'en' : 'fr';
+
       await sendWeeklyReportEmail({
         to: user.email,
-        companyName: user.company_name || 'là',
+        companyName: user.company_name || (language === 'en' ? 'there' : 'là'),
         clientsSaved,
         revenueSaved,
         roiPercent,
         churnRateNow: Number(churnRateNow.toFixed(1)),
         churnRateBefore: Number(churnRateNow.toFixed(1)),
         dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+        language,
       });
       results.push({ userId: user.id, sent: true, type: 'weekly' });
 
@@ -131,6 +134,7 @@ async function handleCron(req: NextRequest) {
           companyName: user.company_name || '',
           monthlyPrice,
           appUrl: process.env.NEXT_PUBLIC_APP_URL || '',
+          language,
         });
         results.push({ userId: user.id, sent: true, type: 'welcome' });
       }
