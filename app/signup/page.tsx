@@ -146,22 +146,20 @@ export default function Signup() {
     setError('');
     setLoading(true);
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          company_name: companyName,
-          client_count: clientCount,
-          monthly_revenue: monthlyRevenue,
-          industry,
-          churn_rate: churnRate,
-        },
-      },
+    // La création du compte passe par une route serveur qui vérifie que le
+    // code à 4 chiffres a bien été validé pour cet email avant de créer quoi
+    // que ce soit — supabase.auth.signUp() n'est jamais appelé directement
+    // depuis le navigateur, sinon cette vérification serait purement
+    // cosmétique (contournable en appelant l'API Supabase directement).
+    const completeRes = await fetch('/api/complete-signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, companyName, clientCount, monthlyRevenue, industry, churnRate }),
     });
 
-    if (signUpError) {
-      setError(signUpError.message);
+    if (!completeRes.ok) {
+      const data = await completeRes.json().catch(() => ({}));
+      setError(data.error || 'Impossible de créer le compte.');
       setLoading(false);
       return;
     }
@@ -169,20 +167,6 @@ export default function Signup() {
     const { data: sessionData } = await supabase.auth.signInWithPassword({ email, password });
 
     if (sessionData.user) {
-      const { error: updateError } = await supabase.from('users').update({
-        client_count: clientCount,
-        monthly_revenue: monthlyRevenue,
-        industry,
-        churn_rate: churnRate,
-      }).eq('id', sessionData.user.id);
-
-      if (updateError) {
-        setError('Compte créé, mais impossible d\'enregistrer votre profil. Vous pourrez le compléter dans les Réglages.');
-        setLoading(false);
-        router.push(isManager ? '/dashboard' : '/impact');
-        return;
-      }
-
       const { data: sessionForToken } = await supabase.auth.getSession();
       const token = sessionForToken?.session?.access_token;
       if (token) {

@@ -29,12 +29,26 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'send') {
+      // Le cooldown de 30s côté client (bouton "Renvoyer") est contournable
+      // en appelant cette route directement — sans ce garde-fou côté
+      // serveur, n'importe qui pourrait déclencher l'envoi répété de codes
+      // vers une adresse email arbitraire (spam, coût Resend).
+      const { data: existing } = await supabaseAdmin
+        .from('email_verifications')
+        .select('created_at')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existing && Date.now() - new Date(existing.created_at).getTime() < 30 * 1000) {
+        return NextResponse.json({ error: 'Merci de patienter avant de redemander un code.' }, { status: 429 });
+      }
+
       const code = generateCode();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
       const { error: dbError } = await supabaseAdmin
         .from('email_verifications')
-        .upsert({ email, code, expires_at: expiresAt }, { onConflict: 'email' });
+        .upsert({ email, code, expires_at: expiresAt, verified: false, attempts: 0, created_at: new Date().toISOString() }, { onConflict: 'email' });
 
       if (dbError) {
         console.error('[verify-email] upsert failed', dbError.message);
@@ -75,7 +89,7 @@ export async function POST(req: NextRequest) {
 
       const { data, error } = await supabaseAdmin
         .from('email_verifications')
-        .select('code, expires_at')
+        .select('code, expires_at, attempts')
         .eq('email', email)
         .single();
 
@@ -87,9 +101,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Code expiré. Demandez un nouveau code.' }, { status: 400 });
       }
 
+      if (data.attempts >= 5) {
+        return NextResponse.json({ error: 'Trop de tentatives. Demandez un nouveau code.' }, { status: 400 });
+      }
+
       if (data.code !== submittedCode) {
+        await supabaseAdmin
+          .from('email_verifications')
+          .update({ attempts: data.attempts + 1 })
+          .eq('email', email);
         return NextResponse.json({ error: 'Code incorrect.' }, { status: 400 });
       }
+
+      await supabaseAdmin
+        .from('email_verifications')
+        .update({ verified: true })
+        .eq('email', email);
 
       return NextResponse.json({ verified: true });
     }

@@ -7,7 +7,7 @@ import Navigation from '@/components/Navigation';
 import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
 import { supabase } from '@/lib/supabase';
-import { calcPrice, calcPricing, formatEuro } from '@/lib/pricing';
+import { calcPricing, formatEuro } from '@/lib/pricing';
 import { ArrowRight, Check, ChevronDown } from 'lucide-react';
 
 const DEFAULT_CLIENT_COUNT = 100;
@@ -135,12 +135,20 @@ export default function PricingPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-      const tier = String(calcPrice(DEFAULT_CLIENT_COUNT, monthlyRevenue, churnRate));
+
+      // Le palier facturé est recalculé côté serveur à partir du profil en
+      // base (voir /api/create-checkout-session) — on enregistre donc les
+      // valeurs du simulateur sur le compte avant de payer, pour que le prix
+      // facturé corresponde bien à ce qui vient d'être affiché à l'écran.
+      await supabase
+        .from('users')
+        .update({ client_count: DEFAULT_CLIENT_COUNT, monthly_revenue: monthlyRevenue, churn_rate: churnRate })
+        .eq('id', user.id);
 
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
