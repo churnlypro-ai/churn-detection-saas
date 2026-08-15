@@ -67,13 +67,21 @@ export async function POST(req: NextRequest) {
     // posé de façon permanente au premier essai (voir stripe-webhook) et n'est
     // jamais effacé, contrairement à trial_end qui repart à null à l'annulation.
     const trialAlreadyUsed = (profile as { trial_used?: boolean })?.trial_used === true;
+    const grantsTrial = !isManagerProfile && !trialAlreadyUsed;
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
+      // Sans carte pendant l'essai : rien à payer aujourd'hui, donc rien à
+      // demander. Si personne n'ajoute de carte avant la fin des 3 jours,
+      // l'abonnement passe directement à "canceled" (déjà géré partout
+      // ailleurs dans l'app) plutôt que de rester bloqué en attente.
+      ...(grantsTrial ? { payment_method_collection: 'if_required' as const } : {}),
       subscription_data: {
-        ...(isManagerProfile || trialAlreadyUsed ? {} : { trial_period_days: 3 }),
+        ...(grantsTrial
+          ? { trial_period_days: 3, trial_settings: { end_behavior: { missing_payment_method: 'cancel' as const } } }
+          : {}),
         metadata: { supabase_user_id: user.id, tier: String(tier) },
       },
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
