@@ -61,6 +61,10 @@ export default function Signup() {
 
   async function sendCode() {
     setError('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Adresse email invalide.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/verify-email', {

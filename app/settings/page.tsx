@@ -72,7 +72,9 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState('');
 
-  const isLocked = profile?.subscription_status !== 'active';
+  // 'trialing' oublié ici verrouillerait la visualisation pour un compte
+  // pourtant déjà en essai gratuit actif — même règle que le dashboard.
+  const isLocked = profile?.subscription_status !== 'active' && profile?.subscription_status !== 'trialing';
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -149,11 +151,15 @@ export default function Settings() {
 
   const currentPrice = calcPrice(editRevenue);
 
+  const industryLabels: Record<string, string> = {
+    saas: 'SaaS', agency: 'Agence', ecommerce: 'E-commerce', manager: 'Manager / Talents', other: 'Autre',
+  };
+
   const staticInfo = [
     { label: 'Entreprise', value: profile?.company_name || '—', icon: Building2 },
     { label: 'Clients', value: (profile?.client_count ?? 0).toString(), icon: Users },
     { label: 'Revenue mensuel', value: formatEuro(profile?.monthly_revenue ?? 0), icon: Euro },
-    { label: 'Industry', value: profile?.industry || '—', icon: Building2 },
+    { label: 'Industrie', value: (profile?.industry && industryLabels[profile.industry]) || '—', icon: Building2 },
     {
       label: 'Taux de churn (calculé par Churnly)',
       value: profile?.churn_rate != null ? `${profile.churn_rate.toFixed(1)}%` : 'Pas encore analysé',
@@ -274,12 +280,15 @@ export default function Settings() {
                   <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                     <Building2 className="h-3.5 w-3.5" /> Industrie
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={editIndustry}
                     onChange={(e) => setEditIndustry(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
+                  >
+                    {Object.entries(industryLabels).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <button

@@ -51,7 +51,10 @@ function PreviewContent() {
       const p = profileData as Profile;
       setProfile(p);
 
-      if (p?.subscription_status === 'active') {
+      // 'trialing' oublié ici enverrait un compte déjà en essai gratuit vers
+      // cet écran "payez pour débloquer" alors qu'il a déjà accès — même
+      // règle que hasAccess dans app/dashboard/page.tsx.
+      if (p?.subscription_status === 'active' || p?.subscription_status === 'trialing') {
         router.replace('/dashboard');
         return;
       }
