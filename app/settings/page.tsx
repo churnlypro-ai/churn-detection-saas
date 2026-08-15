@@ -9,6 +9,7 @@ import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
 import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle } from 'lucide-react';
 import type { HexagonStatus } from '@/components/MagicHexagon';
+import { useTranslations } from '@/lib/i18n/LanguageContext';
 
 interface Profile {
   company_name: string;
@@ -71,6 +72,7 @@ export default function Settings() {
 
   const [newPassword, setNewPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState('');
+  const t = useTranslations('settings');
 
   // 'trialing' oublié ici verrouillerait la visualisation pour un compte
   // pourtant déjà en essai gratuit actif — même règle que le dashboard.
@@ -112,7 +114,7 @@ export default function Settings() {
 
     setSaving(false);
     if (updateError) {
-      setError('Erreur lors de la mise à jour.');
+      setError(t.updateError);
       setHexStatus('error');
       setTimeout(() => setHexStatus('idle'), 3000);
     } else {
@@ -121,13 +123,13 @@ export default function Settings() {
       setTimeout(() => setSavedToast(false), 3000);
       setTimeout(() => setHexStatus('idle'), 2500);
     }
-  }, [user, editCompany, editClients, editRevenue, editIndustry]);
+  }, [user, editCompany, editClients, editRevenue, editIndustry, t.updateError]);
 
   async function handlePasswordChange(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPasswordStatus('');
     const { error: pwError } = await supabase.auth.updateUser({ password: newPassword });
-    setPasswordStatus(pwError ? 'Erreur lors du changement de mot de passe.' : 'Mot de passe mis à jour.');
+    setPasswordStatus(pwError ? t.passwordUpdateError : t.passwordUpdated);
     if (!pwError) setNewPassword('');
   }
 
@@ -150,19 +152,16 @@ export default function Settings() {
   }
 
   const currentPrice = calcPrice(editRevenue);
-
-  const industryLabels: Record<string, string> = {
-    saas: 'SaaS', agency: 'Agence', ecommerce: 'E-commerce', manager: 'Manager / Talents', other: 'Autre',
-  };
+  const industryLabels = t.industries;
 
   const staticInfo = [
-    { label: 'Entreprise', value: profile?.company_name || '—', icon: Building2 },
-    { label: 'Clients', value: (profile?.client_count ?? 0).toString(), icon: Users },
-    { label: 'Revenue mensuel', value: formatEuro(profile?.monthly_revenue ?? 0), icon: Euro },
-    { label: 'Industrie', value: (profile?.industry && industryLabels[profile.industry]) || '—', icon: Building2 },
+    { label: t.infoLabels.company, value: profile?.company_name || '—', icon: Building2 },
+    { label: t.infoLabels.clients, value: (profile?.client_count ?? 0).toString(), icon: Users },
+    { label: t.infoLabels.monthlyRevenue, value: formatEuro(profile?.monthly_revenue ?? 0), icon: Euro },
+    { label: t.infoLabels.industry, value: (profile?.industry && industryLabels[profile.industry]) || '—', icon: Building2 },
     {
-      label: 'Taux de churn (calculé par Churnly)',
-      value: profile?.churn_rate != null ? `${profile.churn_rate.toFixed(1)}%` : 'Pas encore analysé',
+      label: t.infoLabels.churnRate,
+      value: profile?.churn_rate != null ? `${profile.churn_rate.toFixed(1)}%` : t.infoLabels.notAnalyzedYet,
       icon: TrendingDown,
     },
   ];
@@ -177,7 +176,7 @@ export default function Settings() {
           transition={{ duration: 0.6, ease: EASE_OUT }}
           className="mb-10 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
         >
-          Paramètres
+          {t.title}
         </motion.h1>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -187,7 +186,7 @@ export default function Settings() {
             transition={{ duration: 0.6, ease: EASE_OUT }}
             className="space-y-4"
           >
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Profil actuel</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.currentProfile}</h2>
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               {staticInfo.map((item) => (
                 <div key={item.label} className="flex items-center justify-between border-b border-slate-50 py-3 last:border-0 dark:border-slate-800">
@@ -201,7 +200,7 @@ export default function Settings() {
             </div>
 
             <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-6 shadow-sm dark:border-brand-800/40 dark:bg-brand-500/5">
-              <h3 className="text-sm font-semibold text-brand-700 dark:text-brand-400">Votre prix</h3>
+              <h3 className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.yourPrice}</h3>
               <motion.p
                 key={currentPrice}
                 initial={{ opacity: 0.5, y: 8 }}
@@ -209,9 +208,9 @@ export default function Settings() {
                 transition={{ duration: 0.3 }}
                 className="mt-2 text-4xl font-extrabold text-brand-700 dark:text-brand-400"
               >
-                {formatEuro(currentPrice)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">/mois</span>
+                {formatEuro(currentPrice)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
               </motion.p>
-              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">Basé sur votre CA mensuel. Modifiez-le à droite pour voir le prix changer en direct.</p>
+              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">{t.priceNote}</p>
             </div>
           </motion.div>
 
@@ -239,14 +238,14 @@ export default function Settings() {
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
                       <Lock className="h-8 w-8" />
                     </div>
-                    <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">Débloquez avec Churnly</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">À partir de {formatEuro(currentPrice)}/mois</p>
+                    <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.unlockWithChurnly}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.startingAt} {formatEuro(currentPrice)}{t.perMonth}</p>
                   </motion.div>
                 </div>
               )}
             </div>
             <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
-              Taille: clients · Couleur: churn · Épaisseur: revenue · Vitesse: urgence
+              {t.legend}
             </p>
           </motion.div>
 
@@ -256,12 +255,12 @@ export default function Settings() {
             transition={{ duration: 0.6, ease: EASE_OUT }}
             className="space-y-5"
           >
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Modifier</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.edit}</h2>
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> Nom de l'entreprise
+                    <Building2 className="h-3.5 w-3.5" /> {t.companyNameLabel}
                   </label>
                   <input
                     type="text"
@@ -270,15 +269,15 @@ export default function Settings() {
                     className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
-                <EditField label="Nombre de clients" value={editClients} onChange={setEditClients} min={1} max={10000} step={1} icon={Users} />
-                <EditField label="Revenue mensuel" value={editRevenue} onChange={setEditRevenue} min={0} max={1000000} step={1000} suffix="€" icon={Euro} />
+                <EditField label={t.clientCountLabel} value={editClients} onChange={setEditClients} min={1} max={10000} step={1} icon={Users} />
+                <EditField label={t.monthlyRevenueLabel} value={editRevenue} onChange={setEditRevenue} min={0} max={1000000} step={1000} suffix="€" icon={Euro} />
                 <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                   <TrendingDown className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                  Le taux de churn n&apos;est pas à saisir — Churnly le calcule automatiquement à partir de vos vraies données, à chaque nouvelle analyse.
+                  {t.churnRateNote}
                 </p>
                 <div>
                   <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> Industrie
+                    <Building2 className="h-3.5 w-3.5" /> {t.industryLabel}
                   </label>
                   <select
                     value={editIndustry}
@@ -296,19 +295,19 @@ export default function Settings() {
                 disabled={saving}
                 className="mt-5 w-full rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
               >
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
+                {saving ? t.saving : t.save}
               </button>
               {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
             </div>
 
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Mot de passe</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.passwordTitle}</h3>
               <form onSubmit={handlePasswordChange} className="mt-4 flex flex-col gap-3">
                 <input
                   type="password"
                   required
                   minLength={8}
-                  placeholder="Nouveau mot de passe"
+                  placeholder={t.newPasswordPlaceholder}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
@@ -317,7 +316,7 @@ export default function Settings() {
                   type="submit"
                   className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
                 >
-                  Mettre à jour
+                  {t.updatePassword}
                 </button>
               </form>
               {passwordStatus && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{passwordStatus}</p>}
@@ -327,7 +326,7 @@ export default function Settings() {
               onClick={handleLogout}
               className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              Déconnexion
+              {t.logout}
             </button>
           </motion.div>
         </div>
@@ -342,7 +341,7 @@ export default function Settings() {
             transition={{ duration: 0.3, ease: EASE_OUT }}
             className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg"
           >
-            <Check className="h-4 w-4" /> Infos mises à jour
+            <Check className="h-4 w-4" /> {t.savedToast}
           </motion.div>
         )}
       </AnimatePresence>

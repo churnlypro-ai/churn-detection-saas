@@ -8,6 +8,7 @@ import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
 import { calcPricing, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
 import { TrendingDown, Users, Euro, ShieldCheck, ArrowRight, AlertTriangle, Clock } from 'lucide-react';
+import { useTranslations } from '@/lib/i18n/LanguageContext';
 
 interface Profile {
   company_name: string;
@@ -59,6 +60,7 @@ export default function ImpactPage() {
   const [inView, setInView] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const t = useTranslations('impact');
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -91,12 +93,12 @@ export default function ImpactPage() {
         body: JSON.stringify({}),
       });
 
-      if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
+      if (!response.ok) throw new Error(t.checkoutErrorStart);
 
       const { url } = await response.json();
       window.location.href = url;
     } catch (err) {
-      setCheckoutError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+      setCheckoutError(err instanceof Error ? err.message : t.checkoutErrorFallback);
       setCheckoutLoading(false);
     }
   }
@@ -161,70 +163,70 @@ export default function ImpactPage() {
       <div className="sticky top-[73px] z-40 border-b border-slate-100 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Votre tarif</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.yourPrice}</span>
             <motion.span key={pricing.monthly} initial={{ opacity: 0.5, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-lg font-extrabold text-brand-700 dark:text-brand-400">
-              {formatEuro(pricing.monthly)}<span className="text-sm font-medium text-slate-400 dark:text-slate-500">/mois</span>
+              {formatEuro(pricing.monthly)}<span className="text-sm font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
             </motion.span>
           </div>
           <div className="hidden text-xs text-slate-500 dark:text-slate-400 sm:block">
-            Mensuel: 3 jours gratuits · Annuel: {formatEuro(pricing.annualPerMonth)}/mois (1 mois gratuit)
+            {t.monthlyAnnualNote(formatEuro(pricing.annualPerMonth))}
           </div>
         </div>
       </div>
 
       <main className="mx-auto max-w-4xl px-6 py-16">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="mb-16 text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">Churnly</p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl">Votre situation réelle</h1>
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">{t.eyebrow}</p>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl">{t.title}</h1>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.2 }} className="mb-8">
-          <h2 className="mb-6 text-center text-xl font-bold text-slate-900 dark:text-white">En ce moment même, vous perdez :</h2>
+          <h2 className="mb-6 text-center text-xl font-bold text-slate-900 dark:text-white">{t.losingNowTitle}</h2>
           <div className="rounded-3xl border border-red-100 bg-red-50/40 p-8 dark:border-red-800/40 dark:bg-red-950/10">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               <div className="text-center">
                 <Users className="mx-auto mb-2 h-6 w-6 text-red-400" />
                 <p className="text-3xl font-extrabold text-red-600 dark:text-red-400">{animatedClientsDay.toFixed(1)}</p>
-                <p className="mt-1 text-xs text-red-400">clients / jour</p>
+                <p className="mt-1 text-xs text-red-400">{t.perDay}</p>
               </div>
               <div className="text-center">
                 <Users className="mx-auto mb-2 h-6 w-6 text-red-400" />
                 <p className="text-3xl font-extrabold text-red-600 dark:text-red-400">{Math.round(animatedClientsMonth)}</p>
-                <p className="mt-1 text-xs text-red-400">clients / mois</p>
+                <p className="mt-1 text-xs text-red-400">{t.perMonthClients}</p>
               </div>
               <div className="text-center">
                 <Users className="mx-auto mb-2 h-6 w-6 text-red-400" />
                 <p className="text-3xl font-extrabold text-red-600 dark:text-red-400">{Math.round(animatedClientsYear)}</p>
-                <p className="mt-1 text-xs text-red-400">clients / an</p>
+                <p className="mt-1 text-xs text-red-400">{t.perYear}</p>
               </div>
             </div>
           </div>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.3 }} className="mb-8">
-          <h2 className="mb-6 text-center text-xl font-bold text-slate-900 dark:text-white">Ce qui signifie :</h2>
+          <h2 className="mb-6 text-center text-xl font-bold text-slate-900 dark:text-white">{t.meansTitle}</h2>
           <div className="rounded-3xl border border-red-100 bg-red-50/40 p-8 dark:border-red-800/40 dark:bg-red-950/10">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               <div className="text-center">
                 <Euro className="mx-auto mb-2 h-6 w-6 text-red-400" />
                 <p className="text-3xl font-extrabold text-red-600 dark:text-red-400">{formatEuro(animatedRevDay)}</p>
-                <p className="mt-1 text-xs text-red-400">revenue perdu / jour</p>
+                <p className="mt-1 text-xs text-red-400">{t.revenueLostPerDay}</p>
               </div>
               <div className="text-center">
                 <Euro className="mx-auto mb-2 h-6 w-6 text-red-400" />
                 <p className="text-3xl font-extrabold text-red-600 dark:text-red-400">{formatEuro(animatedRevMonth)}</p>
-                <p className="mt-1 text-xs text-red-400">revenue perdu / mois</p>
+                <p className="mt-1 text-xs text-red-400">{t.revenueLostPerMonth}</p>
               </div>
               <div className="text-center">
                 <Euro className="mx-auto mb-2 h-6 w-6 text-red-400" />
                 <p className="text-3xl font-extrabold text-red-600 dark:text-red-400">{formatEuro(animatedRevYear)}</p>
-                <p className="mt-1 text-xs text-red-400">revenue perdu / an</p>
+                <p className="mt-1 text-xs text-red-400">{t.revenueLostPerYear}</p>
               </div>
             </div>
             <div className="mt-8 flex items-center justify-center gap-2 rounded-2xl bg-red-100/60 px-6 py-4 dark:bg-red-500/10">
               <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
               <Clock className="h-4 w-4 text-red-500" />
-              <p className="text-sm font-semibold text-red-600 dark:text-red-400">Depuis votre inscription : {formatEuro(realTimeLoss)} perdu</p>
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400">{t.sinceSignup(formatEuro(realTimeLoss))}</p>
             </div>
           </div>
         </motion.div>
@@ -236,32 +238,32 @@ export default function ImpactPage() {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.4 }} className="mb-8">
-          <h2 className="mb-6 text-center text-xl font-bold text-brand-700 dark:text-brand-400">Avec Churnly :</h2>
+          <h2 className="mb-6 text-center text-xl font-bold text-brand-700 dark:text-brand-400">{t.withChurnlyTitle}</h2>
           <div className="rounded-3xl border border-emerald-100 bg-emerald-50/40 p-8 dark:border-emerald-800/40 dark:bg-emerald-950/10">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="text-center">
                 <TrendingDown className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
                 <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">-50%</p>
-                <p className="mt-1 text-xs text-emerald-500">réduction du churn</p>
+                <p className="mt-1 text-xs text-emerald-500">{t.churnReduction}</p>
               </div>
               <div className="text-center">
                 <Users className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
                 <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">{Math.round(animatedSavedClients)}</p>
-                <p className="mt-1 text-xs text-emerald-500">clients sauvés / mois</p>
+                <p className="mt-1 text-xs text-emerald-500">{t.clientsSavedPerMonth}</p>
               </div>
               <div className="text-center">
                 <Euro className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
                 <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">{formatEuro(animatedSavedRev)}</p>
-                <p className="mt-1 text-xs text-emerald-500">revenue économisée / mois</p>
+                <p className="mt-1 text-xs text-emerald-500">{t.revenueSavedPerMonth}</p>
               </div>
               <div className="text-center">
                 <ShieldCheck className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
                 <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">{Math.round(animatedRoi)}x</p>
-                <p className="mt-1 text-xs text-emerald-500">ROI sur votre investissement</p>
+                <p className="mt-1 text-xs text-emerald-500">{t.roiOnInvestment}</p>
               </div>
             </div>
             <div className="mt-6 rounded-xl bg-emerald-100/50 px-6 py-3 text-center dark:bg-emerald-500/10">
-              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Rentabilité en {breakEvenWeeks} semaine{breakEvenWeeks > 1 ? 's' : ''}</p>
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{t.profitableIn(breakEvenWeeks)}</p>
             </div>
           </div>
         </motion.div>
@@ -275,11 +277,11 @@ export default function ImpactPage() {
             {checkoutLoading ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Redirection vers le paiement…
+                {t.redirecting}
               </>
             ) : (
               <>
-                Commencer — {formatEuro(pricing.monthly)}/mois (3 jours gratuits) <ArrowRight className="h-5 w-5" />
+                {t.startButton(formatEuro(pricing.monthly))} <ArrowRight className="h-5 w-5" />
               </>
             )}
           </button>
@@ -287,7 +289,7 @@ export default function ImpactPage() {
             <p className="text-center text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
           )}
           <button onClick={() => router.push('/dashboard')} className="flex w-full items-center justify-center gap-2 rounded-full px-8 py-3 text-sm font-medium text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
-            Voir mon dashboard
+            {t.seeDashboard}
           </button>
         </motion.div>
       </main>

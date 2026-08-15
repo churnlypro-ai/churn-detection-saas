@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
+import { useTranslations } from '@/lib/i18n/LanguageContext';
 
 interface NormalizedRow {
   name: string;
@@ -23,6 +24,7 @@ export default function Upload() {
   const [status, setStatus] = useState<'idle' | 'parsing' | 'analyzing' | 'error'>('idle');
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
+  const t = useTranslations('upload');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -75,7 +77,7 @@ export default function Upload() {
 
         if (clients.length === 0) {
           setStatus('error');
-          setError('Aucune ligne valide trouvée dans le CSV. Vérifiez les colonnes (name, revenue_monthly, ...).');
+          setError(t.errors.noValidRows);
           return;
         }
 
@@ -96,19 +98,19 @@ export default function Upload() {
 
           if (!response.ok) {
             const body = await response.json().catch(() => ({}));
-            throw new Error(body.error || "L'analyse a échoué.");
+            throw new Error(body.error || t.errors.analysisFailed);
           }
 
           const result = await response.json();
           router.push(`/preview?uploadId=${result.uploadId}`);
         } catch (err) {
           setStatus('error');
-          setError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+          setError(err instanceof Error ? err.message : t.errors.generic);
         }
       },
       error: () => {
         setStatus('error');
-        setError('Impossible de lire ce fichier CSV.');
+        setError(t.errors.cannotReadFile);
       },
     });
   }
@@ -120,18 +122,18 @@ export default function Upload() {
       <Navigation user={user} />
       <main className="mx-auto flex min-h-[calc(100vh-73px)] max-w-xl flex-col items-center justify-center px-6 text-center">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Bienvenue{companyName ? ` ${companyName}` : ''}
+          {t.welcome(companyName)}
         </h1>
         <p className="mt-3 text-slate-600 dark:text-slate-400">
-          Connectez vos données clients pour voir qui risque de partir.
+          {t.subtitle}
         </p>
 
         <label className="mt-10 flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-8 py-12 transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-brand-600 dark:hover:bg-brand-500/5">
           <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
-            {status === 'parsing' || status === 'analyzing' ? 'Traitement en cours…' : 'Télécharger un CSV'}
+            {status === 'parsing' || status === 'analyzing' ? t.processing : t.uploadCsv}
           </span>
           <span className="text-xs text-slate-400 dark:text-slate-500">
-            {fileName || 'name, revenue_monthly, days_since_last_login, support_tickets_open, payment_status, renewal_date'}
+            {fileName || t.columnsHint}
           </span>
           <input
             type="file"
@@ -143,23 +145,23 @@ export default function Upload() {
         </label>
 
         {status === 'analyzing' && (
-          <p className="mt-4 animate-pulse text-sm text-slate-500 dark:text-slate-400">Claude analyse vos clients…</p>
+          <p className="mt-4 animate-pulse text-sm text-slate-500 dark:text-slate-400">{t.analyzing}</p>
         )}
         {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="mt-8 flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
           <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
-          ou
+          {t.or}
           <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
         </div>
 
         <button
           type="button"
           disabled
-          title="Bientôt disponible"
+          title={t.comingSoon}
           className="mt-6 rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-400 dark:border-slate-700 dark:text-slate-500"
         >
-          Connecter Stripe (bientôt)
+          {t.connectStripe}
         </button>
       </main>
     </>
