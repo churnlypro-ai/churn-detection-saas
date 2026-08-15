@@ -73,7 +73,7 @@ export default function Signup() {
       const res = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, action: 'send' }),
+        body: JSON.stringify({ email, action: 'send', language }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -97,7 +97,7 @@ export default function Signup() {
       const res = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: fullCode, action: 'verify' }),
+        body: JSON.stringify({ email, code: fullCode, action: 'verify', language }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

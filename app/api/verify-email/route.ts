@@ -20,12 +20,50 @@ function generateCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
+const MESSAGES = {
+  fr: {
+    invalidEmail: 'Email invalide.',
+    wait: 'Merci de patienter avant de redemander un code.',
+    dbError: 'Erreur base de données.',
+    emailSendError: 'Erreur envoi email.',
+    codeRequired: 'Code requis.',
+    noCodeFound: 'Aucun code trouvé. Demandez un nouveau code.',
+    codeExpired: 'Code expiré. Demandez un nouveau code.',
+    tooManyAttempts: 'Trop de tentatives. Demandez un nouveau code.',
+    incorrectCode: 'Code incorrect.',
+    unknownAction: 'Action inconnue.',
+    serverError: 'Erreur serveur.',
+    emailTitle: 'Voici votre code de vérification',
+    expiresNote: 'Ce code expire dans 10 minutes.',
+    ignoreNote: "Si vous n'avez pas créé de compte, ignorez cet email.",
+    emailSubject: 'Votre code de vérification Churnly',
+  },
+  en: {
+    invalidEmail: 'Invalid email.',
+    wait: 'Please wait before requesting another code.',
+    dbError: 'Database error.',
+    emailSendError: 'Error sending email.',
+    codeRequired: 'Code required.',
+    noCodeFound: 'No code found. Request a new code.',
+    codeExpired: 'Code expired. Request a new code.',
+    tooManyAttempts: 'Too many attempts. Request a new code.',
+    incorrectCode: 'Incorrect code.',
+    unknownAction: 'Unknown action.',
+    serverError: 'Server error.',
+    emailTitle: 'Here is your verification code',
+    expiresNote: 'This code expires in 10 minutes.',
+    ignoreNote: "If you didn't create an account, ignore this email.",
+    emailSubject: 'Your Churnly verification code',
+  },
+} as const;
+
 export async function POST(req: NextRequest) {
   try {
-    const { email, action, code: submittedCode } = await req.json();
+    const { email, action, code: submittedCode, language } = await req.json();
+    const m = language === 'en' ? MESSAGES.en : MESSAGES.fr;
 
     if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: 'Email invalide.' }, { status: 400 });
+      return NextResponse.json({ error: m.invalidEmail }, { status: 400 });
     }
 
     if (action === 'send') {
@@ -40,7 +78,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (existing && Date.now() - new Date(existing.created_at).getTime() < 30 * 1000) {
-        return NextResponse.json({ error: 'Merci de patienter avant de redemander un code.' }, { status: 429 });
+        return NextResponse.json({ error: m.wait }, { status: 429 });
       }
 
       const code = generateCode();
@@ -52,31 +90,31 @@ export async function POST(req: NextRequest) {
 
       if (dbError) {
         console.error('[verify-email] upsert failed', dbError.message);
-        return NextResponse.json({ error: 'Erreur base de données.' }, { status: 500 });
+        return NextResponse.json({ error: m.dbError }, { status: 500 });
       }
 
       const html = `
         <div style="font-family: Inter, -apple-system, sans-serif; max-width: 480px; margin: 0 auto; text-align: center; color: #1f2937;">
           <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Churnly</h1>
-          <p style="color: #6b7280; font-size: 14px; margin-bottom: 32px;">Voici votre code de vérification</p>
+          <p style="color: #6b7280; font-size: 14px; margin-bottom: 32px;">${m.emailTitle}</p>
           <div style="font-size: 48px; font-weight: 700; letter-spacing: 12px; color: #d97706; margin: 24px 0;">
             ${code}
           </div>
-          <p style="color: #6b7280; font-size: 13px;">Ce code expire dans 10 minutes.</p>
-          <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">Si vous n'avez pas créé de compte, ignorez cet email.</p>
+          <p style="color: #6b7280; font-size: 13px;">${m.expiresNote}</p>
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">${m.ignoreNote}</p>
         </div>
       `;
 
       const { error: emailError } = await getResend().emails.send({
         from: process.env.EMAIL_FROM || 'Churnly <noreply@yourdomain.com>',
         to: email,
-        subject: 'Votre code de vérification Churnly',
+        subject: m.emailSubject,
         html,
       });
 
       if (emailError) {
         console.error('[verify-email] resend send failed', JSON.stringify(emailError));
-        return NextResponse.json({ error: 'Erreur envoi email.' }, { status: 500 });
+        return NextResponse.json({ error: m.emailSendError }, { status: 500 });
       }
 
       return NextResponse.json({ sent: true });
@@ -84,7 +122,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'verify') {
       if (!submittedCode) {
-        return NextResponse.json({ error: 'Code requis.' }, { status: 400 });
+        return NextResponse.json({ error: m.codeRequired }, { status: 400 });
       }
 
       const { data, error } = await supabaseAdmin
@@ -94,15 +132,15 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (error || !data) {
-        return NextResponse.json({ error: 'Aucun code trouvé. Demandez un nouveau code.' }, { status: 400 });
+        return NextResponse.json({ error: m.noCodeFound }, { status: 400 });
       }
 
       if (new Date(data.expires_at) < new Date()) {
-        return NextResponse.json({ error: 'Code expiré. Demandez un nouveau code.' }, { status: 400 });
+        return NextResponse.json({ error: m.codeExpired }, { status: 400 });
       }
 
       if (data.attempts >= 5) {
-        return NextResponse.json({ error: 'Trop de tentatives. Demandez un nouveau code.' }, { status: 400 });
+        return NextResponse.json({ error: m.tooManyAttempts }, { status: 400 });
       }
 
       if (data.code !== submittedCode) {
@@ -110,7 +148,7 @@ export async function POST(req: NextRequest) {
           .from('email_verifications')
           .update({ attempts: data.attempts + 1 })
           .eq('email', email);
-        return NextResponse.json({ error: 'Code incorrect.' }, { status: 400 });
+        return NextResponse.json({ error: m.incorrectCode }, { status: 400 });
       }
 
       await supabaseAdmin
@@ -121,8 +159,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ verified: true });
     }
 
-    return NextResponse.json({ error: 'Action inconnue.' }, { status: 400 });
+    return NextResponse.json({ error: m.unknownAction }, { status: 400 });
   } catch {
-    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 });
+    return NextResponse.json({ error: MESSAGES.fr.serverError }, { status: 500 });
   }
 }

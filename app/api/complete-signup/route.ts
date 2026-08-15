@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
+const MESSAGES = {
+  fr: {
+    missingCredentials: 'Email et mot de passe requis.',
+    passwordTooShort: 'Le mot de passe doit contenir au moins 8 caractères.',
+    emailNotVerified: 'Email non vérifié. Recommencez la vérification par code.',
+    cannotCreateAccount: 'Impossible de créer le compte.',
+  },
+  en: {
+    missingCredentials: 'Email and password required.',
+    passwordTooShort: 'Password must be at least 8 characters.',
+    emailNotVerified: 'Email not verified. Restart the code verification.',
+    cannotCreateAccount: 'Could not create the account.',
+  },
+} as const;
+
 // Account creation is only allowed to go through this route, never
 // supabase.auth.signUp() directly from the browser — otherwise anyone
 // could create a Churnly account under an email address they don't own
@@ -11,12 +26,13 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const { email, password, companyName, clientCount, monthlyRevenue, industry, language } = body ?? {};
+  const m = language === 'en' ? MESSAGES.en : MESSAGES.fr;
 
   if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
-    return NextResponse.json({ error: 'Email et mot de passe requis.' }, { status: 400 });
+    return NextResponse.json({ error: m.missingCredentials }, { status: 400 });
   }
   if (password.length < 8) {
-    return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères.' }, { status: 400 });
+    return NextResponse.json({ error: m.passwordTooShort }, { status: 400 });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
@@ -33,7 +49,7 @@ export async function POST(req: NextRequest) {
     new Date(verification.expires_at) < new Date()
   ) {
     return NextResponse.json(
-      { error: 'Email non vérifié. Recommencez la vérification par code.' },
+      { error: m.emailNotVerified },
       { status: 400 },
     );
   }
@@ -47,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   if (createError || !created?.user) {
     return NextResponse.json(
-      { error: createError?.message ?? 'Impossible de créer le compte.' },
+      { error: createError?.message ?? m.cannotCreateAccount },
       { status: 400 },
     );
   }
