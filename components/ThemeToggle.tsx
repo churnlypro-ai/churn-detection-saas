@@ -4,10 +4,12 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sun, Moon } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { dict } = useLanguage();
 
   useEffect(() => {
     setMounted(true);
@@ -24,7 +26,7 @@ export function ThemeToggle() {
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
       className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-      aria-label="Changer de thème"
+      aria-label={dict.common.themeToggle}
     >
       <AnimatePresence mode="wait">
         {theme === 'dark' ? (

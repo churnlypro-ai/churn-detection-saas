@@ -262,7 +262,7 @@ export async function sendWeeklyReportEmail({
       <p>Cette semaine, voici vos résultats :</p>
       <ul style="line-height: 1.8;">
         <li>✓ Clients sauvés : <strong>${clientsSaved}</strong></li>
-        <li>✓ Revenue sauvée : <strong>€${revenueSaved.toLocaleString(locale)}</strong></li>
+        <li>✓ Revenu sauvé : <strong>€${revenueSaved.toLocaleString(locale)}</strong></li>
         <li>✓ ROI cette semaine : <strong>${roiPercent}%</strong></li>
       </ul>
       <p>Taux de churn actuel : <strong>${churnRateNow}%</strong> (vs ${churnRateBefore}% semaine passée)</p>

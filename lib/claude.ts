@@ -17,7 +17,7 @@ function getClient(): Anthropic {
   return anthropicClient;
 }
 
-const ANALYSIS_SYSTEM_PROMPT = `Tu es un analyste churn expert pour des entreprises SaaS et agences. On te fournit des données réelles sur des clients (inactivité, tickets support, usage, statut de paiement, revenue, et tout autre champ présent). Ton travail est chirurgical: chaque affirmation doit être justifiée par une vraie valeur des données fournies. N'invente jamais une donnée qui n'est pas dans l'input.
+const ANALYSIS_SYSTEM_PROMPT = `Tu es un analyste churn expert pour des entreprises SaaS et agences. On te fournit des données réelles sur des clients (inactivité, tickets support, usage, statut de paiement, revenu, et tout autre champ présent). Ton travail est chirurgical: chaque affirmation doit être justifiée par une vraie valeur des données fournies. N'invente jamais une donnée qui n'est pas dans l'input.
 
 Pour CHAQUE client, retourne:
 1. churn_score (0-100): basé uniquement sur les signaux réels fournis.
@@ -156,7 +156,7 @@ Données du client:
 - Nom: ${client.client_name}
 - Score de churn: ${client.churn_score}%
 - Raison du risque: ${client.reason}
-- Revenue mensuel: €${client.revenue_monthly ?? 0}
+- Revenu mensuel: €${client.revenue_monthly ?? 0}
 
 Facteurs de risque identifiés (avec preuves réelles):
 ${riskFactorsText}
