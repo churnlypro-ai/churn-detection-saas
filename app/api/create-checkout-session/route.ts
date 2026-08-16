@@ -15,6 +15,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   }
 
+  const body = await req.json().catch(() => ({}));
+  // Le client ne peut que RENONCER à l'essai (payer tout de suite), jamais
+  // s'en accorder un en plus de ce que le serveur autorise déjà plus bas
+  // (isManagerProfile / trialAlreadyUsed) — 'wantsTrial: true' envoyé par un
+  // utilisateur qui n'y a pas droit reste sans effet.
+  const wantsTrial = body?.wantsTrial !== false;
+
   const user = userData.user;
   const { data: profile } = await supabaseAdmin
     .from('users')
@@ -67,7 +74,7 @@ export async function POST(req: NextRequest) {
     // posé de façon permanente au premier essai (voir stripe-webhook) et n'est
     // jamais effacé, contrairement à trial_end qui repart à null à l'annulation.
     const trialAlreadyUsed = (profile as { trial_used?: boolean })?.trial_used === true;
-    const grantsTrial = !isManagerProfile && !trialAlreadyUsed;
+    const grantsTrial = wantsTrial && !isManagerProfile && !trialAlreadyUsed;
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
