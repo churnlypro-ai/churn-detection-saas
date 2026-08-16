@@ -76,6 +76,7 @@ export default function Settings() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'disconnecting'>('idle');
   const [stripeMessage, setStripeMessage] = useState('');
+  const [planMessage, setPlanMessage] = useState('');
   const t = useTranslations('settings');
 
   // 'trialing' oublié ici verrouillerait la visualisation pour un compte
@@ -106,6 +107,7 @@ export default function Settings() {
     if (!user) return;
     setSaving(true);
     setError('');
+    setPlanMessage('');
     setHexStatus('loading');
     const { error: updateError } = await supabase
       .from('users')
@@ -117,18 +119,44 @@ export default function Settings() {
       })
       .eq('id', user.id);
 
-    setSaving(false);
     if (updateError) {
+      setSaving(false);
       setError(t.updateError);
       setHexStatus('error');
       setTimeout(() => setHexStatus('idle'), 3000);
-    } else {
-      setSavedToast(true);
-      setHexStatus('success');
-      setTimeout(() => setSavedToast(false), 3000);
-      setTimeout(() => setHexStatus('idle'), 2500);
+      return;
     }
-  }, [user, editCompany, editClients, editRevenue, editIndustry, t.updateError]);
+
+    // Un client déjà abonné doit voir son abonnement Stripe suivre ces
+    // nouvelles valeurs — sinon les modifier ici ne change rien à ce qu'il
+    // paie réellement. Best-effort : ses infos sont déjà enregistrées même
+    // si cet ajustement échoue.
+    if (profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing') {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        const response = await fetch('/api/update-subscription-tier', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setPlanMessage(t.planUpdateError);
+        } else if (result.updated) {
+          setProfile((prev) => (prev ? { ...prev, subscription_tier: String(result.tier) } : prev));
+          setPlanMessage(t.planUpdated(formatEuro(Number(result.tier))));
+        }
+      } catch {
+        setPlanMessage(t.planUpdateError);
+      }
+    }
+
+    setSaving(false);
+    setSavedToast(true);
+    setHexStatus('success');
+    setTimeout(() => setSavedToast(false), 3000);
+    setTimeout(() => setHexStatus('idle'), 2500);
+  }, [user, editCompany, editClients, editRevenue, editIndustry, profile?.subscription_status, t]);
 
   async function handlePasswordChange(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -254,7 +282,9 @@ export default function Settings() {
               >
                 {formatEuro(currentPrice)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
               </motion.p>
-              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">{t.priceNote}</p>
+              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                {isLocked ? t.priceNote : t.priceNoteSubscribed}
+              </p>
             </div>
           </motion.div>
 
@@ -342,6 +372,9 @@ export default function Settings() {
                 {saving ? t.saving : t.save}
               </button>
               {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+              {planMessage && (
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{planMessage}</p>
+              )}
             </div>
 
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
