@@ -409,6 +409,8 @@ export const en: Dictionary = {
       accountCreatedNoPayment: 'Account created, but could not start checkout. Try again from the dashboard.',
       checkoutStartFailed: 'Could not start checkout.',
       accountCreatedPaymentFailed: 'Account created, but payment failed. Try again from the dashboard.',
+      stripeSignupDenied: 'Stripe connection cancelled.',
+      stripeSignupError: 'Signing in with Stripe failed. Try again or create your account with an email.',
     },
     passwordStrength: {
       label: 'Strength:',
@@ -419,6 +421,10 @@ export const en: Dictionary = {
     step0: {
       title: 'Create your account',
       subtitle: 'Get started for free.',
+      stripeSignupButton: 'Create my account with Stripe',
+      stripeSignupLoading: 'Connecting to Stripe…',
+      stripeSignupNote: 'Your revenue and customer count are calculated automatically from your real Stripe data — no form to fill in.',
+      or: 'or',
       emailLabel: 'Email',
       emailPlaceholder: 'you@company.com',
       sending: 'Sending…',
@@ -493,6 +499,11 @@ export const en: Dictionary = {
     noAccount: 'No account yet?',
     createAccount: 'Create an account',
     redirecting: 'Redirecting to your dashboard…',
+    stripeAccountExists: 'A Churnly account already exists with this email — it was created via Stripe sign-in and has no password. Get a sign-in link by email instead.',
+    magicLinkButton: 'Send a sign-in link',
+    magicLinkSending: 'Sending…',
+    magicLinkSent: 'Link sent — check your inbox.',
+    magicLinkError: 'Could not send the link. Try again.',
   },
   pricing: {
     eyebrow: 'Pricing',

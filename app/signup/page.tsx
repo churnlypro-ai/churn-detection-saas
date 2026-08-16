@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -13,8 +13,9 @@ import { useLanguage, useTierName, useTranslations } from '@/lib/i18n/LanguageCo
 
 type Industry = 'saas' | 'agency' | 'ecommerce' | 'manager' | 'other';
 
-export default function Signup() {
+function SignupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState(['', '', '', '']);
@@ -28,10 +29,38 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [stripeSignupLoading, setStripeSignupLoading] = useState(false);
   const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
   const t = useTranslations('signup');
   const tierName = useTierName();
   const { language } = useLanguage();
+
+  useEffect(() => {
+    const stripeParam = searchParams.get('stripe');
+    if (!stripeParam) return;
+    window.history.replaceState({}, '', '/signup');
+    if (stripeParam === 'denied') setError(t.errors.stripeSignupDenied);
+    else if (stripeParam === 'error') setError(t.errors.stripeSignupError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  async function handleStripeSignup() {
+    setError('');
+    setStripeSignupLoading(true);
+    try {
+      const res = await fetch('/api/stripe/connect/signup-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language }),
+      });
+      if (!res.ok) throw new Error(t.errors.stripeSignupError);
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.errors.stripeSignupError);
+      setStripeSignupLoading(false);
+    }
+  }
 
   const steps = t.steps;
   const INDUSTRY_LABELS = t.industries;
@@ -268,6 +297,27 @@ export default function Signup() {
                 <motion.div key="step0" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
                   <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.step0.title}</h1>
                   <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{t.step0.subtitle}</p>
+
+                  <button
+                    type="button"
+                    onClick={handleStripeSignup}
+                    disabled={stripeSignupLoading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700 dark:hover:text-brand-400"
+                  >
+                    {stripeSignupLoading ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> {t.step0.stripeSignupLoading}</>
+                    ) : (
+                      t.step0.stripeSignupButton
+                    )}
+                  </button>
+                  <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">{t.step0.stripeSignupNote}</p>
+
+                  <div className="my-5 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+                    <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                    {t.step0.or}
+                    <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                  </div>
+
                   <div className="space-y-4">
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.step0.emailLabel}</label>
@@ -489,5 +539,13 @@ export default function Signup() {
         </motion.div>
       </main>
     </>
+  );
+}
+
+export default function Signup() {
+  return (
+    <Suspense fallback={null}>
+      <SignupContent />
+    </Suspense>
   );
 }

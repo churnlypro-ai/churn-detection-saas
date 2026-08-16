@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const state = signConnectState(userData.user.id);
-    return NextResponse.json({ url: getConnectAuthUrl(state) });
+    return NextResponse.json({ url: getConnectAuthUrl(state, '/api/stripe/connect/callback') });
   } catch (err) {
     console.error('[stripe/connect/start] failed', err);
     return NextResponse.json({ error: 'Could not start Stripe connection.' }, { status: 500 });

@@ -407,6 +407,8 @@ export const fr = {
       accountCreatedNoPayment: 'Compte créé, mais impossible de démarrer le paiement. Réessayez depuis le dashboard.',
       checkoutStartFailed: 'Impossible de démarrer le paiement.',
       accountCreatedPaymentFailed: 'Compte créé, mais le paiement a échoué. Réessayez depuis le dashboard.',
+      stripeSignupDenied: 'Connexion Stripe annulée.',
+      stripeSignupError: 'La connexion via Stripe a échoué. Réessayez ou créez votre compte avec un email.',
     },
     passwordStrength: {
       label: 'Force:',
@@ -417,6 +419,10 @@ export const fr = {
     step0: {
       title: 'Créez votre compte',
       subtitle: 'Commencez gratuitement.',
+      stripeSignupButton: 'Créer mon compte avec Stripe',
+      stripeSignupLoading: 'Connexion à Stripe…',
+      stripeSignupNote: 'Votre CA et votre nombre de clients sont calculés automatiquement à partir de vos vraies données Stripe — pas de formulaire à remplir.',
+      or: 'ou',
       emailLabel: 'Email',
       emailPlaceholder: 'vous@entreprise.com',
       sending: 'Envoi…',
@@ -491,6 +497,11 @@ export const fr = {
     noAccount: 'Pas encore de compte ?',
     createAccount: 'Créer un compte',
     redirecting: 'Redirection vers votre dashboard…',
+    stripeAccountExists: 'Un compte Churnly existe déjà avec cet email — il a été créé via la connexion Stripe et n\'a pas de mot de passe. Recevez un lien de connexion par email à la place.',
+    magicLinkButton: 'Envoyer un lien de connexion',
+    magicLinkSending: 'Envoi…',
+    magicLinkSent: 'Lien envoyé — vérifiez votre boîte mail.',
+    magicLinkError: 'Impossible d\'envoyer le lien. Réessayez.',
   },
   pricing: {
     eyebrow: 'Tarifs',

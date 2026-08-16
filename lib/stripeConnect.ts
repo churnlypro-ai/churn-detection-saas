@@ -46,7 +46,42 @@ export function verifyConnectState(state: string): string | null {
   return userId;
 }
 
-export function getConnectAuthUrl(state: string): string {
+// Format distinct de signConnectState (préfixe littéral 'signup', jamais
+// confondu avec un userId UUID) : utilisé quand aucun compte Churnly
+// n'existe encore — inscription en un clic en liant Stripe avant même
+// d'avoir créé le compte, comme "Sign up with GitHub". La langue choisie
+// sur la page d'inscription est embarquée dans l'état signé puisqu'il n'y a
+// pas encore de session ni de profil en base pour la retrouver au retour.
+export function signSignupState(language: 'fr' | 'en'): string {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const timestamp = Date.now().toString();
+  const signature = crypto
+    .createHmac('sha256', getStateSecret())
+    .update(`signup.${language}.${nonce}.${timestamp}`)
+    .digest('hex');
+  return `signup.${language}.${nonce}.${timestamp}.${signature}`;
+}
+
+export function verifySignupState(state: string): { language: 'fr' | 'en' } | null {
+  const parts = state.split('.');
+  if (parts.length !== 5 || parts[0] !== 'signup') return null;
+  const [prefix, language, nonce, timestamp, signature] = parts;
+
+  const expected = crypto
+    .createHmac('sha256', getStateSecret())
+    .update(`${prefix}.${language}.${nonce}.${timestamp}`)
+    .digest('hex');
+
+  const sigBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (sigBuffer.length !== expectedBuffer.length) return null;
+  if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) return null;
+
+  if (Date.now() - Number(timestamp) > STATE_TTL_MS) return null;
+  return { language: language === 'en' ? 'en' : 'fr' };
+}
+
+export function getConnectAuthUrl(state: string, redirectPath: string): string {
   const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
   if (!clientId) throw new Error('STRIPE_CONNECT_CLIENT_ID is not set');
 
@@ -58,7 +93,7 @@ export function getConnectAuthUrl(state: string): string {
     // fait en pratique que lire les abonnements (voir
     // fetchClientsFromConnectedAccount) — jamais aucun appel d'écriture.
     scope: 'read_write',
-    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/connect/callback`,
+    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}${redirectPath}`,
     state,
   });
   return `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
@@ -74,6 +109,28 @@ export async function exchangeCodeForAccount(code: string): Promise<string> {
     throw new Error('Stripe OAuth response missing stripe_user_id');
   }
   return response.stripe_user_id;
+}
+
+export interface ConnectedAccountProfile {
+  email: string | null;
+  companyName: string;
+}
+
+// Utilisé uniquement par le parcours d'inscription via Stripe (voir
+// app/api/stripe/connect/signup-callback) pour pré-remplir le compte Churnly
+// à partir du compte Stripe qui vient d'être lié, sans jamais redemander ces
+// informations à l'utilisateur.
+export async function fetchConnectedAccountProfile(accountId: string): Promise<ConnectedAccountProfile> {
+  const stripe = getStripe();
+  const account = await stripe.accounts.retrieve(accountId);
+  return {
+    email: account.email ?? null,
+    companyName:
+      account.business_profile?.name ||
+      account.settings?.dashboard?.display_name ||
+      account.email ||
+      'Mon entreprise',
+  };
 }
 
 export async function disconnectAccount(accountId: string): Promise<void> {
