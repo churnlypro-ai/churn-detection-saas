@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
@@ -17,13 +17,17 @@ interface NormalizedRow {
   renewal_date: string;
 }
 
-export default function Upload() {
+function UploadContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [companyName, setCompanyName] = useState('');
   const [status, setStatus] = useState<'idle' | 'parsing' | 'analyzing' | 'error'>('idle');
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'importing' | 'error'>('idle');
+  const [stripeMessage, setStripeMessage] = useState('');
   const t = useTranslations('upload');
   const { language } = useLanguage();
 
@@ -36,12 +40,34 @@ export default function Upload() {
       setUser(data.user);
       supabase
         .from('users')
-        .select('company_name')
+        .select('company_name, stripe_connect_account_id')
         .eq('id', data.user.id)
         .maybeSingle()
-        .then(({ data: profile }) => setCompanyName(profile?.company_name || ''));
+        .then(({ data: profile }) => {
+          setCompanyName(profile?.company_name || '');
+          setStripeConnected(!!profile?.stripe_connect_account_id);
+        });
     });
   }, [router]);
+
+  // Retour depuis l'écran d'autorisation Stripe : on lance l'import tout de
+  // suite plutôt que de faire recliquer un bouton — connecter Stripe n'a
+  // d'intérêt que si ça débouche immédiatement sur des données.
+  useEffect(() => {
+    const stripeParam = searchParams.get('stripe');
+    if (!stripeParam) return;
+    window.history.replaceState({}, '', '/upload');
+
+    if (stripeParam === 'connected') {
+      setStripeConnected(true);
+      void handleImportFromStripe();
+    } else if (stripeParam === 'denied') {
+      setStripeMessage(t.stripeDenied);
+    } else if (stripeParam === 'error') {
+      setStripeMessage(t.stripeError);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   function normalizeRow(row: Record<string, string>): NormalizedRow & Record<string, unknown> {
     return {
@@ -116,6 +142,48 @@ export default function Upload() {
     });
   }
 
+  async function handleConnectStripe() {
+    setStripeStatus('connecting');
+    setStripeMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/stripe/connect/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t.stripeError);
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err) {
+      setStripeStatus('error');
+      setStripeMessage(err instanceof Error ? err.message : t.stripeError);
+    }
+  }
+
+  async function handleImportFromStripe() {
+    setStripeStatus('importing');
+    setStripeMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/stripe/connect/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ language }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || t.errors.stripeImportFailed);
+      }
+      const result = await response.json();
+      router.push(`/preview?uploadId=${result.uploadId}`);
+    } catch (err) {
+      setStripeStatus('error');
+      setStripeMessage(err instanceof Error ? err.message : t.errors.stripeImportFailed);
+    }
+  }
+
   if (!user) return null;
 
   return (
@@ -158,13 +226,30 @@ export default function Upload() {
 
         <button
           type="button"
-          disabled
-          title={t.comingSoon}
-          className="mt-6 rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-400 dark:border-slate-700 dark:text-slate-500"
+          onClick={stripeConnected ? handleImportFromStripe : handleConnectStripe}
+          disabled={stripeStatus === 'connecting' || stripeStatus === 'importing'}
+          className="mt-6 rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-400"
         >
-          {t.connectStripe}
+          {stripeStatus === 'connecting'
+            ? t.connectingStripe
+            : stripeStatus === 'importing'
+            ? t.importingStripe
+            : stripeConnected
+            ? t.importFromStripe
+            : t.connectStripe}
         </button>
+        {stripeMessage && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400">{stripeMessage}</p>
+        )}
       </main>
     </>
+  );
+}
+
+export default function Upload() {
+  return (
+    <Suspense fallback={null}>
+      <UploadContent />
+    </Suspense>
   );
 }

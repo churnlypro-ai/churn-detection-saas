@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle } from 'lucide-react';
+import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2 } from 'lucide-react';
 import type { HexagonStatus } from '@/components/MagicHexagon';
 import { useTranslations } from '@/lib/i18n/LanguageContext';
 
@@ -21,6 +21,7 @@ interface Profile {
   churn_rate: number | null;
   stripe_connected: boolean;
   intercom_connected: boolean;
+  stripe_connect_account_id: string | null;
 }
 
 import { calcPrice, formatEuro } from '@/lib/pricing';
@@ -72,6 +73,9 @@ export default function Settings() {
 
   const [newPassword, setNewPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState('');
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'disconnecting'>('idle');
+  const [stripeMessage, setStripeMessage] = useState('');
   const t = useTranslations('settings');
 
   // 'trialing' oublié ici verrouillerait la visualisation pour un compte
@@ -93,6 +97,7 @@ export default function Settings() {
       setEditRevenue(p?.monthly_revenue ?? 50000);
       setEditCompany(p?.company_name ?? '');
       setEditIndustry(p?.industry ?? '');
+      setStripeConnected(!!p?.stripe_connect_account_id);
       setLoading(false);
     });
   }, [router]);
@@ -136,6 +141,45 @@ export default function Settings() {
   async function handleLogout() {
     await supabase.auth.signOut();
     router.push('/login');
+  }
+
+  async function handleConnectStripe() {
+    setStripeStatus('connecting');
+    setStripeMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/stripe/connect/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t.stripeConnectError);
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err) {
+      setStripeStatus('idle');
+      setStripeMessage(err instanceof Error ? err.message : t.stripeConnectError);
+    }
+  }
+
+  async function handleDisconnectStripe() {
+    setStripeStatus('disconnecting');
+    setStripeMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/stripe/connect/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t.stripeDisconnectError);
+      setStripeConnected(false);
+      setStripeMessage(t.stripeDisconnected);
+    } catch (err) {
+      setStripeMessage(err instanceof Error ? err.message : t.stripeDisconnectError);
+    } finally {
+      setStripeStatus('idle');
+    }
   }
 
   if (loading || !user) {
@@ -320,6 +364,38 @@ export default function Settings() {
                 </button>
               </form>
               {passwordStatus && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{passwordStatus}</p>}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.stripeConnectTitle}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.stripeConnectDescription}</p>
+              <div className="mt-4 flex items-center justify-between">
+                <span className={`flex items-center gap-1.5 text-xs font-semibold ${stripeConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {stripeConnected ? t.stripeConnectedLabel : t.stripeNotConnectedLabel}
+                </span>
+                {stripeConnected ? (
+                  <button
+                    onClick={handleDisconnectStripe}
+                    disabled={stripeStatus === 'disconnecting'}
+                    className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {stripeStatus === 'disconnecting' ? t.stripeDisconnecting : t.stripeDisconnectButton}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectStripe}
+                    disabled={stripeStatus === 'connecting'}
+                    className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                  >
+                    {stripeStatus === 'connecting' ? t.stripeConnecting : t.stripeConnectButton}
+                  </button>
+                )}
+              </div>
+              {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
             </div>
 
             <button
