@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { useRef, useEffect, useState } from 'react';
+import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import AnimatedHero from '@/components/AnimatedHero';
 import Calculator from '@/components/Calculator';
@@ -461,9 +462,9 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 dark:text-slate-500 sm:flex-row">
           <span>© {new Date().getFullYear()} Churnly</span>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.privacy}</a>
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.terms}</a>
-            <a href="#" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.contact}</a>
+            <Link href="/confidentialite" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.privacy}</Link>
+            <Link href="/conditions" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.terms}</Link>
+            <a href="mailto:contact@churnly.fr" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.contact}</a>
           </div>
         </div>
       </footer>
