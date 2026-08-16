@@ -53,10 +53,11 @@ export function getConnectAuthUrl(state: string): string {
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
-    // 'read_only' : Churnly n'a besoin que de lire les clients, abonnements
-    // et factures pour l'analyse de churn — jamais d'écrire quoi que ce soit
-    // sur le compte Stripe du client, donc jamais demander plus large.
-    scope: 'read_only',
+    // Stripe réserve 'read_only' aux plateformes validées manuellement par
+    // leur support ; 'read_write' est donc utilisé par défaut. Churnly ne
+    // fait en pratique que lire les abonnements (voir
+    // fetchClientsFromConnectedAccount) — jamais aucun appel d'écriture.
+    scope: 'read_write',
     redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/connect/callback`,
     state,
   });
