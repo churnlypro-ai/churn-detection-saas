@@ -203,6 +203,11 @@ export const fr = {
   },
   settings: {
     title: 'Paramètres',
+    onboardingBanner: {
+      title: 'Bienvenue sur Churnly',
+      body: 'Un dernier coup d\'œil sur vos infos avant de continuer — vous pourrez toujours les modifier plus tard.',
+      cta: 'Suivant',
+    },
     currentProfile: 'Profil actuel',
     infoLabels: {
       company: 'Entreprise',
