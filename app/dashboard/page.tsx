@@ -64,6 +64,13 @@ interface ActionRow {
   created_at: string;
 }
 
+interface OutcomeRow {
+  client_name: string;
+  outcome: 'churned' | 'retained';
+  churn_score_at_outcome: number | null;
+  source: 'manual' | 'auto_reimport';
+}
+
 function formatEuro(value: number): string {
   return formatEuroShared(value);
 }
@@ -224,7 +231,62 @@ const WEIGHT_STYLES: Record<RiskFactor['weight'], string> = {
   low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
 };
 
-function ClientDetailRow({ client }: { client: AnalysisRow }) {
+function OutcomeControl({ client, outcome, onMark, marking }: {
+  client: AnalysisRow;
+  outcome?: OutcomeRow;
+  onMark: (clientName: string, outcome: 'churned' | 'retained') => void;
+  marking: boolean;
+}) {
+  const t = useTranslations('dashboard').outcome;
+
+  return (
+    <div className="mt-4 rounded-xl border border-slate-100 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.title}</p>
+      {outcome ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className={`rounded-full px-2.5 py-1 font-semibold ${outcome.outcome === 'churned' ? 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'}`}>
+            {outcome.outcome === 'churned' ? t.churned : t.retained}
+          </span>
+          <span className="text-slate-400 dark:text-slate-500">
+            {outcome.source === 'manual' ? t.manualLabel : t.autoDetected}
+          </span>
+          <button
+            onClick={() => onMark(client.client_name, outcome.outcome === 'churned' ? 'retained' : 'churned')}
+            disabled={marking}
+            className="text-brand-600 underline-offset-2 hover:underline disabled:opacity-50 dark:text-brand-400"
+          >
+            {t.changeButton}
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-400 dark:text-slate-500">{t.unknown}</span>
+          <button
+            onClick={() => onMark(client.client_name, 'churned')}
+            disabled={marking}
+            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-red-300 hover:text-red-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:border-red-800 dark:hover:text-red-400"
+          >
+            {t.markChurned}
+          </button>
+          <button
+            onClick={() => onMark(client.client_name, 'retained')}
+            disabled={marking}
+            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:border-emerald-800 dark:hover:text-emerald-400"
+          >
+            {t.markRetained}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientDetailRow({ client, outcome, onMarkOutcome, markingOutcome }: {
+  client: AnalysisRow;
+  outcome?: OutcomeRow;
+  onMarkOutcome: (clientName: string, outcome: 'churned' | 'retained') => void;
+  markingOutcome: boolean;
+}) {
   const factors = client.details?.risk_factors ?? [];
   const actions = client.details?.recommended_actions ?? [];
   const t = useTranslations('dashboard').clientDetail;
@@ -274,12 +336,19 @@ function ClientDetailRow({ client }: { client: AnalysisRow }) {
             )}
           </div>
         </div>
+        <OutcomeControl client={client} outcome={outcome} onMark={onMarkOutcome} marking={markingOutcome} />
       </td>
     </tr>
   );
 }
 
-function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onEmailSent: () => void }) {
+function PaidClientTable({ clients, onEmailSent, outcomes, onMarkOutcome, markingClientName }: {
+  clients: AnalysisRow[];
+  onEmailSent: () => void;
+  outcomes: Map<string, OutcomeRow>;
+  onMarkOutcome: (clientName: string, outcome: 'churned' | 'retained') => void;
+  markingClientName: string | null;
+}) {
   const [emailClient, setEmailClient] = useState<AnalysisRow | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const t = useTranslations('dashboard');
@@ -310,15 +379,14 @@ function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onE
             {clients.map((client) => {
               const badge = riskBadge(client.churn_score, t.riskBadge);
               const isExpanded = expandedId === client.id;
-              const hasDetails = (client.details?.risk_factors?.length ?? 0) > 0 || (client.details?.recommended_actions?.length ?? 0) > 0;
+              const outcome = outcomes.get(client.client_name);
               return (
                 <Fragment key={client.id}>
                   <tr className="align-top transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                     <td className="px-5 py-4 font-medium text-slate-900 dark:text-white">
                       <button
-                        onClick={() => hasDetails && setExpandedId(isExpanded ? null : client.id)}
-                        className={`text-left ${hasDetails ? 'underline decoration-dotted underline-offset-4 hover:text-brand-600 dark:hover:text-brand-400' : ''}`}
-                        disabled={!hasDetails}
+                        onClick={() => setExpandedId(isExpanded ? null : client.id)}
+                        className="text-left underline decoration-dotted underline-offset-4 hover:text-brand-600 dark:hover:text-brand-400"
                       >
                         {client.client_name}
                       </button>
@@ -331,14 +399,12 @@ function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onE
                     <td className="max-w-[240px] px-5 py-4 text-slate-600 dark:text-slate-400">{client.solution}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        {hasDetails && (
-                          <button
-                            onClick={() => setExpandedId(isExpanded ? null : client.id)}
-                            className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-400"
-                          >
-                            <Info className="h-3.5 w-3.5" /> {t.table.infoClient}
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : client.id)}
+                          className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-400"
+                        >
+                          <Info className="h-3.5 w-3.5" /> {t.table.infoClient}
+                        </button>
                         <button
                           onClick={() => setEmailClient(client)}
                           className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20"
@@ -348,7 +414,14 @@ function PaidClientTable({ clients, onEmailSent }: { clients: AnalysisRow[]; onE
                       </div>
                     </td>
                   </tr>
-                  {isExpanded && <ClientDetailRow client={client} />}
+                  {isExpanded && (
+                    <ClientDetailRow
+                      client={client}
+                      outcome={outcome}
+                      onMarkOutcome={onMarkOutcome}
+                      markingOutcome={markingClientName === client.client_name}
+                    />
+                  )}
                 </Fragment>
               );
             })}
@@ -568,6 +641,8 @@ export default function Dashboard() {
   const [clients, setClients] = useState<AnalysisRow[]>([]);
   const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [actionLog, setActionLog] = useState<ActionRow[]>([]);
+  const [outcomes, setOutcomes] = useState<Map<string, OutcomeRow>>(new Map());
+  const [markingClientName, setMarkingClientName] = useState<string | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
@@ -614,7 +689,43 @@ export default function Dashboard() {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     setActionLog((actionRows ?? []) as ActionRow[]);
+
+    const { data: outcomeRows } = await supabase
+      .from('client_outcomes')
+      .select('client_name, outcome, churn_score_at_outcome, source')
+      .eq('user_id', userId);
+    setOutcomes(new Map(((outcomeRows ?? []) as OutcomeRow[]).map((o) => [o.client_name, o])));
   }, []);
+
+  async function handleMarkOutcome(clientName: string, outcome: 'churned' | 'retained') {
+    if (!user) return;
+    setMarkingClientName(clientName);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch('/api/mark-outcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ clientName, outcome }),
+      });
+      if (res.ok) {
+        setOutcomes((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(clientName);
+          next.set(clientName, {
+            client_name: clientName,
+            outcome,
+            churn_score_at_outcome: existing?.churn_score_at_outcome ?? (clients.find((c) => c.client_name === clientName)?.churn_score ?? null),
+            source: 'manual',
+          });
+          return next;
+        });
+      }
+    } catch {
+      // best-effort — l'utilisateur peut réessayer, ce n'est pas bloquant
+    }
+    setMarkingClientName(null);
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -710,6 +821,18 @@ export default function Dashboard() {
     const potentialSavings = monthlyLoss * 0.5;
     return { mrr, churnRate, ltv, clientCount, atRisk, monthlyLoss, annualLoss, potentialSavings };
   }, [clients, profile]);
+
+  // Précision de l'analyse : parmi les clients qu'on a jugés "à risque"
+  // (score >= 60) ET dont on connaît maintenant le sort réel (marqué
+  // manuellement ou détecté via un ré-import, voir client_outcomes), quelle
+  // proportion a vraiment churné. C'est la seule preuve que le score veut
+  // dire quelque chose plutôt qu'un chiffre inventé.
+  const precision = useMemo(() => {
+    const resolvedFlagged = Array.from(outcomes.values()).filter((o) => (o.churn_score_at_outcome ?? 0) >= 60);
+    if (resolvedFlagged.length === 0) return null;
+    const correct = resolvedFlagged.filter((o) => o.outcome === 'churned').length;
+    return { rate: Math.round((correct / resolvedFlagged.length) * 100), total: resolvedFlagged.length, correct };
+  }, [outcomes]);
 
   const chartData = useMemo(() => {
     // Une soustraction linéaire (mrr - monthlyLoss * mois) part dans le
@@ -1023,6 +1146,28 @@ export default function Dashboard() {
           </motion.div>
         </div>
 
+        {hasAccess && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <Target className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t.precision.title}</h2>
+            </div>
+            {precision ? (
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{precision.rate}%</span>{' '}
+                {t.precision.detail(precision.correct, precision.total)}
+              </p>
+            ) : (
+              <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">{t.precision.unresolvedHint}</p>
+            )}
+          </motion.div>
+        )}
+
         <ChurnEducationSection
           industry={profile?.industry ?? null}
           churnRate={metrics.churnRate}
@@ -1036,7 +1181,13 @@ export default function Dashboard() {
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
           <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">{t.atRiskClientsTitle}</h2>
           {hasAccess ? (
-            <PaidClientTable clients={clients} onEmailSent={() => user && loadData(user.id)} />
+            <PaidClientTable
+              clients={clients}
+              onEmailSent={() => user && loadData(user.id)}
+              outcomes={outcomes}
+              onMarkOutcome={handleMarkOutcome}
+              markingClientName={markingClientName}
+            />
           ) : (
             <LockedClientsTeaser
               atRisk={metrics.atRisk}

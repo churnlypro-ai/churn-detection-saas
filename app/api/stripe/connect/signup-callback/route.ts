@@ -8,6 +8,10 @@ import {
 } from '@/lib/stripeConnect';
 import { runChurnAnalysis } from '@/lib/analysis';
 
+// Voir la même note dans app/api/analyze/route.ts — l'analyse initiale
+// déclenchée ici peut porter sur beaucoup de clients Stripe d'un coup.
+export const maxDuration = 300;
+
 function redirectToSignup(req: NextRequest, status: 'denied' | 'error', language: 'fr' | 'en' = 'fr') {
   const url = new URL('/signup', process.env.NEXT_PUBLIC_APP_URL || req.url);
   url.searchParams.set('stripe', status);

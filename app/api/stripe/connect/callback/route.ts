@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { exchangeCodeForAccount, verifyConnectState } from '@/lib/stripeConnect';
+import { logAuditEvent } from '@/lib/auditLog';
 
 function redirectToUpload(req: NextRequest, status: 'connected' | 'denied' | 'error') {
   const url = new URL('/upload', process.env.NEXT_PUBLIC_APP_URL || req.url);
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
       return redirectToUpload(req, 'error');
     }
 
+    await logAuditEvent(supabaseAdmin, userId, 'stripe_connected');
     return redirectToUpload(req, 'connected');
   } catch (err) {
     console.error('[stripe/connect/callback] token exchange failed', err);

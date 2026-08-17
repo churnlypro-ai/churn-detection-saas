@@ -7,6 +7,13 @@ function parseLanguage(value: unknown): AnalysisLanguage {
   return value === 'en' ? 'en' : 'fr';
 }
 
+// Un gros upload (jusqu'à 2000 lignes, voir plus bas) peut prendre plus que
+// les 15s par défaut d'une fonction Vercel une fois les batchs Claude
+// traités avec une concurrence bornée (voir MAX_CONCURRENT_BATCHES dans
+// lib/claude.ts). Le plafond réel dépend quand même du plan Vercel (Hobby
+// reste limité à 60s quoi qu'il arrive).
+export const maxDuration = 300;
+
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) {
