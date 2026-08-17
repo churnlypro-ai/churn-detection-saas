@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { sendWeeklyReportEmail, sendWelcomeEmail } from '@/lib/email';
+import { resolveAccountId } from '@/lib/team';
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -12,7 +13,10 @@ export async function POST(req: NextRequest) {
     if (userError || !userData?.user) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
-    const userId = userData.user.id;
+    // Un membre d'équipe qui envoie un email agit sur les clients du compte
+    // auquel il appartient, pas sur un compte vide à son propre nom — voir
+    // lib/team.ts.
+    const userId = await resolveAccountId(supabaseAdmin, userData.user.id);
 
     const body = await req.json();
     const { subject, body: emailBody, clientName } = body ?? {};

@@ -13,6 +13,7 @@ import {
 import { formatEuro as formatEuroShared } from '@/lib/pricing';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
 import type { Dictionary } from '@/lib/i18n/dictionaries/fr';
+import { resolveAccountIdClient } from '@/lib/team';
 
 interface Profile {
   company_name: string;
@@ -444,7 +445,7 @@ const TEASER_META = [
   { revenue: 890, score: 58 },
 ];
 
-function LockedClientsTeaser({ atRisk, trialEligible, onSubscribe, loading, error }: { atRisk: number; trialEligible: boolean; onSubscribe: (wantsTrial?: boolean) => void; loading: boolean; error: string }) {
+function LockedClientsTeaser({ atRisk, trialEligible, onSubscribe, loading, error, isTeamMember }: { atRisk: number; trialEligible: boolean; onSubscribe: (wantsTrial?: boolean) => void; loading: boolean; error: string; isTeamMember: boolean }) {
   const t = useTranslations('dashboard');
   const TEASER_CLIENTS = t.teaser.samples.map((s, i) => ({ ...s, ...TEASER_META[i] }));
 
@@ -486,32 +487,38 @@ function LockedClientsTeaser({ atRisk, trialEligible, onSubscribe, loading, erro
         <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
           {t.teaser.body}
         </p>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onSubscribe(true)}
-          disabled={loading}
-          className="mt-1 flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-        >
-          {loading ? (
-            <>
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              {t.teaser.redirecting}
-            </>
-          ) : trialEligible ? (
-            t.teaser.startTrial
-          ) : (
-            t.unlockBanner.subscribeButton
-          )}
-        </motion.button>
-        {trialEligible && (
-          <button
-            onClick={() => onSubscribe(false)}
-            disabled={loading}
-            className="text-xs font-medium text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline disabled:opacity-60 dark:text-slate-500 dark:hover:text-slate-300"
-          >
-            {t.unlockBanner.payNowLink}
-          </button>
+        {isTeamMember ? (
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t.teaser.teamMemberNote}</p>
+        ) : (
+          <>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onSubscribe(true)}
+              disabled={loading}
+              className="mt-1 flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+            >
+              {loading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  {t.teaser.redirecting}
+                </>
+              ) : trialEligible ? (
+                t.teaser.startTrial
+              ) : (
+                t.unlockBanner.subscribeButton
+              )}
+            </motion.button>
+            {trialEligible && (
+              <button
+                onClick={() => onSubscribe(false)}
+                disabled={loading}
+                className="text-xs font-medium text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline disabled:opacity-60 dark:text-slate-500 dark:hover:text-slate-300"
+              >
+                {t.unlockBanner.payNowLink}
+              </button>
+            )}
+          </>
         )}
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       </div>
@@ -636,6 +643,11 @@ function ChurnEducationSection({
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; created_at?: string } | null>(null);
+  // Compte dont les données sont affichées : celui de l'utilisateur
+  // connecté, sauf s'il s'agit d'un membre d'équipe accepté, auquel cas
+  // c'est celui du propriétaire (voir lib/team.ts) — jamais utilisé pour
+  // les actions réservées au propriétaire (facturation, Stripe Connect).
+  const [accountId, setAccountId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<AnalysisRow[]>([]);
@@ -731,9 +743,11 @@ export default function Dashboard() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) { router.replace('/login'); return; }
       setUser(data.user);
-      let profileData = await fetchProfile(data.user.id);
+      const resolvedAccountId = await resolveAccountIdClient(supabase, data.user.id);
+      setAccountId(resolvedAccountId);
+      let profileData = await fetchProfile(resolvedAccountId);
       setProfile(profileData);
-      await loadData(data.user.id);
+      await loadData(resolvedAccountId);
       setLoading(false);
 
       const params = new URLSearchParams(window.location.search);
@@ -750,11 +764,11 @@ export default function Dashboard() {
           setActivating(true);
           for (let attempt = 0; attempt < 10 && !isUnlocked(profileData); attempt += 1) {
             await new Promise((resolve) => setTimeout(resolve, 1500));
-            profileData = await fetchProfile(data.user.id);
+            profileData = await fetchProfile(resolvedAccountId);
             setProfile(profileData);
           }
           if (isUnlocked(profileData)) {
-            await loadData(data.user.id);
+            await loadData(resolvedAccountId);
           } else {
             setActivationDelayed(true);
           }
@@ -794,6 +808,11 @@ export default function Dashboard() {
 
   const status = profile?.subscription_status ?? 'inactive';
   const hasAccess = status === 'active' || status === 'trialing';
+  // La facturation reste réservée au propriétaire (voir /api/create-checkout-session,
+  // volontairement non résolu vers le compte partagé) — un membre d'équipe
+  // ne doit donc jamais voir de bouton qui déclencherait un paiement sur son
+  // propre profil vide plutôt que sur le compte qu'il consulte.
+  const isTeamMember = !!user && !!accountId && user.id !== accountId;
 
   const trialDaysLeft = useMemo(() => {
     if (status !== 'trialing' || !profile?.trial_end) return 0;
@@ -954,7 +973,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{profile?.company_name || t.fallbackTitle}</h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{planLabel}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {planLabel}
+                {isTeamMember && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{t.teamMemberBadge}</span>}
+              </p>
             </div>
           </div>
         </motion.div>
@@ -1021,7 +1043,7 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {!activating && !activationDelayed && (status === 'inactive' || status === 'canceled') && (
+        {!activating && !activationDelayed && !isTeamMember && (status === 'inactive' || status === 'canceled') && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1183,7 +1205,7 @@ export default function Dashboard() {
           {hasAccess ? (
             <PaidClientTable
               clients={clients}
-              onEmailSent={() => user && loadData(user.id)}
+              onEmailSent={() => accountId && loadData(accountId)}
               outcomes={outcomes}
               onMarkOutcome={handleMarkOutcome}
               markingClientName={markingClientName}
@@ -1195,6 +1217,7 @@ export default function Dashboard() {
               onSubscribe={handleSubscribe}
               loading={checkoutLoading}
               error={checkoutError}
+              isTeamMember={isTeamMember}
             />
           )}
         </motion.div>

@@ -18,6 +18,7 @@ function LoginContent() {
   const [sliding, setSliding] = useState(false);
   const [accountExists, setAccountExists] = useState(false);
   const [magicLinkStatus, setMagicLinkStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [teamInviteError, setTeamInviteError] = useState(false);
   const t = useTranslations('login');
 
   // Un compte créé via "S'inscrire avec Stripe" n'a jamais de mot de passe —
@@ -28,6 +29,11 @@ function LoginContent() {
       setAccountExists(true);
       const prefill = searchParams.get('email');
       if (prefill) setEmail(prefill);
+    }
+    // Retour depuis /api/team/accept (voir cette route) : le lien
+    // d'invitation était invalide, expiré, ou déjà utilisé.
+    if (searchParams.get('team') === 'invalid' || searchParams.get('team') === 'error') {
+      setTeamInviteError(true);
     }
   }, [searchParams]);
 
@@ -62,6 +68,18 @@ function LoginContent() {
     setMagicLinkStatus(otpError ? 'error' : 'sent');
   }
 
+  // Nécessite que le provider Google soit activé côté Supabase (Dashboard
+  // > Authentication > Providers > Google, avec un Client ID/Secret créés
+  // sur Google Cloud Console) — configuration manuelle, rien côté code.
+  // Redirige vers Google puis revient automatiquement connecté ; le trigger
+  // handle_new_user crée le profil public.users comme pour toute inscription.
+  async function handleGoogleSignIn() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/dashboard` },
+    });
+  }
+
   return (
     <>
       <Navigation user={null} />
@@ -76,6 +94,12 @@ function LoginContent() {
         >
           <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.title}</h1>
           <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">{t.subtitle}</p>
+
+          {teamInviteError && (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-500/10 dark:text-amber-400">
+              {t.teamInviteError}
+            </div>
+          )}
 
           {accountExists && (
             <div className="mb-6 rounded-xl border border-brand-100 bg-brand-50/60 p-4 text-sm text-brand-800 dark:border-brand-800/40 dark:bg-brand-500/5 dark:text-brand-300">
@@ -97,6 +121,26 @@ function LoginContent() {
               )}
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700 dark:hover:text-brand-400"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+              <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.28 1.48-1.13 2.73-2.4 3.58v2.98h3.88c2.27-2.09 3.58-5.17 3.58-8.8z" />
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-2.98c-1.08.72-2.45 1.15-4.05 1.15-3.11 0-5.75-2.1-6.69-4.92H1.31v3.09C3.28 21.3 7.31 24 12 24z" />
+              <path fill="#FBBC05" d="M5.31 14.34A7.19 7.19 0 0 1 4.96 12c0-.81.14-1.6.35-2.34V6.57H1.31A11.97 11.97 0 0 0 0 12c0 1.93.46 3.76 1.31 5.43l4-3.09z" />
+              <path fill="#EA4335" d="M12 4.77c1.76 0 3.35.61 4.6 1.8l3.44-3.44C17.94 1.19 15.23 0 12 0 7.31 0 3.28 2.7 1.31 6.57l4 3.09c.94-2.82 3.58-4.89 6.69-4.89z" />
+            </svg>
+            {t.googleButton}
+          </button>
+
+          <div className="my-5 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+            <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+            {t.or}
+            <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

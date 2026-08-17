@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getConnectAuthUrl, signConnectState } from '@/lib/stripeConnect';
+import { resolveAccountId } from '@/lib/team';
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -15,7 +16,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const state = signConnectState(userData.user.id);
+    // Un membre d'équipe qui connecte Stripe le fait pour le compte auquel
+    // il appartient — le state signé encode donc directement l'id du
+    // propriétaire, /api/stripe/connect/callback n'a rien d'autre à changer.
+    const accountId = await resolveAccountId(supabaseAdmin, userData.user.id);
+    const state = signConnectState(accountId);
     return NextResponse.json({ url: getConnectAuthUrl(state, '/api/stripe/connect/callback') });
   } catch (err) {
     console.error('[stripe/connect/start] failed', err);

@@ -7,9 +7,10 @@ import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText } from 'lucide-react';
+import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText, X, Key, Webhook, Gift } from 'lucide-react';
 import type { HexagonStatus } from '@/components/MagicHexagon';
-import { useTranslations } from '@/lib/i18n/LanguageContext';
+import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
+import { resolveAccountIdClient } from '@/lib/team';
 
 interface Profile {
   company_name: string;
@@ -29,6 +30,28 @@ interface AuditLogEntry {
   id: string;
   action: string;
   metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+interface TeamMemberRow {
+  id: string;
+  invited_email: string;
+  status: 'pending' | 'accepted';
+  created_at: string;
+}
+
+interface ApiKeyRow {
+  id: string;
+  key_prefix: string;
+  label: string | null;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+interface WebhookRow {
+  id: string;
+  url: string;
+  enabled: boolean;
   created_at: string;
 }
 
@@ -100,6 +123,20 @@ export default function Settings() {
   const [stripeMessage, setStripeMessage] = useState('');
   const [planMessage, setPlanMessage] = useState('');
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteStatus, setInviteStatus] = useState<'idle' | 'sending' | 'error'>('idle');
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [apiKeys, setApiKeys] = useState<ApiKeyRow[]>([]);
+  const [newApiKey, setNewApiKey] = useState('');
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [webhooks, setWebhooks] = useState<WebhookRow[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookStatus, setWebhookStatus] = useState<'idle' | 'sending' | 'error'>('idle');
+  const [webhookMessage, setWebhookMessage] = useState('');
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCount, setReferralCount] = useState(0);
+  const { language } = useLanguage();
   const t = useTranslations('settings');
 
   // 'trialing' oublié ici verrouillerait la visualisation pour un compte
@@ -109,6 +146,12 @@ export default function Settings() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) { router.replace('/login'); return; }
+      // La facturation, le profil d'entreprise et Stripe Connect restent
+      // réservés au propriétaire du compte — un membre d'équipe accepté est
+      // renvoyé directement vers /dashboard plutôt que de voir une page
+      // /settings partiellement utilisable pour lui.
+      const resolvedAccountId = await resolveAccountIdClient(supabase, data.user.id);
+      if (resolvedAccountId !== data.user.id) { router.replace('/dashboard'); return; }
       setUser(data.user);
       const { data: profileData } = await supabase
         .from('users')
@@ -132,8 +175,171 @@ export default function Settings() {
         .order('created_at', { ascending: false })
         .limit(20);
       setAuditLog((logRows ?? []) as AuditLogEntry[]);
+
+      const { data: memberRows } = await supabase
+        .from('team_members')
+        .select('id, invited_email, status, created_at')
+        .eq('owner_user_id', data.user.id)
+        .order('created_at', { ascending: false });
+      setTeamMembers((memberRows ?? []) as TeamMemberRow[]);
+
+      const { data: keyRows } = await supabase
+        .from('api_keys')
+        .select('id, key_prefix, label, created_at, last_used_at')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false });
+      setApiKeys((keyRows ?? []) as ApiKeyRow[]);
+
+      const { data: webhookRows } = await supabase
+        .from('webhooks')
+        .select('id, url, enabled, created_at')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false });
+      setWebhooks((webhookRows ?? []) as WebhookRow[]);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const referralRes = await fetch('/api/referrals/count', { headers: { Authorization: `Bearer ${token}` } });
+      if (referralRes.ok) {
+        const referralResult = await referralRes.json();
+        setReferralCode(referralResult.code ?? null);
+        setReferralCount(referralResult.count ?? 0);
+      }
     });
   }, [router]);
+
+  async function handleCreateApiKey() {
+    if (!user) return;
+    setCreatingKey(true);
+    setNewApiKey('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch('/api/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (res.ok && result.key) {
+        setNewApiKey(result.key);
+        const { data: keyRows } = await supabase
+          .from('api_keys')
+          .select('id, key_prefix, label, created_at, last_used_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        setApiKeys((keyRows ?? []) as ApiKeyRow[]);
+      }
+    } catch {
+      // best-effort
+    }
+    setCreatingKey(false);
+  }
+
+  async function handleRevokeApiKey(keyId: string) {
+    if (!user) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const res = await fetch('/api/api-keys/revoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ keyId }),
+    });
+    if (res.ok) setApiKeys((prev) => prev.filter((k) => k.id !== keyId));
+  }
+
+  async function handleAddWebhook(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!user) return;
+    setWebhookStatus('sending');
+    setWebhookMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch('/api/webhooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ url: webhookUrl }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setWebhookStatus('error');
+        setWebhookMessage(result.error || t.webhooks.addError);
+        return;
+      }
+      setWebhookUrl('');
+      setWebhookStatus('idle');
+      const { data: webhookRows } = await supabase
+        .from('webhooks')
+        .select('id, url, enabled, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      setWebhooks((webhookRows ?? []) as WebhookRow[]);
+    } catch {
+      setWebhookStatus('error');
+      setWebhookMessage(t.webhooks.addError);
+    }
+  }
+
+  async function handleRemoveWebhook(webhookId: string) {
+    if (!user) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const res = await fetch('/api/webhooks/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ webhookId }),
+    });
+    if (res.ok) setWebhooks((prev) => prev.filter((w) => w.id !== webhookId));
+  }
+
+  async function handleInviteMember(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!user) return;
+    setInviteStatus('sending');
+    setInviteMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch('/api/team/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: inviteEmail, language }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setInviteStatus('error');
+        setInviteMessage(result.error || t.team.inviteError);
+        return;
+      }
+      setInviteEmail('');
+      setInviteStatus('idle');
+      setInviteMessage(t.team.inviteSent);
+      const { data: memberRows } = await supabase
+        .from('team_members')
+        .select('id, invited_email, status, created_at')
+        .eq('owner_user_id', user.id)
+        .order('created_at', { ascending: false });
+      setTeamMembers((memberRows ?? []) as TeamMemberRow[]);
+    } catch {
+      setInviteStatus('error');
+      setInviteMessage(t.team.inviteError);
+    }
+  }
+
+  async function handleRemoveMember(memberId: string) {
+    if (!user) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const res = await fetch('/api/team/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ memberId }),
+    });
+    if (res.ok) {
+      setTeamMembers((prev) => prev.filter((m) => m.id !== memberId));
+    }
+  }
 
   const handleSave = useCallback(async () => {
     if (!user) return;
@@ -485,6 +691,170 @@ export default function Settings() {
               </div>
               {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
             </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Users className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.team.title}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.team.description}</p>
+
+              {teamMembers.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {teamMembers.map((member) => (
+                    <li key={member.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">{member.invited_email}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {member.status === 'accepted' ? t.team.statusAccepted : t.team.statusPending}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                        aria-label={t.team.removeButton}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <form onSubmit={handleInviteMember} className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="email"
+                  required
+                  placeholder={t.team.emailPlaceholder}
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={inviteStatus === 'sending'}
+                  className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                >
+                  {inviteStatus === 'sending' ? t.team.inviting : t.team.inviteButton}
+                </button>
+              </form>
+              {inviteMessage && (
+                <p className={`mt-2 text-sm ${inviteStatus === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>{inviteMessage}</p>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Key className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.apiKeys.title}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.apiKeys.description}</p>
+
+              {newApiKey && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/40 dark:bg-amber-500/10">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">{t.apiKeys.newKeyWarning}</p>
+                  <code className="mt-1.5 block break-all rounded-lg bg-white px-2.5 py-2 text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{newApiKey}</code>
+                </div>
+              )}
+
+              {apiKeys.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {apiKeys.map((key) => (
+                    <li key={key.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                      <div>
+                        <code className="font-medium text-slate-900 dark:text-white">{key.key_prefix}…</code>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {key.last_used_at ? t.apiKeys.lastUsed(new Date(key.last_used_at).toLocaleDateString()) : t.apiKeys.neverUsed}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRevokeApiKey(key.id)}
+                        className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                        aria-label={t.apiKeys.revokeButton}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <button
+                onClick={handleCreateApiKey}
+                disabled={creatingKey}
+                className="mt-4 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+              >
+                {creatingKey ? t.apiKeys.creating : t.apiKeys.createButton}
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Webhook className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.webhooks.title}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.webhooks.description}</p>
+
+              {webhooks.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {webhooks.map((webhook) => (
+                    <li key={webhook.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                      <span className="truncate font-medium text-slate-900 dark:text-white">{webhook.url}</span>
+                      <button
+                        onClick={() => handleRemoveWebhook(webhook.id)}
+                        className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                        aria-label={t.webhooks.removeButton}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <form onSubmit={handleAddWebhook} className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="url"
+                  required
+                  placeholder={t.webhooks.urlPlaceholder}
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={webhookStatus === 'sending'}
+                  className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                >
+                  {webhookStatus === 'sending' ? t.webhooks.adding : t.webhooks.addButton}
+                </button>
+              </form>
+              {webhookMessage && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{webhookMessage}</p>
+              )}
+            </div>
+
+            {referralCode && (
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.referral.title}</h3>
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.referral.description}</p>
+                <div className="mt-3 flex items-center gap-2">
+                  <code className="flex-1 truncate rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/signup?ref=${referralCode}` : ''}
+                  </code>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/signup?ref=${referralCode}`)}
+                    className="shrink-0 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {t.referral.copyButton}
+                  </button>
+                </div>
+                <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.referral.countLabel(referralCount)}</p>
+              </div>
+            )}
 
             {auditLog.length > 0 && (
               <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">

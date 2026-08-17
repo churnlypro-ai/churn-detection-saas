@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { disconnectAccount } from '@/lib/stripeConnect';
 import { logAuditEvent } from '@/lib/auditLog';
+import { resolveAccountId } from '@/lib/team';
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (userError || !userData?.user) {
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   }
-  const userId = userData.user.id;
+  const userId = await resolveAccountId(supabaseAdmin, userData.user.id);
 
   const { data: profile } = await supabaseAdmin
     .from('users')

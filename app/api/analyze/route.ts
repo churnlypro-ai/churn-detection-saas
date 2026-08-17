@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { generateClientEmail, type AnalysisLanguage } from '@/lib/claude';
 import { runChurnAnalysis } from '@/lib/analysis';
+import { resolveAccountId } from '@/lib/team';
 
 function parseLanguage(value: unknown): AnalysisLanguage {
   return value === 'en' ? 'en' : 'fr';
@@ -60,7 +61,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await runChurnAnalysis(supabaseAdmin, userId, clients, filename ?? null, parseLanguage(language));
+    // Un membre d'équipe qui importe un CSV analyse les clients du compte
+    // auquel il appartient, pas un compte vide à son propre nom.
+    const accountId = await resolveAccountId(supabaseAdmin, userId);
+    const result = await runChurnAnalysis(supabaseAdmin, accountId, clients, filename ?? null, parseLanguage(language));
     return NextResponse.json(result);
   } catch (err) {
     console.error('[analyze] failed', err);

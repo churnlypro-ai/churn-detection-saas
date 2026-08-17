@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { analyzeChurnRisk, type AnalysisLanguage } from '@/lib/claude';
+import { triggerRiskWebhooks } from '@/lib/webhooks';
 
 function parseDateOrNull(value: unknown): string | null {
   if (!value || typeof value !== 'string') return null;
@@ -129,6 +130,14 @@ export async function runChurnAnalysis(
     .eq('id', userId);
   if (churnUpdateError) {
     console.error('[analysis] churn_rate update failed', JSON.stringify({ userId, churnUpdateError }));
+  }
+
+  // Best-effort, ne doit jamais faire échouer l'analyse elle-même — voir
+  // lib/webhooks.ts.
+  try {
+    await triggerRiskWebhooks(supabaseAdmin, userId, businessProfile?.company_name ?? '', analysis);
+  } catch (err) {
+    console.error('[analysis] webhook trigger failed', JSON.stringify({ userId, err: err instanceof Error ? err.message : err }));
   }
 
   return {

@@ -6,6 +6,7 @@ import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
+import { resolveAccountIdClient } from '@/lib/team';
 
 interface NormalizedRow {
   name: string;
@@ -32,16 +33,17 @@ function UploadContent() {
   const { language } = useLanguage();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) {
         router.replace('/login');
         return;
       }
       setUser(data.user);
+      const accountId = await resolveAccountIdClient(supabase, data.user.id);
       supabase
         .from('users')
         .select('company_name, stripe_connect_account_id')
-        .eq('id', data.user.id)
+        .eq('id', accountId)
         .maybeSingle()
         .then(({ data: profile }) => {
           setCompanyName(profile?.company_name || '');
