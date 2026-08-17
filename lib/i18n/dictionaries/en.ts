@@ -15,6 +15,7 @@ export const en: Dictionary = {
   },
   nav: {
     dashboard: 'Dashboard',
+    upload: 'Import',
     settings: 'Settings',
     logout: 'Log out',
     pricing: 'Pricing',
@@ -323,6 +324,11 @@ export const en: Dictionary = {
       title: 'Analysis accuracy',
       detail: (correct: number, total: number) => `accuracy on the clients flagged at risk whose fate you've confirmed (${correct}/${total} actually left).`,
       unresolvedHint: 'Mark whether your at-risk clients left or stayed (in each client\'s details below) to see the AI\'s real accuracy show up here.',
+    },
+    noDataBanner: {
+      title: 'Start by importing your data',
+      body: 'No analysis has been run on this account yet — import a CSV or connect Stripe to see your first results.',
+      cta: 'Import my data',
     },
     businessDescriptionBanner: {
       title: 'Describe your business to sharpen the analysis',

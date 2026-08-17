@@ -48,6 +48,7 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
           {isAuthPage ? null : user ? (
             <>
               <Link href="/dashboard" className={linkClass}>{t.dashboard}</Link>
+              <Link href="/upload" className={linkClass}>{t.upload}</Link>
               <Link href="/settings" className={linkClass}>{t.settings}</Link>
               {user.email && (
                 <span className="hidden text-slate-400 dark:text-slate-500 lg:inline">{user.email}</span>
@@ -104,6 +105,7 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
               {user ? (
                 <>
                   <Link href="/dashboard" className={mobileLinkClass}>{t.dashboard}</Link>
+                  <Link href="/upload" className={mobileLinkClass}>{t.upload}</Link>
                   <Link href="/settings" className={mobileLinkClass}>{t.settings}</Link>
                   {user.email && (
                     <p className="px-4 py-1 text-sm text-slate-400 dark:text-slate-500">{user.email}</p>

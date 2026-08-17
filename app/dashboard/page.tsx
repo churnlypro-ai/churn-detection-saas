@@ -981,7 +981,30 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {!loading && (!profile?.business_description || profile.business_description.trim().length < 15) && (
+        {!loading && uploads.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 flex flex-col items-start gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-5 py-4 dark:border-brand-800/60 dark:bg-brand-500/10 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <BarChart3 className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-600 dark:text-brand-400" />
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.noDataBanner.title}</p>
+                <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{t.noDataBanner.body}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push('/upload')}
+              className="flex flex-shrink-0 items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+            >
+              {t.noDataBanner.cta}
+            </button>
+          </motion.div>
+        )}
+
+        {!loading && uploads.length > 0 && (!profile?.business_description || profile.business_description.trim().length < 15) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
