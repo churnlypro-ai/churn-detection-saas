@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2 } from 'lucide-react';
+import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText } from 'lucide-react';
 import type { HexagonStatus } from '@/components/MagicHexagon';
 import { useTranslations } from '@/lib/i18n/LanguageContext';
 
@@ -25,7 +25,27 @@ interface Profile {
   stripe_connect_account_id: string | null;
 }
 
+interface AuditLogEntry {
+  id: string;
+  action: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
 import { calcPrice, formatEuro } from '@/lib/pricing';
+
+function auditActionLabel(
+  entry: AuditLogEntry,
+  labels: { stripeConnected: string; stripeDisconnected: string; subscriptionTierChanged: (fromTier: string, toTier: string) => string },
+): string {
+  if (entry.action === 'stripe_connected') return labels.stripeConnected;
+  if (entry.action === 'stripe_disconnected') return labels.stripeDisconnected;
+  if (entry.action === 'subscription_tier_changed') {
+    const meta = entry.metadata ?? {};
+    return labels.subscriptionTierChanged(String(meta.fromTier ?? '—'), String(meta.toTier ?? '—'));
+  }
+  return entry.action;
+}
 
 function EditField({
   label, value, onChange, suffix, min, max, step, icon: Icon,
@@ -79,6 +99,7 @@ export default function Settings() {
   const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'disconnecting'>('idle');
   const [stripeMessage, setStripeMessage] = useState('');
   const [planMessage, setPlanMessage] = useState('');
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const t = useTranslations('settings');
 
   // 'trialing' oublié ici verrouillerait la visualisation pour un compte
@@ -103,6 +124,14 @@ export default function Settings() {
       setEditBusinessDescription(p?.business_description ?? '');
       setStripeConnected(!!p?.stripe_connect_account_id);
       setLoading(false);
+
+      const { data: logRows } = await supabase
+        .from('audit_log')
+        .select('id, action, metadata, created_at')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      setAuditLog((logRows ?? []) as AuditLogEntry[]);
     });
   }, [router]);
 
@@ -456,6 +485,25 @@ export default function Settings() {
               </div>
               {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
             </div>
+
+            {auditLog.length > 0 && (
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <ScrollText className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.auditLog.title}</h3>
+                </div>
+                <ul className="mt-3 space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                  {auditLog.map((entry) => (
+                    <li key={entry.id} className="flex items-start justify-between gap-3 border-b border-slate-50 pb-2.5 last:border-0 last:pb-0 dark:border-slate-800">
+                      <span>{auditActionLabel(entry, t.auditLog.actions)}</span>
+                      <span className="shrink-0 text-slate-400 dark:text-slate-500">
+                        {new Date(entry.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <button
               onClick={handleLogout}

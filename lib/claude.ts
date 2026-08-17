@@ -323,6 +323,31 @@ async function analyzeChurnRiskBatch(
 // within output limits — richer per-client analysis takes more tokens than
 // the old flat schema, and truncating a JSON response would break parsing.
 // Cost is not a constraint here; correctness and depth are the priority.
+// Lancer tous les batchs en même temps (l'ancien Promise.all) tient pour un
+// petit CSV, mais un compte avec des milliers de clients (2000 lignes max /
+// 15 par batch ≈ 134 batchs) déclenchait 134 appels Claude simultanés : de
+// quoi se faire jeter par le rate limit Anthropic ou dépasser le timeout de
+// la fonction serverless, précisément au moment où un gros client teste le
+// produit pour la première fois. On borne donc le nombre de batchs traités
+// en parallèle plutôt que de tout lancer d'un coup.
+const MAX_CONCURRENT_BATCHES = 5;
+
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index]);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
 export async function analyzeChurnRisk(
   clients: Array<Record<string, unknown>>,
   language: AnalysisLanguage = 'fr',
@@ -333,6 +358,8 @@ export async function analyzeChurnRisk(
     batches.push(clients.slice(i, i + BATCH_SIZE));
   }
 
-  const results = await Promise.all(batches.map((batch) => analyzeChurnRiskBatch(batch, language, businessContext)));
+  const results = await mapWithConcurrency(batches, MAX_CONCURRENT_BATCHES, (batch) =>
+    analyzeChurnRiskBatch(batch, language, businessContext),
+  );
   return results.flat();
 }

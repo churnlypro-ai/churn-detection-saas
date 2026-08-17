@@ -5,7 +5,7 @@ import Navigation from '@/components/Navigation';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const CONTACT_EMAIL = 'contact@churnly.fr';
-const LAST_UPDATED = { fr: '16 août 2026', en: 'August 16, 2026' };
+const LAST_UPDATED = { fr: '17 août 2026', en: 'August 17, 2026' };
 
 interface Section {
   title: string;
@@ -68,31 +68,38 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
               'Stripe — traitement des paiements et, si vous l\'activez, import en lecture seule de vos données d\'abonnements existantes.',
               'Anthropic (Claude) — analyse du risque de désabonnement à partir des données que vous fournissez, dans le seul but de produire le résultat affiché sur votre tableau de bord.',
               'Resend — envoi des emails transactionnels du service.',
+              'Vercel — hébergement de l\'application et des fonctions serveur.',
             ],
           },
           "Aucun de ces prestataires n'est autorisé à utiliser vos données à d'autres fins que la fourniture du service Churnly.",
         ],
       },
       {
-        title: '6. Durée de conservation',
+        title: '6. Accord de traitement des données (DPA)',
         body: [
-          "Vos données de compte sont conservées tant que votre compte est actif. Les données clients importées et les résultats d'analyse sont conservés le temps nécessaire à l'usage du tableau de bord, et supprimés dans un délai raisonnable après la clôture de votre compte, sauf obligation légale de conservation plus longue.",
+          "Pour les données de vos propres clients que vous importez dans Churnly, nous agissons en tant que sous-traitant au sens du RGPD, et vous restez responsable de traitement. Un exemplaire de notre Accord de traitement des données (Data Processing Agreement) est disponible sur demande à " + CONTACT_EMAIL + " pour les comptes professionnels qui en ont besoin. Nous nous engageons à vous notifier tout changement de sous-traitant listé à la section 5, ainsi que toute violation de données affectant vos informations, dans les meilleurs délais et conformément aux exigences légales applicables.",
         ],
       },
       {
-        title: '7. Sécurité',
+        title: '7. Durée de conservation',
+        body: [
+          "Vos données de compte sont conservées tant que votre compte est actif. À la clôture de votre compte, les données clients importées et les résultats d'analyse sont supprimés sous 30 jours, sauf obligation légale de conservation plus longue (par exemple les données de facturation, conservées conformément aux obligations comptables).",
+        ],
+      },
+      {
+        title: '8. Sécurité',
         body: [
           "L'accès aux données est protégé par authentification et par des règles de sécurité au niveau des lignes (Row Level Security) dans notre base de données : chaque utilisateur ne peut accéder qu'à ses propres données. Les connexions sont chiffrées (HTTPS/TLS). Aucun jeton d'accès Stripe n'est stocké côté serveur lors d'une connexion Stripe — seul l'identifiant du compte connecté est conservé.",
         ],
       },
       {
-        title: '8. Transferts hors Union européenne',
+        title: '9. Transferts hors Union européenne',
         body: [
           "Certains de nos prestataires (Anthropic, Stripe) peuvent traiter des données depuis les États-Unis. Ces transferts s'appuient sur les garanties prévues par le RGPD (clauses contractuelles types ou mécanismes équivalents).",
         ],
       },
       {
-        title: '9. Vos droits',
+        title: '10. Vos droits',
         body: [
           {
             intro: "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de portabilité et d'opposition sur vos données. Vous pouvez :",
@@ -105,19 +112,19 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         ],
       },
       {
-        title: '10. Cookies',
+        title: '11. Cookies',
         body: [
           "Churnly utilise uniquement des cookies techniques strictement nécessaires au fonctionnement du service (authentification, préférence de langue, mode sombre). Aucun cookie publicitaire ou de traçage tiers n'est utilisé.",
         ],
       },
       {
-        title: '11. Modifications',
+        title: '12. Modifications',
         body: [
           "Cette politique peut être mise à jour pour refléter des évolutions du service ou de la réglementation. La date de dernière mise à jour est indiquée en haut de cette page.",
         ],
       },
       {
-        title: '12. Contact',
+        title: '13. Contact',
         body: [`Pour toute question relative à cette politique ou à vos données, écrivez-nous à ${CONTACT_EMAIL}.`],
       },
     ],
@@ -177,31 +184,38 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
               "Stripe — payment processing and, if you enable it, read-only import of your existing subscription data.",
               'Anthropic (Claude) — churn-risk analysis based on the data you provide, solely to produce the result shown on your dashboard.',
               "Resend — delivery of the service's transactional emails.",
+              'Vercel — hosting of the application and server functions.',
             ],
           },
           'None of these providers is authorized to use your data for any purpose other than delivering the Churnly service.',
         ],
       },
       {
-        title: '6. Data retention',
+        title: '6. Data Processing Agreement (DPA)',
         body: [
-          'Your account data is kept for as long as your account is active. Imported customer data and analysis results are kept for as long as needed to use the dashboard, and deleted within a reasonable time after your account is closed, unless a longer retention period is legally required.',
+          'For your own customers\' data that you import into Churnly, we act as a processor under GDPR, and you remain the controller. A copy of our Data Processing Agreement is available on request at ' + CONTACT_EMAIL + ' for business accounts that need one. We commit to notifying you of any change to the sub-processors listed in section 5, as well as any data breach affecting your information, promptly and in line with applicable legal requirements.',
         ],
       },
       {
-        title: '7. Security',
+        title: '7. Data retention',
+        body: [
+          'Your account data is kept for as long as your account is active. When your account is closed, imported customer data and analysis results are deleted within 30 days, unless a longer retention period is legally required (for example billing records, kept in line with accounting obligations).',
+        ],
+      },
+      {
+        title: '8. Security',
         body: [
           'Access to data is protected by authentication and by row-level security rules in our database: each user can only access their own data. Connections are encrypted (HTTPS/TLS). No Stripe access token is stored server-side when you connect Stripe — only the connected account identifier is kept.',
         ],
       },
       {
-        title: '8. Transfers outside the European Union',
+        title: '9. Transfers outside the European Union',
         body: [
           'Some of our providers (Anthropic, Stripe) may process data from the United States. These transfers rely on GDPR-compliant safeguards (standard contractual clauses or equivalent mechanisms).',
         ],
       },
       {
-        title: '9. Your rights',
+        title: '10. Your rights',
         body: [
           {
             intro: 'Under GDPR, you have the right to access, rectify, erase, port, and object to the processing of your data. You can:',
@@ -214,19 +228,19 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         ],
       },
       {
-        title: '10. Cookies',
+        title: '11. Cookies',
         body: [
           'Churnly only uses technical cookies strictly necessary for the service to function (authentication, language preference, dark mode). No advertising or third-party tracking cookies are used.',
         ],
       },
       {
-        title: '11. Changes',
+        title: '12. Changes',
         body: [
           'This policy may be updated to reflect changes to the service or applicable law. The last-updated date is shown at the top of this page.',
         ],
       },
       {
-        title: '12. Contact',
+        title: '13. Contact',
         body: [`For any question about this policy or your data, write to us at ${CONTACT_EMAIL}.`],
       },
     ],

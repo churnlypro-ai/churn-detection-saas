@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe, PRICE_IDS } from '@/lib/stripe';
 import { calcPrice, calcManagerPrice } from '@/lib/pricing';
+import { logAuditEvent } from '@/lib/auditLog';
 
 // Appelée depuis /settings après l'enregistrement du profil : un client déjà
 // abonné doit voir son abonnement Stripe suivre son CA / nombre de clients
@@ -75,6 +76,11 @@ export async function POST(req: NextRequest) {
     if (updateError) {
       console.error('[update-subscription-tier] supabase update failed', JSON.stringify({ userId, updateError }));
     }
+
+    await logAuditEvent(supabaseAdmin, userId, 'subscription_tier_changed', {
+      fromTier: profile.subscription_tier,
+      toTier: String(tier),
+    });
 
     return NextResponse.json({ updated: true, tier });
   } catch (err) {

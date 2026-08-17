@@ -261,8 +261,32 @@ export const en: Dictionary = {
     stripeDisconnected: 'Stripe account disconnected.',
     stripeConnectError: 'Could not connect to Stripe.',
     stripeDisconnectError: 'Could not disconnect the Stripe account.',
+    auditLog: {
+      title: 'Activity log',
+      actions: {
+        stripeConnected: 'Stripe account connected',
+        stripeDisconnected: 'Stripe account disconnected',
+        subscriptionTierChanged: (fromTier: string, toTier: string) => `Subscription tier changed from $${fromTier} to $${toTier}`,
+      },
+    },
   },
   dashboard: {
+    outcome: {
+      title: 'Real outcome',
+      unknown: 'No confirmed outcome yet',
+      churned: 'Churned',
+      retained: 'Still a customer',
+      markChurned: 'Mark as churned',
+      markRetained: 'Mark as retained',
+      manualLabel: 'confirmed manually',
+      autoDetected: 'auto-detected (disappeared from a re-import)',
+      changeButton: 'Correct',
+    },
+    precision: {
+      title: 'Analysis accuracy',
+      detail: (correct: number, total: number) => `accuracy on the clients flagged at risk whose fate you've confirmed (${correct}/${total} actually left).`,
+      unresolvedHint: 'Mark whether your at-risk clients left or stayed (in each client\'s details below) to see the AI\'s real accuracy show up here.',
+    },
     businessDescriptionBanner: {
       title: 'Describe your business to sharpen the analysis',
       body: 'The AI calibrates its risk thresholds (inactivity, usage frequency...) to your type of product — without this description, it falls back to generic thresholds.',

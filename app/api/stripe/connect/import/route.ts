@@ -8,6 +8,12 @@ function parseLanguage(value: unknown): AnalysisLanguage {
   return value === 'en' ? 'en' : 'fr';
 }
 
+// Voir la même note dans app/api/analyze/route.ts — un compte Stripe avec
+// beaucoup de clients (jusqu'à 2000, voir MAX_CUSTOMERS dans
+// lib/stripeConnect.ts) peut dépasser le timeout par défaut d'une fonction
+// Vercel une fois les batchs Claude traités avec une concurrence bornée.
+export const maxDuration = 300;
+
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) {

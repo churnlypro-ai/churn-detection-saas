@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { disconnectAccount } from '@/lib/stripeConnect';
+import { logAuditEvent } from '@/lib/auditLog';
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -44,5 +45,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Could not disconnect Stripe.' }, { status: 500 });
   }
 
+  await logAuditEvent(supabaseAdmin, userId, 'stripe_disconnected');
   return NextResponse.json({ disconnected: true });
 }

@@ -259,8 +259,32 @@ export const fr = {
     stripeDisconnected: 'Compte Stripe déconnecté.',
     stripeConnectError: 'Impossible de se connecter à Stripe.',
     stripeDisconnectError: 'Impossible de déconnecter le compte Stripe.',
+    auditLog: {
+      title: 'Journal d\'activité',
+      actions: {
+        stripeConnected: 'Compte Stripe connecté',
+        stripeDisconnected: 'Compte Stripe déconnecté',
+        subscriptionTierChanged: (fromTier: string, toTier: string) => `Palier d'abonnement changé de ${fromTier}€ à ${toTier}€`,
+      },
+    },
   },
   dashboard: {
+    outcome: {
+      title: 'Résultat réel',
+      unknown: 'Pas encore de résultat confirmé',
+      churned: 'Parti',
+      retained: 'Toujours client',
+      markChurned: 'Marquer comme parti',
+      markRetained: 'Marquer comme retenu',
+      manualLabel: 'confirmé manuellement',
+      autoDetected: 'détecté automatiquement (disparu lors d\'un ré-import)',
+      changeButton: 'Corriger',
+    },
+    precision: {
+      title: 'Précision de l\'analyse',
+      detail: (correct: number, total: number) => `de précision sur les clients identifiés à risque dont vous avez confirmé le sort (${correct}/${total} ont vraiment quitté).`,
+      unresolvedHint: 'Marquez si vos clients à risque sont partis ou sont restés (dans le détail de chaque client ci-dessous) pour voir apparaître ici la précision réelle de l\'IA.',
+    },
     businessDescriptionBanner: {
       title: 'Décrivez votre activité pour affiner l\'analyse',
       body: 'L\'IA calibre ses seuils de risque (inactivité, fréquence d\'usage...) selon le type de produit — sans cette description, elle applique des seuils génériques.',

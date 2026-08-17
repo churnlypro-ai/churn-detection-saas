@@ -35,6 +35,15 @@ export async function runChurnAnalysis(
     description: businessProfile?.business_description ?? null,
   });
 
+  // Doit être lu AVANT d'insérer les nouveaux résultats plus bas : c'est la
+  // photo "avant ce ré-import" qui sert de référence pour détecter les
+  // clients disparus (voir plus bas, après l'insert).
+  const { data: previousResults } = await supabaseAdmin
+    .from('analysis_results')
+    .select('client_name, churn_score, analyzed_at')
+    .eq('user_id', userId)
+    .order('analyzed_at', { ascending: false });
+
   const { data: upload, error: uploadError } = await supabaseAdmin
     .from('csv_uploads')
     .insert({ user_id: userId, client_count: clients.length, filename })
@@ -76,6 +85,36 @@ export async function runChurnAnalysis(
 
   const { error: insertError } = await supabaseAdmin.from('analysis_results').insert(rows);
   if (insertError) throw insertError;
+
+  // Un client présent lors du dernier import et absent de celui-ci a de
+  // fortes chances d'être parti — heuristique raisonnable, pas une
+  // certitude (un ré-upload partiel peut produire un faux positif), d'où
+  // 'auto_reimport' comme source et 'ignoreDuplicates' pour ne jamais
+  // écraser une correction manuelle déjà enregistrée (voir la contrainte
+  // unique(user_id, client_name) dans la migration correspondante).
+  const previousLatestByClient = new Map<string, number>();
+  for (const r of previousResults ?? []) {
+    if (!previousLatestByClient.has(r.client_name)) previousLatestByClient.set(r.client_name, r.churn_score);
+  }
+  const newClientNames = new Set(analysis.map((item) => item.client_name));
+  const disappearedClients = Array.from(previousLatestByClient.entries()).filter(([name]) => !newClientNames.has(name));
+
+  if (disappearedClients.length > 0) {
+    const outcomeRows = disappearedClients.map(([client_name, churn_score]) => ({
+      user_id: userId,
+      client_name,
+      outcome: 'churned' as const,
+      churn_score_at_outcome: churn_score,
+      source: 'auto_reimport' as const,
+      resolved_at: new Date().toISOString(),
+    }));
+    const { error: outcomeError } = await supabaseAdmin
+      .from('client_outcomes')
+      .upsert(outcomeRows, { onConflict: 'user_id,client_name', ignoreDuplicates: true });
+    if (outcomeError) {
+      console.error('[analysis] auto outcome detection failed', JSON.stringify({ userId, outcomeError }));
+    }
+  }
 
   const atRiskCount = analysis.filter((item) => item.churn_score >= 60).length;
 
