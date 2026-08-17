@@ -13,6 +13,7 @@ export const fr = {
   },
   nav: {
     dashboard: 'Dashboard',
+    upload: 'Importer',
     settings: 'Réglages',
     logout: 'Déconnexion',
     pricing: 'Tarifs',
@@ -321,6 +322,11 @@ export const fr = {
       title: 'Précision de l\'analyse',
       detail: (correct: number, total: number) => `de précision sur les clients identifiés à risque dont vous avez confirmé le sort (${correct}/${total} ont vraiment quitté).`,
       unresolvedHint: 'Marquez si vos clients à risque sont partis ou sont restés (dans le détail de chaque client ci-dessous) pour voir apparaître ici la précision réelle de l\'IA.',
+    },
+    noDataBanner: {
+      title: 'Commencez par importer vos données',
+      body: 'Aucune analyse n\'a encore été faite sur ce compte — importez un CSV ou connectez Stripe pour voir vos premiers résultats.',
+      cta: 'Importer mes données',
     },
     businessDescriptionBanner: {
       title: 'Décrivez votre activité pour affiner l\'analyse',
