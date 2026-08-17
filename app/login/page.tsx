@@ -18,6 +18,7 @@ function LoginContent() {
   const [sliding, setSliding] = useState(false);
   const [accountExists, setAccountExists] = useState(false);
   const [magicLinkStatus, setMagicLinkStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [teamInviteError, setTeamInviteError] = useState(false);
   const t = useTranslations('login');
 
   // Un compte créé via "S'inscrire avec Stripe" n'a jamais de mot de passe —
@@ -28,6 +29,11 @@ function LoginContent() {
       setAccountExists(true);
       const prefill = searchParams.get('email');
       if (prefill) setEmail(prefill);
+    }
+    // Retour depuis /api/team/accept (voir cette route) : le lien
+    // d'invitation était invalide, expiré, ou déjà utilisé.
+    if (searchParams.get('team') === 'invalid' || searchParams.get('team') === 'error') {
+      setTeamInviteError(true);
     }
   }, [searchParams]);
 
@@ -76,6 +82,12 @@ function LoginContent() {
         >
           <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.title}</h1>
           <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">{t.subtitle}</p>
+
+          {teamInviteError && (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-500/10 dark:text-amber-400">
+              {t.teamInviteError}
+            </div>
+          )}
 
           {accountExists && (
             <div className="mb-6 rounded-xl border border-brand-100 bg-brand-50/60 p-4 text-sm text-brand-800 dark:border-brand-800/40 dark:bg-brand-500/5 dark:text-brand-300">

@@ -281,3 +281,48 @@ export async function sendWeeklyReportEmail({
     html,
   });
 }
+
+interface TeamInviteParams {
+  to: string;
+  inviterCompanyName: string;
+  acceptUrl: string;
+  language?: EmailLanguage;
+}
+
+export async function sendTeamInviteEmail({ to, inviterCompanyName, acceptUrl, language = 'fr' }: TeamInviteParams) {
+  const resend = getResend();
+  const subject = language === 'en'
+    ? `${inviterCompanyName} invited you to their Churnly dashboard`
+    : `${inviterCompanyName} vous invite sur son dashboard Churnly`;
+
+  const html = language === 'en' ? `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>You've been invited to view and act on ${inviterCompanyName}'s Churnly dashboard — no separate signup form needed, just click below.</p>
+      <p style="margin-top: 24px;">
+        <a href="${acceptUrl}" style="background: #2148ec; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+          Accept invitation
+        </a>
+      </p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">If you weren't expecting this, you can ignore this email.</p>
+    </div>
+  ` : `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>Vous avez été invité(e) à consulter et agir sur le dashboard Churnly de ${inviterCompanyName} — pas de formulaire d'inscription à remplir, il suffit de cliquer ci-dessous.</p>
+      <p style="margin-top: 24px;">
+        <a href="${acceptUrl}" style="background: #2148ec; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+          Accepter l'invitation
+        </a>
+      </p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Si vous ne vous attendiez pas à cet email, vous pouvez l'ignorer.</p>
+    </div>
+  `;
+
+  return resend.emails.send({
+    from: process.env.EMAIL_FROM || 'Churnly <notifications@yourdomain.com>',
+    to,
+    subject,
+    html,
+  });
+}

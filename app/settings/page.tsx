@@ -7,9 +7,10 @@ import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText } from 'lucide-react';
+import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText, X } from 'lucide-react';
 import type { HexagonStatus } from '@/components/MagicHexagon';
-import { useTranslations } from '@/lib/i18n/LanguageContext';
+import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
+import { resolveAccountIdClient } from '@/lib/team';
 
 interface Profile {
   company_name: string;
@@ -29,6 +30,13 @@ interface AuditLogEntry {
   id: string;
   action: string;
   metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+interface TeamMemberRow {
+  id: string;
+  invited_email: string;
+  status: 'pending' | 'accepted';
   created_at: string;
 }
 
@@ -100,6 +108,11 @@ export default function Settings() {
   const [stripeMessage, setStripeMessage] = useState('');
   const [planMessage, setPlanMessage] = useState('');
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteStatus, setInviteStatus] = useState<'idle' | 'sending' | 'error'>('idle');
+  const [inviteMessage, setInviteMessage] = useState('');
+  const { language } = useLanguage();
   const t = useTranslations('settings');
 
   // 'trialing' oublié ici verrouillerait la visualisation pour un compte
@@ -109,6 +122,12 @@ export default function Settings() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) { router.replace('/login'); return; }
+      // La facturation, le profil d'entreprise et Stripe Connect restent
+      // réservés au propriétaire du compte — un membre d'équipe accepté est
+      // renvoyé directement vers /dashboard plutôt que de voir une page
+      // /settings partiellement utilisable pour lui.
+      const resolvedAccountId = await resolveAccountIdClient(supabase, data.user.id);
+      if (resolvedAccountId !== data.user.id) { router.replace('/dashboard'); return; }
       setUser(data.user);
       const { data: profileData } = await supabase
         .from('users')
@@ -132,8 +151,63 @@ export default function Settings() {
         .order('created_at', { ascending: false })
         .limit(20);
       setAuditLog((logRows ?? []) as AuditLogEntry[]);
+
+      const { data: memberRows } = await supabase
+        .from('team_members')
+        .select('id, invited_email, status, created_at')
+        .eq('owner_user_id', data.user.id)
+        .order('created_at', { ascending: false });
+      setTeamMembers((memberRows ?? []) as TeamMemberRow[]);
     });
   }, [router]);
+
+  async function handleInviteMember(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!user) return;
+    setInviteStatus('sending');
+    setInviteMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch('/api/team/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: inviteEmail, language }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setInviteStatus('error');
+        setInviteMessage(result.error || t.team.inviteError);
+        return;
+      }
+      setInviteEmail('');
+      setInviteStatus('idle');
+      setInviteMessage(t.team.inviteSent);
+      const { data: memberRows } = await supabase
+        .from('team_members')
+        .select('id, invited_email, status, created_at')
+        .eq('owner_user_id', user.id)
+        .order('created_at', { ascending: false });
+      setTeamMembers((memberRows ?? []) as TeamMemberRow[]);
+    } catch {
+      setInviteStatus('error');
+      setInviteMessage(t.team.inviteError);
+    }
+  }
+
+  async function handleRemoveMember(memberId: string) {
+    if (!user) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const res = await fetch('/api/team/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ memberId }),
+    });
+    if (res.ok) {
+      setTeamMembers((prev) => prev.filter((m) => m.id !== memberId));
+    }
+  }
 
   const handleSave = useCallback(async () => {
     if (!user) return;
@@ -484,6 +558,57 @@ export default function Settings() {
                 )}
               </div>
               {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Users className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.team.title}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.team.description}</p>
+
+              {teamMembers.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {teamMembers.map((member) => (
+                    <li key={member.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">{member.invited_email}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {member.status === 'accepted' ? t.team.statusAccepted : t.team.statusPending}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                        aria-label={t.team.removeButton}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <form onSubmit={handleInviteMember} className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="email"
+                  required
+                  placeholder={t.team.emailPlaceholder}
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={inviteStatus === 'sending'}
+                  className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                >
+                  {inviteStatus === 'sending' ? t.team.inviting : t.team.inviteButton}
+                </button>
+              </form>
+              {inviteMessage && (
+                <p className={`mt-2 text-sm ${inviteStatus === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>{inviteMessage}</p>
+              )}
             </div>
 
             {auditLog.length > 0 && (

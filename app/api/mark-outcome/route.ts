@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { resolveAccountId } from '@/lib/team';
 
 // Une correction manuelle doit toujours l'emporter sur une détection
 // automatique (voir 'auto_reimport' dans lib/analysis.ts) — c'est pour ça
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   if (userError || !userData?.user) {
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   }
-  const userId = userData.user.id;
+  const userId = await resolveAccountId(supabaseAdmin, userData.user.id);
 
   const body = await req.json().catch(() => ({}));
   const { clientName, outcome } = body ?? {};

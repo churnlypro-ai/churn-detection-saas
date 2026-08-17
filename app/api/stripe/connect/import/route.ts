@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { fetchClientsFromConnectedAccount } from '@/lib/stripeConnect';
 import { runChurnAnalysis } from '@/lib/analysis';
 import type { AnalysisLanguage } from '@/lib/claude';
+import { resolveAccountId } from '@/lib/team';
 
 function parseLanguage(value: unknown): AnalysisLanguage {
   return value === 'en' ? 'en' : 'fr';
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (userError || !userData?.user) {
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   }
-  const userId = userData.user.id;
+  const userId = await resolveAccountId(supabaseAdmin, userData.user.id);
 
   const body = await req.json().catch(() => ({}));
   const { language } = body ?? {};

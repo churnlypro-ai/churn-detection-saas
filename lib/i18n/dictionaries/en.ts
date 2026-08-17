@@ -269,6 +269,18 @@ export const en: Dictionary = {
         subscriptionTierChanged: (fromTier: string, toTier: string) => `Subscription tier changed from $${fromTier} to $${toTier}`,
       },
     },
+    team: {
+      title: 'Team',
+      description: 'Invite colleagues to view and act on your dashboard — never with access to billing or your password.',
+      statusAccepted: 'Active',
+      statusPending: 'Invite pending',
+      removeButton: 'Remove',
+      emailPlaceholder: 'colleague@company.com',
+      inviteButton: 'Invite',
+      inviting: 'Sending…',
+      inviteSent: 'Invite sent.',
+      inviteError: 'Could not send the invite.',
+    },
   },
   dashboard: {
     outcome: {
@@ -346,6 +358,7 @@ export const en: Dictionary = {
       body: 'Names, risk scores, precise reasons, and ready-to-send emails — included in the 3-day free trial, no commitment.',
       redirecting: 'Redirecting…',
       startTrial: 'Start my free trial',
+      teamMemberNote: 'Ask the account owner to activate the subscription.',
       samples: [
         { name: 'A••••• M•••••', reason: 'No login in 21 days, 3 unresolved support tickets.' },
         { name: 'B••• & C••', reason: 'Usage down 40% this month compared to average.' },
@@ -377,6 +390,7 @@ export const en: Dictionary = {
       paymentSuccess: 'Payment successful — welcome to Churnly Premium',
     },
     fallbackTitle: 'Dashboard',
+    teamMemberBadge: 'Team member',
     planLabel: {
       active: (tier: string) => `$${tier}/mo plan · Active`,
       trialing: (days: number) => `Free trial · ${days} day${days > 1 ? 's' : ''} left`,
@@ -542,6 +556,7 @@ export const en: Dictionary = {
     magicLinkSending: 'Sending…',
     magicLinkSent: 'Link sent — check your inbox.',
     magicLinkError: 'Could not send the link. Try again.',
+    teamInviteError: 'This invite link is invalid, expired, or already used. Ask the person who invited you for a new one.',
   },
   pricing: {
     eyebrow: 'Pricing',

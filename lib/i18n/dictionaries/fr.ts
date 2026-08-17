@@ -267,6 +267,18 @@ export const fr = {
         subscriptionTierChanged: (fromTier: string, toTier: string) => `Palier d'abonnement changé de ${fromTier}€ à ${toTier}€`,
       },
     },
+    team: {
+      title: 'Équipe',
+      description: 'Invitez des collègues à consulter et agir sur votre dashboard — sans jamais accéder à la facturation ni à votre mot de passe.',
+      statusAccepted: 'Actif',
+      statusPending: 'Invitation en attente',
+      removeButton: 'Retirer',
+      emailPlaceholder: 'collegue@entreprise.com',
+      inviteButton: 'Inviter',
+      inviting: 'Envoi…',
+      inviteSent: 'Invitation envoyée.',
+      inviteError: 'Impossible d\'envoyer l\'invitation.',
+    },
   },
   dashboard: {
     outcome: {
@@ -344,6 +356,7 @@ export const fr = {
       body: 'Noms, scores de risque, raisons précises et emails prêts à envoyer — inclus dans l\'essai gratuit de 3 jours, sans engagement.',
       redirecting: 'Redirection…',
       startTrial: 'Démarrer mon essai gratuit',
+      teamMemberNote: 'Demandez au propriétaire du compte d\'activer l\'abonnement.',
       samples: [
         { name: 'A••••• M•••••', reason: 'Aucune connexion depuis 21 jours, 3 tickets support non résolus.' },
         { name: 'B••• & C••', reason: 'Usage en baisse de 40% ce mois-ci par rapport à la moyenne.' },
@@ -375,6 +388,7 @@ export const fr = {
       paymentSuccess: 'Paiement réussi — bienvenue sur Churnly Premium',
     },
     fallbackTitle: 'Dashboard',
+    teamMemberBadge: 'Membre d\'équipe',
     planLabel: {
       active: (tier: string) => `Plan €${tier}/mois · Actif`,
       trialing: (days: number) => `Essai gratuit · ${days}j restant${days > 1 ? 's' : ''}`,
@@ -540,6 +554,7 @@ export const fr = {
     magicLinkSending: 'Envoi…',
     magicLinkSent: 'Lien envoyé — vérifiez votre boîte mail.',
     magicLinkError: 'Impossible d\'envoyer le lien. Réessayez.',
+    teamInviteError: 'Ce lien d\'invitation est invalide, expiré, ou a déjà été utilisé. Demandez une nouvelle invitation à la personne qui vous a invité.',
   },
   pricing: {
     eyebrow: 'Tarifs',
