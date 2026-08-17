@@ -109,6 +109,7 @@ export default function Settings() {
   const [savedToast, setSavedToast] = useState(false);
   const [error, setError] = useState('');
   const [hexStatus, setHexStatus] = useState<HexagonStatus>('idle');
+  const [onboarding, setOnboarding] = useState(false);
 
   const [editClients, setEditClients] = useState(100);
   const [editRevenue, setEditRevenue] = useState(50000);
@@ -144,8 +145,28 @@ export default function Settings() {
   const isLocked = profile?.subscription_status !== 'active' && profile?.subscription_status !== 'trialing';
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('onboarding') === '1') {
+      setOnboarding(true);
+    }
+
+    // Retour OAuth (Google) : voir la note équivalente dans app/dashboard/page.tsx —
+    // on remonte l'erreur exacte à /login plutôt que de rediriger silencieusement.
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : '');
+    const oauthErrorDescription = hashParams.get('error_description') || hashParams.get('error');
+    const hadAccessToken = hashParams.has('access_token');
+
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data?.user) { router.replace('/login'); return; }
+      if (!data?.user) {
+        if (oauthErrorDescription) {
+          router.replace(`/login?oauth_error=${encodeURIComponent(oauthErrorDescription)}`);
+        } else if (hadAccessToken) {
+          router.replace('/login?oauth_error=session_not_created');
+        } else {
+          router.replace('/login');
+        }
+        return;
+      }
       // La facturation, le profil d'entreprise et Stripe Connect restent
       // réservés au propriétaire du compte — un membre d'équipe accepté est
       // renvoyé directement vers /dashboard plutôt que de voir une page
@@ -498,6 +519,26 @@ export default function Settings() {
         >
           {t.title}
         </motion.h1>
+
+        {onboarding && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 mb-8 flex flex-col items-start gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-5 py-4 dark:border-brand-800/60 dark:bg-brand-500/10 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.onboardingBanner.title}</p>
+              <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{t.onboardingBanner.body}</p>
+            </div>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="flex flex-shrink-0 items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+            >
+              {t.onboardingBanner.cta}
+            </button>
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <motion.div

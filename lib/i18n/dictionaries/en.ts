@@ -205,6 +205,11 @@ export const en: Dictionary = {
   },
   settings: {
     title: 'Settings',
+    onboardingBanner: {
+      title: 'Welcome to Churnly',
+      body: 'One last look at your info before you continue — you can always change it later.',
+      cta: 'Next',
+    },
     currentProfile: 'Current profile',
     infoLabels: {
       company: 'Company',
