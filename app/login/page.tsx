@@ -19,6 +19,7 @@ function LoginContent() {
   const [accountExists, setAccountExists] = useState(false);
   const [magicLinkStatus, setMagicLinkStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [teamInviteError, setTeamInviteError] = useState(false);
+  const [oauthError, setOauthError] = useState('');
   const t = useTranslations('login');
 
   // Un compte créé via "S'inscrire avec Stripe" n'a jamais de mot de passe —
@@ -34,6 +35,10 @@ function LoginContent() {
     // d'invitation était invalide, expiré, ou déjà utilisé.
     if (searchParams.get('team') === 'invalid' || searchParams.get('team') === 'error') {
       setTeamInviteError(true);
+    }
+    const oauthErrorParam = searchParams.get('oauth_error');
+    if (oauthErrorParam) {
+      setOauthError(oauthErrorParam);
     }
   }, [searchParams]);
 
@@ -119,6 +124,12 @@ function LoginContent() {
               {magicLinkStatus === 'error' && (
                 <p className="mt-2 text-xs text-red-600 dark:text-red-400">{t.magicLinkError}</p>
               )}
+            </div>
+          )}
+
+          {oauthError && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-800/40 dark:bg-red-500/10 dark:text-red-400">
+              Connexion Google échouée : {oauthError}
             </div>
           )}
 
