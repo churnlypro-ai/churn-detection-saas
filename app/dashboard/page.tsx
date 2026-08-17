@@ -740,8 +740,28 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    // Après un retour OAuth (Google), Supabase ajoute soit les tokens de
+    // session soit un `error`/`error_description` dans le hash de l'URL.
+    // Si getUser() échoue quand même juste après, on remonte ce détail à
+    // /login au lieu de rediriger silencieusement — sinon un échec de
+    // config (redirect URL, provider) est indiscernable d'un simple visiteur
+    // non connecté.
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : '');
+    const oauthErrorDescription = hashParams.get('error_description') || hashParams.get('error');
+    const hadAccessToken = hashParams.has('access_token');
+
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data?.user) { router.replace('/login'); return; }
+      if (!data?.user) {
+        if (oauthErrorDescription) {
+          router.replace(`/login?oauth_error=${encodeURIComponent(oauthErrorDescription)}`);
+        } else if (hadAccessToken) {
+          router.replace('/login?oauth_error=session_not_created');
+        } else {
+          router.replace('/login');
+        }
+        return;
+      }
       setUser(data.user);
       const resolvedAccountId = await resolveAccountIdClient(supabase, data.user.id);
       setAccountId(resolvedAccountId);
