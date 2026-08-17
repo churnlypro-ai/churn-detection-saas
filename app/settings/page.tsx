@@ -545,78 +545,7 @@ export default function Settings() {
             initial={{ opacity: 0, x: -24 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, ease: EASE_OUT }}
-            className="space-y-4"
-          >
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.currentProfile}</h2>
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              {staticInfo.map((item) => (
-                <div key={item.label} className="flex items-center justify-between border-b border-slate-50 py-3 last:border-0 dark:border-slate-800">
-                  <div className="flex items-center gap-2.5">
-                    <item.icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                    <span className="text-sm text-slate-600 dark:text-slate-400">{item.label}</span>
-                  </div>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">{item.value}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-6 shadow-sm dark:border-brand-800/40 dark:bg-brand-500/5">
-              <h3 className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.yourPrice}</h3>
-              <motion.p
-                key={currentPrice}
-                initial={{ opacity: 0.5, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mt-2 text-4xl font-extrabold text-brand-700 dark:text-brand-400"
-              >
-                {formatEuro(currentPrice)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
-              </motion.p>
-              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-                {isLocked ? t.priceNote : t.priceNoteSubscribed}
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: EASE_OUT }}
-            className="relative flex flex-col items-center justify-center"
-          >
-            <div className="relative h-[400px] w-full overflow-hidden rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
-              <MagicHexagon
-                clientCount={editClients}
-                churnRate={profile?.churn_rate ?? undefined}
-                monthlyRevenue={editRevenue}
-                isLocked={isLocked}
-                status={hexStatus}
-              />
-              {isLocked && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-sm dark:bg-slate-950/40">
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    className="flex flex-col items-center gap-3"
-                  >
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
-                      <Lock className="h-8 w-8" />
-                    </div>
-                    <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.unlockWithChurnly}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.startingAt} {formatEuro(currentPrice)}{t.perMonth}</p>
-                  </motion.div>
-                </div>
-              )}
-            </div>
-            <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
-              {t.legend}
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, ease: EASE_OUT }}
-            className="space-y-5"
+            className="space-y-6 lg:col-span-2"
           >
             <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.edit}</h2>
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -679,223 +608,229 @@ export default function Settings() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.passwordTitle}</h3>
-              <form onSubmit={handlePasswordChange} className="mt-4 flex flex-col gap-3">
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  placeholder={t.newPasswordPlaceholder}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
-                >
-                  {t.updatePassword}
-                </button>
-              </form>
-              {passwordStatus && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{passwordStatus}</p>}
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center gap-2">
-                <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.stripeConnectTitle}</h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.stripeConnectDescription}</p>
-              <div className="mt-4 flex items-center justify-between">
-                <span className={`flex items-center gap-1.5 text-xs font-semibold ${stripeConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                  <AlertCircle className="h-3.5 w-3.5" />
-                  {stripeConnected ? t.stripeConnectedLabel : t.stripeNotConnectedLabel}
-                </span>
-                {stripeConnected ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.passwordTitle}</h3>
+                <form onSubmit={handlePasswordChange} className="mt-4 flex flex-col gap-3">
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    placeholder={t.newPasswordPlaceholder}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
                   <button
-                    onClick={handleDisconnectStripe}
-                    disabled={stripeStatus === 'disconnecting'}
-                    className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    type="submit"
+                    className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
                   >
-                    {stripeStatus === 'disconnecting' ? t.stripeDisconnecting : t.stripeDisconnectButton}
+                    {t.updatePassword}
                   </button>
-                ) : (
-                  <button
-                    onClick={handleConnectStripe}
-                    disabled={stripeStatus === 'connecting'}
-                    className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                  >
-                    {stripeStatus === 'connecting' ? t.stripeConnecting : t.stripeConnectButton}
-                  </button>
-                )}
+                </form>
+                {passwordStatus && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{passwordStatus}</p>}
               </div>
-              {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
-            </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center gap-2">
-                <Users className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.team.title}</h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.team.description}</p>
-
-              {teamMembers.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {teamMembers.map((member) => (
-                    <li key={member.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">{member.invited_email}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {member.status === 'accepted' ? t.team.statusAccepted : t.team.statusPending}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveMember(member.id)}
-                        className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                        aria-label={t.team.removeButton}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <form onSubmit={handleInviteMember} className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="email"
-                  required
-                  placeholder={t.team.emailPlaceholder}
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-                <button
-                  type="submit"
-                  disabled={inviteStatus === 'sending'}
-                  className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                >
-                  {inviteStatus === 'sending' ? t.team.inviting : t.team.inviteButton}
-                </button>
-              </form>
-              {inviteMessage && (
-                <p className={`mt-2 text-sm ${inviteStatus === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>{inviteMessage}</p>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center gap-2">
-                <Key className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.apiKeys.title}</h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.apiKeys.description}</p>
-
-              {newApiKey && (
-                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/40 dark:bg-amber-500/10">
-                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">{t.apiKeys.newKeyWarning}</p>
-                  <code className="mt-1.5 block break-all rounded-lg bg-white px-2.5 py-2 text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{newApiKey}</code>
-                </div>
-              )}
-
-              {apiKeys.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {apiKeys.map((key) => (
-                    <li key={key.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
-                      <div>
-                        <code className="font-medium text-slate-900 dark:text-white">{key.key_prefix}…</code>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {key.last_used_at ? t.apiKeys.lastUsed(new Date(key.last_used_at).toLocaleDateString()) : t.apiKeys.neverUsed}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleRevokeApiKey(key.id)}
-                        className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                        aria-label={t.apiKeys.revokeButton}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <button
-                onClick={handleCreateApiKey}
-                disabled={creatingKey}
-                className="mt-4 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-              >
-                {creatingKey ? t.apiKeys.creating : t.apiKeys.createButton}
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center gap-2">
-                <Webhook className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.webhooks.title}</h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.webhooks.description}</p>
-
-              {webhooks.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {webhooks.map((webhook) => (
-                    <li key={webhook.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
-                      <span className="truncate font-medium text-slate-900 dark:text-white">{webhook.url}</span>
-                      <button
-                        onClick={() => handleRemoveWebhook(webhook.id)}
-                        className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                        aria-label={t.webhooks.removeButton}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <form onSubmit={handleAddWebhook} className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="url"
-                  required
-                  placeholder={t.webhooks.urlPlaceholder}
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-                <button
-                  type="submit"
-                  disabled={webhookStatus === 'sending'}
-                  className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                >
-                  {webhookStatus === 'sending' ? t.webhooks.adding : t.webhooks.addButton}
-                </button>
-              </form>
-              {webhookMessage && (
-                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{webhookMessage}</p>
-              )}
-            </div>
-
-            {referralCode && (
               <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex items-center gap-2">
-                  <Gift className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.referral.title}</h3>
+                  <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.stripeConnectTitle}</h3>
                 </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.referral.description}</p>
-                <div className="mt-3 flex items-center gap-2">
-                  <code className="flex-1 truncate rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/signup?ref=${referralCode}` : ''}
-                  </code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/signup?ref=${referralCode}`)}
-                    className="shrink-0 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                  >
-                    {t.referral.copyButton}
-                  </button>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.stripeConnectDescription}</p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className={`flex items-center gap-1.5 text-xs font-semibold ${stripeConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {stripeConnected ? t.stripeConnectedLabel : t.stripeNotConnectedLabel}
+                  </span>
+                  {stripeConnected ? (
+                    <button
+                      onClick={handleDisconnectStripe}
+                      disabled={stripeStatus === 'disconnecting'}
+                      className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      {stripeStatus === 'disconnecting' ? t.stripeDisconnecting : t.stripeDisconnectButton}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleConnectStripe}
+                      disabled={stripeStatus === 'connecting'}
+                      className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                    >
+                      {stripeStatus === 'connecting' ? t.stripeConnecting : t.stripeConnectButton}
+                    </button>
+                  )}
                 </div>
-                <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.referral.countLabel(referralCount)}</p>
+                {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
               </div>
-            )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.team.title}</h3>
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.team.description}</p>
+
+                {teamMembers.length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {teamMembers.map((member) => (
+                      <li key={member.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                        <div>
+                          <p className="font-medium text-slate-900 dark:text-white">{member.invited_email}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {member.status === 'accepted' ? t.team.statusAccepted : t.team.statusPending}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                          aria-label={t.team.removeButton}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <form onSubmit={handleInviteMember} className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="email"
+                    required
+                    placeholder={t.team.emailPlaceholder}
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={inviteStatus === 'sending'}
+                    className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                  >
+                    {inviteStatus === 'sending' ? t.team.inviting : t.team.inviteButton}
+                  </button>
+                </form>
+                {inviteMessage && (
+                  <p className={`mt-2 text-sm ${inviteStatus === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>{inviteMessage}</p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <Key className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.apiKeys.title}</h3>
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.apiKeys.description}</p>
+
+                {newApiKey && (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/40 dark:bg-amber-500/10">
+                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">{t.apiKeys.newKeyWarning}</p>
+                    <code className="mt-1.5 block break-all rounded-lg bg-white px-2.5 py-2 text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{newApiKey}</code>
+                  </div>
+                )}
+
+                {apiKeys.length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {apiKeys.map((key) => (
+                      <li key={key.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                        <div>
+                          <code className="font-medium text-slate-900 dark:text-white">{key.key_prefix}…</code>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {key.last_used_at ? t.apiKeys.lastUsed(new Date(key.last_used_at).toLocaleDateString()) : t.apiKeys.neverUsed}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleRevokeApiKey(key.id)}
+                          className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                          aria-label={t.apiKeys.revokeButton}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <button
+                  onClick={handleCreateApiKey}
+                  disabled={creatingKey}
+                  className="mt-4 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                >
+                  {creatingKey ? t.apiKeys.creating : t.apiKeys.createButton}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <Webhook className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.webhooks.title}</h3>
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.webhooks.description}</p>
+
+                {webhooks.length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {webhooks.map((webhook) => (
+                      <li key={webhook.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                        <span className="truncate font-medium text-slate-900 dark:text-white">{webhook.url}</span>
+                        <button
+                          onClick={() => handleRemoveWebhook(webhook.id)}
+                          className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                          aria-label={t.webhooks.removeButton}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <form onSubmit={handleAddWebhook} className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="url"
+                    required
+                    placeholder={t.webhooks.urlPlaceholder}
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={webhookStatus === 'sending'}
+                    className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                  >
+                    {webhookStatus === 'sending' ? t.webhooks.adding : t.webhooks.addButton}
+                  </button>
+                </form>
+                {webhookMessage && (
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{webhookMessage}</p>
+                )}
+              </div>
+
+              {referralCode && (
+                <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                  <div className="flex items-center gap-2">
+                    <Gift className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.referral.title}</h3>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.referral.description}</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <code className="flex-1 truncate rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                      {typeof window !== 'undefined' ? `${window.location.origin}/signup?ref=${referralCode}` : ''}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(`${window.location.origin}/signup?ref=${referralCode}`)}
+                      className="shrink-0 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      {t.referral.copyButton}
+                    </button>
+                  </div>
+                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.referral.countLabel(referralCount)}</p>
+                </div>
+              )}
+            </div>
 
             {auditLog.length > 0 && (
               <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -922,6 +857,72 @@ export default function Settings() {
             >
               {t.logout}
             </button>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, ease: EASE_OUT }}
+            className="space-y-4 lg:sticky lg:top-24 lg:self-start"
+          >
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.currentProfile}</h2>
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              {staticInfo.map((item) => (
+                <div key={item.label} className="flex items-center justify-between border-b border-slate-50 py-3 last:border-0 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <item.icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span className="text-sm text-slate-600 dark:text-slate-400">{item.label}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">{item.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-6 shadow-sm dark:border-brand-800/40 dark:bg-brand-500/5">
+              <h3 className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.yourPrice}</h3>
+              <motion.p
+                key={currentPrice}
+                initial={{ opacity: 0.5, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mt-2 text-4xl font-extrabold text-brand-700 dark:text-brand-400"
+              >
+                {formatEuro(currentPrice)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
+              </motion.p>
+              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                {isLocked ? t.priceNote : t.priceNoteSubscribed}
+              </p>
+            </div>
+
+            <div className="relative flex flex-col items-center justify-center">
+              <div className="relative h-[320px] w-full overflow-hidden rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+                <MagicHexagon
+                  clientCount={editClients}
+                  churnRate={profile?.churn_rate ?? undefined}
+                  monthlyRevenue={editRevenue}
+                  isLocked={isLocked}
+                  status={hexStatus}
+                />
+                {isLocked && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-sm dark:bg-slate-950/40">
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="flex flex-col items-center gap-3"
+                    >
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                        <Lock className="h-8 w-8" />
+                      </div>
+                      <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.unlockWithChurnly}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.startingAt} {formatEuro(currentPrice)}{t.perMonth}</p>
+                    </motion.div>
+                  </div>
+                )}
+              </div>
+              <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
+                {t.legend}
+              </p>
+            </div>
           </motion.div>
         </div>
       </main>
