@@ -279,6 +279,25 @@ export const fr = {
       inviteSent: 'Invitation envoyée.',
       inviteError: 'Impossible d\'envoyer l\'invitation.',
     },
+    apiKeys: {
+      title: 'Clés API',
+      description: 'Accédez à vos clients à risque depuis vos propres outils. Voir GET /api/v1/clients (en-tête X-API-Key).',
+      newKeyWarning: 'Copiez cette clé maintenant — elle ne sera plus jamais affichée.',
+      lastUsed: (date: string) => `Dernière utilisation : ${date}`,
+      neverUsed: 'Jamais utilisée',
+      revokeButton: 'Révoquer',
+      createButton: 'Créer une clé',
+      creating: 'Création…',
+    },
+    webhooks: {
+      title: 'Webhooks',
+      description: 'Recevez une notification signée dès qu\'un client passe à risque (URL en HTTPS uniquement).',
+      urlPlaceholder: 'https://votre-outil.com/webhooks/churnly',
+      addButton: 'Ajouter',
+      adding: 'Ajout…',
+      addError: 'Impossible d\'ajouter ce webhook.',
+      removeButton: 'Retirer',
+    },
   },
   dashboard: {
     outcome: {

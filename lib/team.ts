@@ -37,3 +37,26 @@ export async function resolveAccountIdClient(
     .maybeSingle();
   return data?.owner_user_id ?? authUserId;
 }
+
+// Certaines actions (facturation, Stripe Connect, clés API, webhooks) ne
+// doivent JAMAIS être déclenchables par un membre d'équipe, même par
+// accident — contrairement à resolveAccountId qui redirige poliment vers le
+// bon compte, celle-ci authentifie le token puis rejette purement et
+// simplement l'appel si l'appelant est un membre plutôt qu'un propriétaire.
+export async function requireOwnerId(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  token: string,
+): Promise<string | null> {
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userData?.user) return null;
+
+  const { data: membership } = await supabaseAdmin
+    .from('team_members')
+    .select('id')
+    .eq('member_user_id', userData.user.id)
+    .eq('status', 'accepted')
+    .maybeSingle();
+  if (membership) return null;
+
+  return userData.user.id;
+}

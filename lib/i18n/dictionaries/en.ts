@@ -281,6 +281,25 @@ export const en: Dictionary = {
       inviteSent: 'Invite sent.',
       inviteError: 'Could not send the invite.',
     },
+    apiKeys: {
+      title: 'API keys',
+      description: 'Access your at-risk clients from your own tools. See GET /api/v1/clients (X-API-Key header).',
+      newKeyWarning: 'Copy this key now — it will never be shown again.',
+      lastUsed: (date: string) => `Last used: ${date}`,
+      neverUsed: 'Never used',
+      revokeButton: 'Revoke',
+      createButton: 'Create a key',
+      creating: 'Creating…',
+    },
+    webhooks: {
+      title: 'Webhooks',
+      description: 'Get a signed notification the moment a client becomes at risk (HTTPS URLs only).',
+      urlPlaceholder: 'https://your-tool.com/webhooks/churnly',
+      addButton: 'Add',
+      adding: 'Adding…',
+      addError: 'Could not add this webhook.',
+      removeButton: 'Remove',
+    },
   },
   dashboard: {
     outcome: {
