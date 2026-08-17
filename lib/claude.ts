@@ -216,7 +216,14 @@ function normalizeAnalysisItem(item: Partial<ChurnAnalysisItem> & Record<string,
   };
 }
 
-async function analyzeChurnRiskBatch(clients: Array<Record<string, unknown>>, language: AnalysisLanguage): Promise<ChurnAnalysisItem[]> {
+const BATCH_MAX_RETRIES = 2;
+const BATCH_RETRY_BASE_DELAY_MS = 600;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function analyzeChurnRiskBatchOnce(clients: Array<Record<string, unknown>>, language: AnalysisLanguage): Promise<ChurnAnalysisItem[]> {
   const client = getClient();
 
   const message = await client.messages.create({
@@ -249,6 +256,28 @@ async function analyzeChurnRiskBatch(clients: Array<Record<string, unknown>>, la
   }
 
   return parsed.analysis.map(normalizeAnalysisItem);
+}
+
+// Un CSV de plusieurs centaines de clients se découpe en dizaines de lots
+// (BATCH_SIZE=15) — sans reprise, une seule erreur transitoire (rate limit,
+// coupure réseau, réponse mal formée) sur UN lot faisait échouer toute
+// l'analyse via Promise.all, y compris les lots déjà réussis, forçant à
+// tout relancer depuis zéro et refacturer l'intégralité des appels IA déjà
+// payés. Chaque lot retente maintenant seul, avec un backoff court.
+async function analyzeChurnRiskBatch(clients: Array<Record<string, unknown>>, language: AnalysisLanguage): Promise<ChurnAnalysisItem[]> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= BATCH_MAX_RETRIES; attempt++) {
+    try {
+      return await analyzeChurnRiskBatchOnce(clients, language);
+    } catch (err) {
+      lastError = err;
+      if (attempt < BATCH_MAX_RETRIES) {
+        console.error('[claude] batch analysis failed, retrying', JSON.stringify({ attempt, err: err instanceof Error ? err.message : err }));
+        await sleep(BATCH_RETRY_BASE_DELAY_MS * 2 ** attempt);
+      }
+    }
+  }
+  throw lastError;
 }
 
 // Splits large client lists into batches so each Claude call stays well

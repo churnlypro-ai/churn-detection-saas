@@ -239,7 +239,10 @@ function HowItWorksSection() {
 
 function ChurnDefinitionSection() {
   const flowRef = useRef<HTMLDivElement>(null);
-  const flowInView = useInView(flowRef, { once: false, amount: 0.1 });
+  // once:true — avec le délai en cascade ci-dessous, remonter les points à
+  // chaque passage dans le viewport (once:false) rendait l'encadré vide
+  // plusieurs secondes à chaque fois qu'on le recroisait en scrollant.
+  const flowInView = useInView(flowRef, { once: true, amount: 0.1 });
   const t = useTranslations('home').churnDefinition;
 
   return (
@@ -263,7 +266,7 @@ function ChurnDefinitionSection() {
                 className="absolute h-8 w-8 rounded-full bg-brand-200 dark:bg-brand-500/30"
                 initial={{ x: -50, opacity: 0 }}
                 animate={{ x: 800, opacity: [0, 1, 1, 0] }}
-                transition={{ duration: 4, repeat: Infinity, delay: i * 0.4, ease: 'linear' }}
+                transition={{ duration: 4, repeat: Infinity, delay: i * 0.15, ease: 'linear' }}
                 style={{ top: `${20 + (i % 3) * 30}px` }}
               />
             ))}
@@ -273,7 +276,7 @@ function ChurnDefinitionSection() {
                 className="absolute h-8 w-8 rounded-full border-2 border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-950/40"
                 initial={{ x: 800, opacity: 0 }}
                 animate={{ x: -50, opacity: [0, 1, 1, 0] }}
-                transition={{ duration: 5, repeat: Infinity, delay: i * 0.5 + 1, ease: 'linear' }}
+                transition={{ duration: 5, repeat: Infinity, delay: i * 0.18 + 0.3, ease: 'linear' }}
                 style={{ top: `${40 + (i % 3) * 30}px` }}
               />
             ))}

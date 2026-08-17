@@ -439,7 +439,7 @@ function SignupContent() {
                           value={clientCount}
                           onChange={(e) => setClientCount(Number(e.target.value) || 0)}
                           onBlur={(e) => setClientCount(Math.max(clientCountMin, Math.min(clientCountMax, Number(e.target.value) || clientCountMin)))}
-                          className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
+                          className="w-24 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
                         />
                       </div>
                     </div>
@@ -456,7 +456,7 @@ function SignupContent() {
                           value={monthlyRevenue}
                           onChange={(e) => setMonthlyRevenue(Number(e.target.value) || 0)}
                           onBlur={(e) => setMonthlyRevenue(Math.max(revenueMin, Math.min(revenueMax, Number(e.target.value) || revenueMin)))}
-                          className="w-24 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
+                          className="w-28 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
                         />
                       </div>
                     </div>

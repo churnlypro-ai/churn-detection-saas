@@ -36,7 +36,7 @@ function SliderField({ label, value, min, max, step, onChange, display, inputSuf
               const v = Number(e.target.value);
               onChange(Math.max(min, Math.min(max, Number.isNaN(v) ? min : v)));
             }}
-            className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-brand-400"
+            className="w-28 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-brand-400"
           />
           {inputSuffix && <span className="text-xs text-slate-400 dark:text-slate-500">{inputSuffix}</span>}
         </div>

@@ -29,25 +29,36 @@ export async function runChurnAnalysis(
 
   if (uploadError) throw uploadError;
 
-  const revenueByName = new Map(
-    clients.map((c) => [c.name as string, Number(c.revenue_monthly) || 0]),
-  );
-  const renewalByName = new Map(
-    clients.map((c) => [c.name as string, parseDateOrNull(c.renewal_date)]),
-  );
+  // Une simple Map name -> valeur écraserait silencieusement les doublons
+  // (deux clients au même nom — franchises, lignes génériques "Client",
+  // saisie dupliquée) : le dernier gagnerait, et TOUS les clients de ce nom
+  // hériteraient de son revenu. Une file par nom associe au contraire
+  // chaque occurrence à la bonne, dans l'ordre où Claude les a reçues.
+  const byName = new Map<string, Array<{ revenue: number; renewal: string | null }>>();
+  for (const c of clients) {
+    const name = c.name as string;
+    const entry = { revenue: Number(c.revenue_monthly) || 0, renewal: parseDateOrNull(c.renewal_date) };
+    const existing = byName.get(name);
+    if (existing) existing.push(entry);
+    else byName.set(name, [entry]);
+  }
 
-  const rows = analysis.map((item) => ({
-    user_id: userId,
-    upload_id: upload.id,
-    client_name: item.client_name,
-    revenue_monthly: revenueByName.get(item.client_name) ?? 0,
-    renewal_date: renewalByName.get(item.client_name) ?? null,
-    churn_score: item.churn_score,
-    reason: item.summary_reason,
-    solution: item.recommended_actions[0]?.detail ?? '',
-    confidence: item.confidence,
-    details: { risk_factors: item.risk_factors, recommended_actions: item.recommended_actions },
-  }));
+  const rows = analysis.map((item) => {
+    const queue = byName.get(item.client_name);
+    const matched = queue?.shift();
+    return {
+      user_id: userId,
+      upload_id: upload.id,
+      client_name: item.client_name,
+      revenue_monthly: matched?.revenue ?? 0,
+      renewal_date: matched?.renewal ?? null,
+      churn_score: item.churn_score,
+      reason: item.summary_reason,
+      solution: item.recommended_actions[0]?.detail ?? '',
+      confidence: item.confidence,
+      details: { risk_factors: item.risk_factors, recommended_actions: item.recommended_actions },
+    };
+  });
 
   const { error: insertError } = await supabaseAdmin.from('analysis_results').insert(rows);
   if (insertError) throw insertError;
