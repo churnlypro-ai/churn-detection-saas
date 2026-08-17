@@ -18,6 +18,7 @@ interface Profile {
   client_count: number | null;
   monthly_revenue: number | null;
   industry: string | null;
+  business_description: string | null;
   churn_rate: number | null;
   stripe_connected: boolean;
   intercom_connected: boolean;
@@ -70,6 +71,7 @@ export default function Settings() {
   const [editRevenue, setEditRevenue] = useState(50000);
   const [editCompany, setEditCompany] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
+  const [editBusinessDescription, setEditBusinessDescription] = useState('');
 
   const [newPassword, setNewPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState('');
@@ -98,6 +100,7 @@ export default function Settings() {
       setEditRevenue(p?.monthly_revenue ?? 50000);
       setEditCompany(p?.company_name ?? '');
       setEditIndustry(p?.industry ?? '');
+      setEditBusinessDescription(p?.business_description ?? '');
       setStripeConnected(!!p?.stripe_connect_account_id);
       setLoading(false);
     });
@@ -105,6 +108,14 @@ export default function Settings() {
 
   const handleSave = useCallback(async () => {
     if (!user) return;
+    // Même seuil que /signup (voir app/signup/page.tsx handleStep3Next) : une
+    // description trop courte ou vide prive l'IA du contexte dont elle a
+    // besoin pour calibrer ses seuils de risque par type de produit (voir
+    // businessContextInstruction dans lib/claude.ts).
+    if (editBusinessDescription.trim().length < 15) {
+      setError(t.businessDescriptionTooShort);
+      return;
+    }
     setSaving(true);
     setError('');
     setPlanMessage('');
@@ -116,6 +127,7 @@ export default function Settings() {
         client_count: editClients,
         monthly_revenue: editRevenue,
         industry: editIndustry,
+        business_description: editBusinessDescription.trim(),
       })
       .eq('id', user.id);
 
@@ -156,7 +168,7 @@ export default function Settings() {
     setHexStatus('success');
     setTimeout(() => setSavedToast(false), 3000);
     setTimeout(() => setHexStatus('idle'), 2500);
-  }, [user, editCompany, editClients, editRevenue, editIndustry, profile?.subscription_status, t]);
+  }, [user, editCompany, editClients, editRevenue, editIndustry, editBusinessDescription, profile?.subscription_status, t]);
 
   async function handlePasswordChange(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -231,6 +243,7 @@ export default function Settings() {
     { label: t.infoLabels.clients, value: (profile?.client_count ?? 0).toString(), icon: Users },
     { label: t.infoLabels.monthlyRevenue, value: formatEuro(profile?.monthly_revenue ?? 0), icon: Euro },
     { label: t.infoLabels.industry, value: (profile?.industry && industryLabels[profile.industry]) || '—', icon: Building2 },
+    { label: t.infoLabels.businessDescription, value: profile?.business_description || '—', icon: Building2 },
     {
       label: t.infoLabels.churnRate,
       value: profile?.churn_rate != null ? `${profile.churn_rate.toFixed(1)}%` : t.infoLabels.notAnalyzedYet,
@@ -362,6 +375,19 @@ export default function Settings() {
                       <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <Building2 className="h-3.5 w-3.5" /> {t.businessDescriptionLabel}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editBusinessDescription}
+                    onChange={(e) => setEditBusinessDescription(e.target.value)}
+                    placeholder={t.businessDescriptionPlaceholder}
+                    className="w-full resize-none rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                  <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">{t.businessDescriptionHint}</p>
                 </div>
               </div>
               <button

@@ -22,6 +22,7 @@ function SignupContent() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [businessDescription, setBusinessDescription] = useState('');
   const [clientCount, setClientCount] = useState(100);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
   const [industry, setIndustry] = useState<Industry>('saas');
@@ -164,6 +165,20 @@ function SignupContent() {
     }
   }
 
+  function handleStep3Next() {
+    setError('');
+    // Sans une vraie description de l'activité, l'IA n'a que le secteur
+    // générique (saas/agence/e-commerce/...) pour calibrer ses seuils de
+    // risque — beaucoup trop grossier (ex: usage quotidien type réseau
+    // social vs hebdomadaire type outil B2B). On la rend donc obligatoire
+    // dès l'inscription plutôt que de l'ajouter comme option ignorable.
+    if (businessDescription.trim().length < 15) {
+      setError(t.errors.businessDescriptionTooShort);
+      return;
+    }
+    setStep(4);
+  }
+
   function handlePasswordNext() {
     setError('');
     if (password.length < 8) {
@@ -189,7 +204,7 @@ function SignupContent() {
     const completeRes = await fetch('/api/complete-signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, companyName, clientCount, monthlyRevenue, industry, language }),
+      body: JSON.stringify({ email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language }),
     });
 
     if (!completeRes.ok) {
@@ -401,6 +416,18 @@ function SignupContent() {
                       </div>
                     </div>
                     <div>
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.step3.businessDescriptionLabel}</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={businessDescription}
+                        onChange={(e) => setBusinessDescription(e.target.value)}
+                        className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                        placeholder={t.step3.businessDescriptionPlaceholder}
+                      />
+                      <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">{t.step3.businessDescriptionHint}</p>
+                    </div>
+                    <div>
                       <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.step3.industryLabel}</label>
                       <div className="grid grid-cols-2 gap-2">
                         {(Object.keys(INDUSTRY_LABELS) as Industry[]).map((key) => (
@@ -467,7 +494,7 @@ function SignupContent() {
                   {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
                   <div className="mt-6 flex gap-3">
                     <button onClick={() => setStep(2)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> {t.step3.back}</button>
-                    <button onClick={() => setStep(4)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700">{t.step3.analyze} <ArrowRight className="h-4 w-4" /></button>
+                    <button onClick={handleStep3Next} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700">{t.step3.analyze} <ArrowRight className="h-4 w-4" /></button>
                   </div>
                 </motion.div>
               )}

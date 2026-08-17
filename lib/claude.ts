@@ -2,10 +2,39 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export type AnalysisLanguage = 'fr' | 'en';
 
+export interface BusinessContext {
+  companyName?: string | null;
+  industry?: string | null;
+  description?: string | null;
+}
+
 function languageInstruction(language: AnalysisLanguage): string {
   return language === 'en'
     ? '\n\nIMPORTANT: Write every text value in your response (summary_reason, factor, evidence, detail, expected_impact) in English. Keep the JSON keys and structure exactly as specified above.'
     : '';
+}
+
+// Un seuil universel ("N jours d'inactivité = risque") est faux d'une
+// entreprise à l'autre : un produit à usage quotidien (réseau social, outil
+// utilisé en continu type Spotify) et un outil B2B consommé une fois par
+// semaine ou par mois n'ont pas la même définition de "normal". Le dropdown
+// industry (saas/agency/ecommerce/...) est trop grossier pour ça — c'est la
+// description libre fournie par le client (business_description en base)
+// qui permet à Claude de déduire la cadence d'usage attendue et de juger
+// chaque signal de fréquence par rapport à CETTE cadence plutôt qu'à un
+// chiffre fixe.
+function businessContextInstruction(context?: BusinessContext | null): string {
+  if (!context) return '';
+  const lines: string[] = [];
+  if (context.companyName) lines.push(`- Nom de l'entreprise: ${context.companyName}`);
+  if (context.industry) lines.push(`- Secteur déclaré: ${context.industry}`);
+  if (context.description) lines.push(`- Description de son activité (fournie par le client lui-même): ${context.description}`);
+
+  if (lines.length === 0) {
+    return '\n\nCONTEXTE MÉTIER: non fourni par ce client. Reste prudent sur les signaux de fréquence/inactivité (days_since_last_login, avg_session_duration_days...) puisque tu ne sais pas quelle cadence d\'usage est normale pour son produit — pondère davantage les signaux non ambigus (statut de paiement, tickets support, renouvellement proche) que les signaux de fréquence dans ce cas.';
+  }
+
+  return `\n\nCONTEXTE MÉTIER DE L'ENTREPRISE CHURNLY QUI TE SOUMET CES CLIENTS (pas un de ses clients — son propre profil) :\n${lines.join('\n')}\n\nUtilise ce contexte pour calibrer, avant tout jugement, ce qui constitue un signal d'alerte de fréquence/inactivité pour CE produit précis. Un produit à usage quotidien par nature (réseau social, outil utilisé en continu, app consultée plusieurs fois par jour) justifie de traiter 7-10 jours d'inactivité comme un vrai risque. Un produit consommé normalement de façon hebdomadaire, mensuelle ou même trimestrielle par sa nature même (reporting, audit, service B2B ponctuel, outil de fond) NE DOIT PAS être pénalisé pour la même inactivité — c'est un usage sain pour ce type de produit, pas un signal de churn. Déduis la cadence attendue de la description ci-dessus et juge chaque client relativement à CETTE cadence, jamais à un seuil universel en nombre de jours.`;
 }
 
 let anthropicClient: Anthropic | null = null;
@@ -18,6 +47,8 @@ function getClient(): Anthropic {
 }
 
 const ANALYSIS_SYSTEM_PROMPT = `Tu es un analyste churn expert pour des entreprises SaaS et agences. On te fournit des données réelles sur des clients (inactivité, tickets support, usage, statut de paiement, revenu, et tout autre champ présent). Ton travail est chirurgical: chaque affirmation doit être justifiée par une vraie valeur des données fournies. N'invente jamais une donnée qui n'est pas dans l'input.
+
+Un signal de fréquence ou d'inactivité n'a de sens que relativement au type de produit analysé — un contexte métier (nom, secteur, description de l'activité) peut t'être fourni plus bas dans ce prompt : sers-t'en systématiquement pour calibrer tes seuils avant de juger un client, plutôt que d'appliquer un seuil universel en nombre de jours.
 
 Pour CHAQUE client, retourne:
 1. churn_score (0-100): basé uniquement sur les signaux réels fournis.
@@ -223,13 +254,17 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function analyzeChurnRiskBatchOnce(clients: Array<Record<string, unknown>>, language: AnalysisLanguage): Promise<ChurnAnalysisItem[]> {
+async function analyzeChurnRiskBatchOnce(
+  clients: Array<Record<string, unknown>>,
+  language: AnalysisLanguage,
+  businessContext?: BusinessContext | null,
+): Promise<ChurnAnalysisItem[]> {
   const client = getClient();
 
   const message = await client.messages.create({
     model: 'claude-opus-5',
     max_tokens: 8192,
-    system: ANALYSIS_SYSTEM_PROMPT + languageInstruction(language),
+    system: ANALYSIS_SYSTEM_PROMPT + businessContextInstruction(businessContext) + languageInstruction(language),
     messages: [
       {
         role: 'user',
@@ -264,11 +299,15 @@ async function analyzeChurnRiskBatchOnce(clients: Array<Record<string, unknown>>
 // l'analyse via Promise.all, y compris les lots déjà réussis, forçant à
 // tout relancer depuis zéro et refacturer l'intégralité des appels IA déjà
 // payés. Chaque lot retente maintenant seul, avec un backoff court.
-async function analyzeChurnRiskBatch(clients: Array<Record<string, unknown>>, language: AnalysisLanguage): Promise<ChurnAnalysisItem[]> {
+async function analyzeChurnRiskBatch(
+  clients: Array<Record<string, unknown>>,
+  language: AnalysisLanguage,
+  businessContext?: BusinessContext | null,
+): Promise<ChurnAnalysisItem[]> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= BATCH_MAX_RETRIES; attempt++) {
     try {
-      return await analyzeChurnRiskBatchOnce(clients, language);
+      return await analyzeChurnRiskBatchOnce(clients, language, businessContext);
     } catch (err) {
       lastError = err;
       if (attempt < BATCH_MAX_RETRIES) {
@@ -287,12 +326,13 @@ async function analyzeChurnRiskBatch(clients: Array<Record<string, unknown>>, la
 export async function analyzeChurnRisk(
   clients: Array<Record<string, unknown>>,
   language: AnalysisLanguage = 'fr',
+  businessContext?: BusinessContext | null,
 ): Promise<ChurnAnalysisItem[]> {
   const batches: Array<Record<string, unknown>>[] = [];
   for (let i = 0; i < clients.length; i += BATCH_SIZE) {
     batches.push(clients.slice(i, i + BATCH_SIZE));
   }
 
-  const results = await Promise.all(batches.map((batch) => analyzeChurnRiskBatch(batch, language)));
+  const results = await Promise.all(batches.map((batch) => analyzeChurnRiskBatch(batch, language, businessContext)));
   return results.flat();
 }

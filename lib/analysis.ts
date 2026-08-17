@@ -19,7 +19,21 @@ export async function runChurnAnalysis(
   filename: string | null,
   language: AnalysisLanguage,
 ) {
-  const analysis = await analyzeChurnRisk(clients, language);
+  // Le contexte métier (secteur + description libre) est lu ici plutôt que
+  // passé par l'appelant : les deux points d'entrée (CSV et Stripe Connect,
+  // voir app/api/analyze et app/api/stripe/connect/import) partagent cette
+  // fonction et ne devraient pas avoir à redupliquer cette lecture.
+  const { data: businessProfile } = await supabaseAdmin
+    .from('users')
+    .select('company_name, industry, business_description')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const analysis = await analyzeChurnRisk(clients, language, {
+    companyName: businessProfile?.company_name ?? null,
+    industry: businessProfile?.industry ?? null,
+    description: businessProfile?.business_description ?? null,
+  });
 
   const { data: upload, error: uploadError } = await supabaseAdmin
     .from('csv_uploads')

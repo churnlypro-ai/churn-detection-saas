@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const accountId = await exchangeCodeForAccount(code);
-    const { email, companyName } = await fetchConnectedAccountProfile(accountId);
+    const { email, companyName, businessDescription } = await fetchConnectedAccountProfile(accountId);
 
     if (!email) {
       console.error('[stripe/connect/signup-callback] connected account has no email', JSON.stringify({ accountId }));
@@ -93,6 +93,10 @@ export async function GET(req: NextRequest) {
         monthly_revenue: monthlyRevenue,
         industry: 'saas',
         stripe_connect_account_id: accountId,
+        // Peut rester null si le compte Stripe connecté ne l'a pas renseigné
+        // — dans ce cas /dashboard invite le client à le compléter (voir la
+        // bannière de la section "business context" ajoutée à cette page).
+        business_description: businessDescription,
       })
       .eq('id', userId);
 

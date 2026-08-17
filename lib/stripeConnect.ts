@@ -114,6 +114,7 @@ export async function exchangeCodeForAccount(code: string): Promise<string> {
 export interface ConnectedAccountProfile {
   email: string | null;
   companyName: string;
+  businessDescription: string | null;
 }
 
 // Utilisé uniquement par le parcours d'inscription via Stripe (voir
@@ -130,6 +131,12 @@ export async function fetchConnectedAccountProfile(accountId: string): Promise<C
       account.settings?.dashboard?.display_name ||
       account.email ||
       'Mon entreprise',
+    // Stripe le demande déjà à ses propres comptes connectés — quand il est
+    // rempli, ça évite de redemander la même information ; souvent absent ou
+    // trop vague ("SaaS platform"), donc jamais traité comme suffisant en
+    // soi : le compte reste invité à le préciser depuis /settings (voir la
+    // bannière sur /dashboard) plutôt que de considérer le champ "acquis".
+    businessDescription: account.business_profile?.product_description ?? null,
   };
 }
 

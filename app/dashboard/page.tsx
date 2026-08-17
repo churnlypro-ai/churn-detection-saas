@@ -21,6 +21,7 @@ interface Profile {
   client_count: number | null;
   monthly_revenue: number | null;
   industry: string | null;
+  business_description: string | null;
   churn_rate: number | null;
   trial_end: string | null;
   trial_used: boolean | null;
@@ -834,6 +835,29 @@ export default function Dashboard() {
             </div>
           </div>
         </motion.div>
+
+        {!loading && (!profile?.business_description || profile.business_description.trim().length < 15) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
+            className="relative z-10 flex flex-col items-start gap-3 rounded-2xl border border-brand-100 bg-brand-50/60 px-5 py-4 dark:border-brand-800/40 dark:bg-brand-500/5 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <Sparkles className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-600 dark:text-brand-400" />
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.businessDescriptionBanner.title}</p>
+                <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{t.businessDescriptionBanner.body}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push('/settings')}
+              className="flex flex-shrink-0 items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+            >
+              {t.businessDescriptionBanner.cta}
+            </button>
+          </motion.div>
+        )}
 
         {status === 'trialing' && (
           <motion.div

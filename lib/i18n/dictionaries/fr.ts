@@ -208,6 +208,7 @@ export const fr = {
       clients: 'Clients',
       monthlyRevenue: 'Revenu mensuel',
       industry: 'Industrie',
+      businessDescription: 'Activité',
       churnRate: 'Taux de churn (calculé par Churnly)',
       notAnalyzedYet: 'Pas encore analysé',
     },
@@ -233,6 +234,10 @@ export const fr = {
       manager: 'Manager / Talents',
       other: 'Autre',
     } as Record<string, string>,
+    businessDescriptionLabel: 'Qu\'est-ce que vous faites exactement ?',
+    businessDescriptionPlaceholder: 'Ex: un SaaS de gestion de projet utilisé quotidiennement par des équipes marketing...',
+    businessDescriptionHint: 'Utilisé par l\'IA pour calibrer ses seuils de risque selon votre type de produit (usage quotidien vs hebdomadaire/mensuel).',
+    businessDescriptionTooShort: 'Décrivez votre activité en quelques mots (15 caractères minimum).',
     saving: 'Enregistrement…',
     save: 'Enregistrer',
     updateError: 'Erreur lors de la mise à jour.',
@@ -256,6 +261,11 @@ export const fr = {
     stripeDisconnectError: 'Impossible de déconnecter le compte Stripe.',
   },
   dashboard: {
+    businessDescriptionBanner: {
+      title: 'Décrivez votre activité pour affiner l\'analyse',
+      body: 'L\'IA calibre ses seuils de risque (inactivité, fréquence d\'usage...) selon le type de produit — sans cette description, elle applique des seuils génériques.',
+      cta: 'Compléter dans les paramètres',
+    },
     riskBadge: {
       critical: (score: number) => `${score}% Critique`,
       atRisk: (score: number) => `${score}% Risque`,
@@ -409,6 +419,7 @@ export const fr = {
       accountCreatedPaymentFailed: 'Compte créé, mais le paiement a échoué. Réessayez depuis le dashboard.',
       stripeSignupDenied: 'Connexion Stripe annulée.',
       stripeSignupError: 'La connexion via Stripe a échoué. Réessayez ou créez votre compte avec un email.',
+      businessDescriptionTooShort: 'Décrivez votre activité en quelques mots (15 caractères minimum) — l\'IA en a besoin pour calibrer son analyse.',
     },
     passwordStrength: {
       label: 'Force:',
@@ -452,6 +463,9 @@ export const fr = {
       subtitle: 'Analyse personnalisée.',
       companyLabel: 'Nom de l\'entreprise',
       companyPlaceholder: 'Acme Inc',
+      businessDescriptionLabel: 'Qu\'est-ce que vous faites exactement ?',
+      businessDescriptionPlaceholder: 'Ex: un SaaS de gestion de projet utilisé quotidiennement par des équipes marketing, ou une agence qui livre un rapport mensuel à ses clients...',
+      businessDescriptionHint: 'Essentiel pour l\'analyse : l\'IA s\'en sert pour savoir ce qui est un usage normal ou un signal d\'alerte pour VOTRE produit (une app à usage quotidien et un outil consulté une fois par mois n\'ont pas les mêmes seuils de risque).',
       industryLabel: 'Type d\'industrie',
       modelsCountLabel: 'Nombre de modèles gérés',
       clientsCountLabel: 'Nombre de clients',

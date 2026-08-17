@@ -5,12 +5,14 @@ const MESSAGES = {
   fr: {
     missingCredentials: 'Email et mot de passe requis.',
     passwordTooShort: 'Le mot de passe doit contenir au moins 8 caractères.',
+    businessDescriptionRequired: 'Décrivez votre activité en quelques mots.',
     emailNotVerified: 'Email non vérifié. Recommencez la vérification par code.',
     cannotCreateAccount: 'Impossible de créer le compte.',
   },
   en: {
     missingCredentials: 'Email and password required.',
     passwordTooShort: 'Password must be at least 8 characters.',
+    businessDescriptionRequired: 'Describe your business in a few words.',
     emailNotVerified: 'Email not verified. Restart the code verification.',
     cannotCreateAccount: 'Could not create the account.',
   },
@@ -25,7 +27,7 @@ const MESSAGES = {
 // no account.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { email, password, companyName, clientCount, monthlyRevenue, industry, language } = body ?? {};
+  const { email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language } = body ?? {};
   const m = language === 'en' ? MESSAGES.en : MESSAGES.fr;
 
   if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
@@ -33,6 +35,13 @@ export async function POST(req: NextRequest) {
   }
   if (password.length < 8) {
     return NextResponse.json({ error: m.passwordTooShort }, { status: 400 });
+  }
+  // Revérifié côté serveur — le garde-fou client (app/signup/page.tsx) est
+  // contournable en appelant cette route directement, et sans une vraie
+  // description l'analyse IA retombe sur des seuils génériques (voir
+  // businessContextInstruction dans lib/claude.ts).
+  if (typeof businessDescription !== 'string' || businessDescription.trim().length < 15) {
+    return NextResponse.json({ error: m.businessDescriptionRequired }, { status: 400 });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
@@ -74,6 +83,7 @@ export async function POST(req: NextRequest) {
       client_count: clientCount ?? null,
       monthly_revenue: monthlyRevenue ?? null,
       industry: industry ?? null,
+      business_description: businessDescription.trim(),
       // churn_rate n'est jamais fourni à l'inscription — Churnly le calcule
       // lui-même à partir de la première analyse réelle (voir /api/analyze).
     })

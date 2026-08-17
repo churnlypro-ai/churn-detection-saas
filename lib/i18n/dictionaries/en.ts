@@ -210,6 +210,7 @@ export const en: Dictionary = {
       clients: 'Customers',
       monthlyRevenue: 'Monthly revenue',
       industry: 'Industry',
+      businessDescription: 'Business',
       churnRate: 'Churn rate (calculated by Churnly)',
       notAnalyzedYet: 'Not analyzed yet',
     },
@@ -235,6 +236,10 @@ export const en: Dictionary = {
       manager: 'Manager / Talent',
       other: 'Other',
     },
+    businessDescriptionLabel: 'What exactly do you do?',
+    businessDescriptionPlaceholder: 'E.g: a project management SaaS used daily by marketing teams...',
+    businessDescriptionHint: 'Used by the AI to calibrate its risk thresholds to your product type (daily use vs. weekly/monthly).',
+    businessDescriptionTooShort: 'Describe your business in a few words (15 characters minimum).',
     saving: 'Saving…',
     save: 'Save',
     updateError: 'Error while updating.',
@@ -258,6 +263,11 @@ export const en: Dictionary = {
     stripeDisconnectError: 'Could not disconnect the Stripe account.',
   },
   dashboard: {
+    businessDescriptionBanner: {
+      title: 'Describe your business to sharpen the analysis',
+      body: 'The AI calibrates its risk thresholds (inactivity, usage frequency...) to your type of product — without this description, it falls back to generic thresholds.',
+      cta: 'Complete it in settings',
+    },
     riskBadge: {
       critical: (score: number) => `${score}% Critical`,
       atRisk: (score: number) => `${score}% At risk`,
@@ -411,6 +421,7 @@ export const en: Dictionary = {
       accountCreatedPaymentFailed: 'Account created, but payment failed. Try again from the dashboard.',
       stripeSignupDenied: 'Stripe connection cancelled.',
       stripeSignupError: 'Signing in with Stripe failed. Try again or create your account with an email.',
+      businessDescriptionTooShort: 'Describe your business in a few words (15 characters minimum) — the AI needs it to calibrate its analysis.',
     },
     passwordStrength: {
       label: 'Strength:',
@@ -454,6 +465,9 @@ export const en: Dictionary = {
       subtitle: 'Personalized analysis.',
       companyLabel: 'Company name',
       companyPlaceholder: 'Acme Inc',
+      businessDescriptionLabel: 'What exactly do you do?',
+      businessDescriptionPlaceholder: 'E.g: a project management SaaS used daily by marketing teams, or an agency that delivers a monthly report to clients...',
+      businessDescriptionHint: 'Essential for the analysis: the AI uses it to know what counts as normal usage vs. a warning sign for YOUR product (a daily-use app and a tool checked once a month don\'t share the same risk thresholds).',
       industryLabel: 'Industry type',
       modelsCountLabel: 'Number of talents managed',
       clientsCountLabel: 'Number of customers',
