@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText, X, Key, Webhook } from 'lucide-react';
+import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText, X, Key, Webhook, Gift } from 'lucide-react';
 import type { HexagonStatus } from '@/components/MagicHexagon';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
 import { resolveAccountIdClient } from '@/lib/team';
@@ -134,6 +134,8 @@ export default function Settings() {
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookStatus, setWebhookStatus] = useState<'idle' | 'sending' | 'error'>('idle');
   const [webhookMessage, setWebhookMessage] = useState('');
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCount, setReferralCount] = useState(0);
   const { language } = useLanguage();
   const t = useTranslations('settings');
 
@@ -194,6 +196,15 @@ export default function Settings() {
         .eq('user_id', data.user.id)
         .order('created_at', { ascending: false });
       setWebhooks((webhookRows ?? []) as WebhookRow[]);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const referralRes = await fetch('/api/referrals/count', { headers: { Authorization: `Bearer ${token}` } });
+      if (referralRes.ok) {
+        const referralResult = await referralRes.json();
+        setReferralCode(referralResult.code ?? null);
+        setReferralCount(referralResult.count ?? 0);
+      }
     });
   }, [router]);
 
@@ -822,6 +833,28 @@ export default function Settings() {
                 <p className="mt-2 text-sm text-red-600 dark:text-red-400">{webhookMessage}</p>
               )}
             </div>
+
+            {referralCode && (
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.referral.title}</h3>
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.referral.description}</p>
+                <div className="mt-3 flex items-center gap-2">
+                  <code className="flex-1 truncate rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/signup?ref=${referralCode}` : ''}
+                  </code>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/signup?ref=${referralCode}`)}
+                    className="shrink-0 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {t.referral.copyButton}
+                  </button>
+                </div>
+                <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.referral.countLabel(referralCount)}</p>
+              </div>
+            )}
 
             {auditLog.length > 0 && (
               <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">

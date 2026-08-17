@@ -63,6 +63,15 @@ function SignupContent() {
     }
   }
 
+  // Voir la note équivalente dans app/login/page.tsx — nécessite le
+  // provider Google activé côté Supabase (config manuelle, hors code).
+  async function handleGoogleSignIn() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/dashboard` },
+    });
+  }
+
   const steps = t.steps;
   const INDUSTRY_LABELS = t.industries;
 
@@ -204,7 +213,7 @@ function SignupContent() {
     const completeRes = await fetch('/api/complete-signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language }),
+      body: JSON.stringify({ email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language, referredBy: searchParams.get('ref') }),
     });
 
     if (!completeRes.ok) {
@@ -326,6 +335,20 @@ function SignupContent() {
                     )}
                   </button>
                   <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">{t.step0.stripeSignupNote}</p>
+
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700 dark:hover:text-brand-400"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                      <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.28 1.48-1.13 2.73-2.4 3.58v2.98h3.88c2.27-2.09 3.58-5.17 3.58-8.8z" />
+                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-2.98c-1.08.72-2.45 1.15-4.05 1.15-3.11 0-5.75-2.1-6.69-4.92H1.31v3.09C3.28 21.3 7.31 24 12 24z" />
+                      <path fill="#FBBC05" d="M5.31 14.34A7.19 7.19 0 0 1 4.96 12c0-.81.14-1.6.35-2.34V6.57H1.31A11.97 11.97 0 0 0 0 12c0 1.93.46 3.76 1.31 5.43l4-3.09z" />
+                      <path fill="#EA4335" d="M12 4.77c1.76 0 3.35.61 4.6 1.8l3.44-3.44C17.94 1.19 15.23 0 12 0 7.31 0 3.28 2.7 1.31 6.57l4 3.09c.94-2.82 3.58-4.89 6.69-4.89z" />
+                    </svg>
+                    {t.step0.googleSignupButton}
+                  </button>
 
                   <div className="my-5 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
                     <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />

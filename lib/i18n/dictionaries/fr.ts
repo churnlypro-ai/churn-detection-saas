@@ -298,6 +298,12 @@ export const fr = {
       addError: 'Impossible d\'ajouter ce webhook.',
       removeButton: 'Retirer',
     },
+    referral: {
+      title: 'Parrainage',
+      description: 'Partagez ce lien — on suit combien de comptes viennent de vous (pas encore de récompense automatique, ça arrive).',
+      copyButton: 'Copier',
+      countLabel: (count: number) => `${count} inscription${count > 1 ? 's' : ''} via votre lien.`,
+    },
   },
   dashboard: {
     outcome: {
@@ -490,6 +496,7 @@ export const fr = {
       stripeSignupButton: 'Créer mon compte avec Stripe',
       stripeSignupLoading: 'Connexion à Stripe…',
       stripeSignupNote: 'Votre CA et votre nombre de clients sont calculés automatiquement à partir de vos vraies données Stripe — pas de formulaire à remplir.',
+      googleSignupButton: 'Continuer avec Google',
       or: 'ou',
       emailLabel: 'Email',
       emailPlaceholder: 'vous@entreprise.com',
@@ -574,6 +581,8 @@ export const fr = {
     magicLinkSent: 'Lien envoyé — vérifiez votre boîte mail.',
     magicLinkError: 'Impossible d\'envoyer le lien. Réessayez.',
     teamInviteError: 'Ce lien d\'invitation est invalide, expiré, ou a déjà été utilisé. Demandez une nouvelle invitation à la personne qui vous a invité.',
+    googleButton: 'Continuer avec Google',
+    or: 'ou',
   },
   pricing: {
     eyebrow: 'Tarifs',

@@ -27,7 +27,7 @@ const MESSAGES = {
 // no account.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language } = body ?? {};
+  const { email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language, referredBy } = body ?? {};
   const m = language === 'en' ? MESSAGES.en : MESSAGES.fr;
 
   if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
@@ -45,6 +45,19 @@ export async function POST(req: NextRequest) {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
+
+  // Un code de parrainage inventé/invalide ne doit jamais faire échouer
+  // l'inscription — juste être ignoré silencieusement plutôt que stocké
+  // tel quel (voir handle_new_user, qui lit raw_user_meta_data.referred_by).
+  let validatedReferredBy: string | null = null;
+  if (typeof referredBy === 'string' && referredBy.trim()) {
+    const { data: referrer } = await supabaseAdmin
+      .from('users')
+      .select('referral_code')
+      .eq('referral_code', referredBy.trim())
+      .maybeSingle();
+    if (referrer) validatedReferredBy = referrer.referral_code;
+  }
 
   const { data: verification, error: verificationError } = await supabaseAdmin
     .from('email_verifications')
@@ -67,7 +80,7 @@ export async function POST(req: NextRequest) {
     email,
     password,
     email_confirm: true,
-    user_metadata: { company_name: companyName ?? '', language: language === 'en' ? 'en' : 'fr' },
+    user_metadata: { company_name: companyName ?? '', language: language === 'en' ? 'en' : 'fr', referred_by: validatedReferredBy ?? '' },
   });
 
   if (createError || !created?.user) {

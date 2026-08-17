@@ -300,6 +300,12 @@ export const en: Dictionary = {
       addError: 'Could not add this webhook.',
       removeButton: 'Remove',
     },
+    referral: {
+      title: 'Referrals',
+      description: 'Share this link — we track how many accounts came from you (no automatic reward yet, that\'s coming).',
+      copyButton: 'Copy',
+      countLabel: (count: number) => `${count} signup${count > 1 ? 's' : ''} via your link.`,
+    },
   },
   dashboard: {
     outcome: {
@@ -492,6 +498,7 @@ export const en: Dictionary = {
       stripeSignupButton: 'Create my account with Stripe',
       stripeSignupLoading: 'Connecting to Stripe…',
       stripeSignupNote: 'Your revenue and customer count are calculated automatically from your real Stripe data — no form to fill in.',
+      googleSignupButton: 'Continue with Google',
       or: 'or',
       emailLabel: 'Email',
       emailPlaceholder: 'you@company.com',
@@ -576,6 +583,8 @@ export const en: Dictionary = {
     magicLinkSent: 'Link sent — check your inbox.',
     magicLinkError: 'Could not send the link. Try again.',
     teamInviteError: 'This invite link is invalid, expired, or already used. Ask the person who invited you for a new one.',
+    googleButton: 'Continue with Google',
+    or: 'or',
   },
   pricing: {
     eyebrow: 'Pricing',
