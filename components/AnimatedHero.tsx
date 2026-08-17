@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import * as THREE from 'three';
+import { useTranslations } from '@/lib/i18n/LanguageContext';
 
 const FLOATING_BALLS = [
   { x: '18%', y: '22%', delay: 0 },
@@ -17,6 +18,7 @@ const FLOATING_BALLS = [
 export default function AnimatedHero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const t = useTranslations('home').hero;
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -181,7 +183,7 @@ export default function AnimatedHero() {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mb-6 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-medium text-slate-500 shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400"
         >
-          Analyse par IA · Prévention de churn en temps réel
+          {t.badge}
         </motion.span>
 
         <motion.h1
@@ -190,9 +192,9 @@ export default function AnimatedHero() {
           transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl"
         >
-          Churnly
+          {t.titleLine1}
           <br />
-          <span className="text-brand-600">Sauvez votre revenue.</span>
+          <span className="text-brand-600">{t.titleLine2}</span>
         </motion.h1>
 
         <motion.p
@@ -201,8 +203,7 @@ export default function AnimatedHero() {
           transition={{ duration: 0.8, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
           className="mt-6 max-w-xl text-lg text-slate-600 dark:text-slate-400"
         >
-          Prédisez qui va partir avant qu&apos;il ne parte. Uploadez vos données clients, notre IA
-          détecte les signaux de risque et vous dit exactement quoi faire.
+          {t.subtitle}
         </motion.p>
 
         <motion.div
@@ -215,9 +216,9 @@ export default function AnimatedHero() {
             href="/signup"
             className="rounded-full bg-brand-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
           >
-            Commencer gratuitement
+            {t.cta}
           </Link>
-          <span className="text-xs text-slate-400 dark:text-slate-500">Pas de carte bancaire requise · Aperçu gratuit</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">{t.ctaNote}</span>
         </motion.div>
       </motion.div>
     </section>

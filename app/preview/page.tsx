@@ -14,9 +14,12 @@ interface Profile {
   client_count: number | null;
   monthly_revenue: number | null;
   churn_rate: number | null;
+  industry: string | null;
+  trial_used: boolean | null;
 }
 
 import { calcPrice, tierName, formatEuro } from '@/lib/pricing';
+import { useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 
 function PreviewContent() {
   const router = useRouter();
@@ -32,6 +35,8 @@ function PreviewContent() {
   const [showDetails, setShowDetails] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const t = useTranslations('preview');
+  const translateTierName = useTierName();
 
   useEffect(() => {
     if (!uploadId) return;
@@ -70,7 +75,7 @@ function PreviewContent() {
     });
   }, [uploadId, router]);
 
-  async function handleSubscribe() {
+  async function handleSubscribe(wantsTrial: boolean = true) {
     setCheckoutLoading(true);
     setCheckoutError('');
 
@@ -83,15 +88,15 @@ function PreviewContent() {
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ wantsTrial }),
       });
 
-      if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
+      if (!response.ok) throw new Error(t.checkoutErrorStart);
 
       const { url } = await response.json();
       window.location.href = url;
     } catch (err) {
-      setCheckoutError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+      setCheckoutError(err instanceof Error ? err.message : t.checkoutErrorFallback);
       setCheckoutLoading(false);
     }
   }
@@ -124,7 +129,7 @@ function PreviewContent() {
               transition={{ duration: 0.3, ease: EASE_OUT }}
               className="mb-6 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-center text-sm font-medium text-amber-700 dark:border-amber-800/40 dark:bg-amber-500/10 dark:text-amber-400"
             >
-              Paiement annulé. Vous pouvez réessayer quand vous voulez.
+              {t.checkoutCancelled}
             </motion.div>
           )}
         </AnimatePresence>
@@ -135,16 +140,16 @@ function PreviewContent() {
           transition={{ duration: 0.6, ease: EASE_OUT }}
           className="rounded-3xl border border-slate-100 bg-white p-10 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Analyse complète</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t.fullAnalysis}</p>
           <p className="mt-2 text-lg text-slate-700 dark:text-slate-300">
-            <span className="font-bold text-slate-900 dark:text-white">{clientCount}</span> clients analysés
+            <span className="font-bold text-slate-900 dark:text-white">{clientCount}</span> {t.clientsAnalyzedSuffix}
           </p>
 
           <div className="mt-8 rounded-2xl bg-amber-50/60 px-6 py-8 dark:bg-amber-500/10">
             <div className="mb-2 flex items-center justify-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               <p className="text-sm font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                Clients à risque détectés
+                {t.atRiskDetected}
               </p>
             </div>
             <motion.p
@@ -167,7 +172,7 @@ function PreviewContent() {
               whileTap={{ scale: 0.98 }}
               className="mt-8 rounded-full bg-brand-600 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700"
             >
-              Voir les détails
+              {t.seeDetails}
             </motion.button>
           )}
         </motion.div>
@@ -184,11 +189,10 @@ function PreviewContent() {
               <div className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-6 flex items-center justify-center gap-2">
                   <Lock className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Débloquez vos clients à risque</h2>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t.unlockTitle}</h2>
                 </div>
                 <p className="text-center text-sm text-slate-600 dark:text-slate-400">
-                  Pour voir qui sont ces {atRiskCount} clients, pourquoi ils sont à risque,
-                  et comment les sauver — passez à Churnly Premium.
+                  {t.unlockBody(atRiskCount)}
                 </p>
 
                 <motion.div
@@ -197,7 +201,7 @@ function PreviewContent() {
                   transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.15 }}
                   className="mt-6 rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50/60 to-white p-6 dark:border-brand-800/40 dark:from-brand-500/10 dark:to-slate-900"
                 >
-                  <p className="text-center text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Votre prix personnalisé</p>
+                  <p className="text-center text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">{t.personalizedPrice}</p>
                   <motion.p
                     key={dynamicPrice}
                     initial={{ opacity: 0.5, y: 8 }}
@@ -206,20 +210,14 @@ function PreviewContent() {
                     className="mt-2 text-center text-5xl font-extrabold text-brand-700 dark:text-brand-400"
                   >
                     {formatEuro(dynamicPrice)}
-                    <span className="text-lg font-medium text-slate-400 dark:text-slate-500">/mois</span>
+                    <span className="text-lg font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
                   </motion.p>
 
-                  <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">Palier {tierName(dynamicPrice)} · basé sur votre CA mensuel</p>
+                  <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">{t.tierPrefix} {translateTierName(tierName(dynamicPrice))} {t.tierSuffix}</p>
                 </motion.div>
 
                 <div className="mt-6 space-y-2.5">
-                  {[
-                    'Liste complète des clients à risque',
-                    'Score de churn et raison détaillée par client',
-                    '5 templates d\'email personnalisés par client',
-                    'Actions recommandées par IA',
-                    'Mise à jour après chaque upload',
-                  ].map((feature, i) => (
+                  {t.features.map((feature, i) => (
                     <motion.div
                       key={feature}
                       initial={{ opacity: 0, x: -12 }}
@@ -239,7 +237,7 @@ function PreviewContent() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.6 }}
-                  onClick={handleSubscribe}
+                  onClick={() => handleSubscribe(true)}
                   disabled={checkoutLoading}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -248,15 +246,24 @@ function PreviewContent() {
                   {checkoutLoading ? (
                     <>
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      Redirection vers le paiement…
+                      {t.redirecting}
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="h-4 w-4" />
-                      S'abonner — {formatEuro(dynamicPrice)}/mois
+                      {t.subscribeButton(formatEuro(dynamicPrice))}
                     </>
                   )}
                 </motion.button>
+                {profile?.industry !== 'manager' && !profile?.trial_used && (
+                  <button
+                    onClick={() => handleSubscribe(false)}
+                    disabled={checkoutLoading}
+                    className="mt-2 flex w-full items-center justify-center text-xs font-medium text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline disabled:opacity-60 dark:text-slate-500 dark:hover:text-slate-300"
+                  >
+                    {t.payNowLink}
+                  </button>
+                )}
 
                 {checkoutError && (
                   <motion.p
@@ -269,7 +276,7 @@ function PreviewContent() {
                 )}
 
                 <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
-                  Annulable à tout moment · Paiement sécurisé via Stripe
+                  {t.cancelAnytime}
                 </p>
               </div>
             </motion.div>

@@ -1,19 +1,35 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
+import { useTranslations } from '@/lib/i18n/LanguageContext';
 
-export default function Login() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [sliding, setSliding] = useState(false);
+  const [accountExists, setAccountExists] = useState(false);
+  const [magicLinkStatus, setMagicLinkStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const t = useTranslations('login');
+
+  // Un compte créé via "S'inscrire avec Stripe" n'a jamais de mot de passe —
+  // ce lien de retour (voir signup-callback) doit donc proposer une autre
+  // porte d'entrée que le formulaire mot de passe classique.
+  useEffect(() => {
+    if (searchParams.get('stripe') === 'account_exists') {
+      setAccountExists(true);
+      const prefill = searchParams.get('email');
+      if (prefill) setEmail(prefill);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,6 +52,16 @@ export default function Login() {
     }, 700);
   }
 
+  async function handleMagicLink() {
+    if (!email) return;
+    setMagicLinkStatus('sending');
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+    });
+    setMagicLinkStatus(otpError ? 'error' : 'sent');
+  }
+
   return (
     <>
       <Navigation user={null} />
@@ -48,23 +74,44 @@ export default function Login() {
           style={{ perspective: 1200 }}
           className="relative z-10 w-full max-w-sm"
         >
-          <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Bon retour</h1>
-          <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">Connectez-vous à votre compte.</p>
+          <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.title}</h1>
+          <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">{t.subtitle}</p>
+
+          {accountExists && (
+            <div className="mb-6 rounded-xl border border-brand-100 bg-brand-50/60 p-4 text-sm text-brand-800 dark:border-brand-800/40 dark:bg-brand-500/5 dark:text-brand-300">
+              <p>{t.stripeAccountExists}</p>
+              {magicLinkStatus === 'sent' ? (
+                <p className="mt-2 font-medium">{t.magicLinkSent}</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleMagicLink}
+                  disabled={magicLinkStatus === 'sending' || !email}
+                  className="mt-3 rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
+                >
+                  {magicLinkStatus === 'sending' ? t.magicLinkSending : t.magicLinkButton}
+                </button>
+              )}
+              {magicLinkStatus === 'error' && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">{t.magicLinkError}</p>
+              )}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.emailLabel}</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                placeholder="vous@entreprise.com"
+                placeholder={t.emailPlaceholder}
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Mot de passe</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.passwordLabel}</label>
               <input
                 type="password"
                 required
@@ -92,14 +139,14 @@ export default function Login() {
               whileTap={{ scale: 0.98 }}
               className="w-full rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60"
             >
-              {loading ? 'Connexion…' : sliding ? 'Bienvenue…' : 'Se connecter'}
+              {loading ? t.connecting : sliding ? t.welcoming : t.submit}
             </motion.button>
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-            Pas encore de compte ?{' '}
+            {t.noAccount}{' '}
             <Link href="/signup" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-              Créer un compte
+              {t.createAccount}
             </Link>
           </p>
         </motion.div>
@@ -119,12 +166,20 @@ export default function Login() {
                 className="text-center"
               >
                 <p className="text-2xl font-bold text-white">Churnly</p>
-                <p className="mt-2 text-sm text-brand-100">Redirection vers votre dashboard…</p>
+                <p className="mt-2 text-sm text-brand-100">{t.redirecting}</p>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
     </>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

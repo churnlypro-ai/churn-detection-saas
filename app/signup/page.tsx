@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -9,25 +9,20 @@ import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
 import { Building2, Users, Euro, Briefcase, Star, ArrowRight, ArrowLeft, Check, Loader2, AlertTriangle, Mail } from 'lucide-react';
 import { calcPricing, calcManagerPrice, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
+import { useLanguage, useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 
 type Industry = 'saas' | 'agency' | 'ecommerce' | 'manager' | 'other';
 
-const INDUSTRY_LABELS: Record<Industry, string> = {
-  saas: 'SaaS',
-  agency: 'Agence',
-  ecommerce: 'E-commerce',
-  manager: 'Manager / Talents',
-  other: 'Autre',
-};
-
-export default function Signup() {
+function SignupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState(['', '', '', '']);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [businessDescription, setBusinessDescription] = useState('');
   const [clientCount, setClientCount] = useState(100);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
   const [industry, setIndustry] = useState<Industry>('saas');
@@ -35,34 +30,72 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [stripeSignupLoading, setStripeSignupLoading] = useState(false);
   const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const t = useTranslations('signup');
+  const tierName = useTierName();
+  const { language } = useLanguage();
 
-  const steps = ['Email', 'Code', 'Mot de passe', 'Entreprise', 'Analyse'];
+  useEffect(() => {
+    const stripeParam = searchParams.get('stripe');
+    if (!stripeParam) return;
+    window.history.replaceState({}, '', '/signup');
+    if (stripeParam === 'denied') setError(t.errors.stripeSignupDenied);
+    else if (stripeParam === 'error') setError(t.errors.stripeSignupError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
-  const pwStrength = (() => {
-    if (!password) return { label: '', color: '' };
+  async function handleStripeSignup() {
+    setError('');
+    setStripeSignupLoading(true);
+    try {
+      const res = await fetch('/api/stripe/connect/signup-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language }),
+      });
+      if (!res.ok) throw new Error(t.errors.stripeSignupError);
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.errors.stripeSignupError);
+      setStripeSignupLoading(false);
+    }
+  }
+
+  const steps = t.steps;
+  const INDUSTRY_LABELS = t.industries;
+
+  const pwStrengthKey: 'weak' | 'medium' | 'strong' | null = (() => {
+    if (!password) return null;
     let score = 0;
     if (password.length >= 8) score++;
     if (password.length >= 12) score++;
     if (/[A-Z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
-    if (score <= 1) return { label: 'Faible', color: 'text-red-500' };
-    if (score <= 3) return { label: 'Moyen', color: 'text-amber-500' };
-    return { label: 'Fort', color: 'text-emerald-500' };
+    if (score <= 1) return 'weak';
+    if (score <= 3) return 'medium';
+    return 'strong';
   })();
+  const pwStrength = pwStrengthKey
+    ? {
+        label: t.passwordStrength[pwStrengthKey],
+        color: pwStrengthKey === 'strong' ? 'text-emerald-500' : pwStrengthKey === 'medium' ? 'text-amber-500' : 'text-red-500',
+      }
+    : { label: '', color: '' };
 
   useEffect(() => {
     if (resendCooldown > 0) {
-      const t = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
 
   async function sendCode() {
     setError('');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Adresse email invalide.');
+      setError(t.errors.invalidEmail);
       return;
     }
     setLoading(true);
@@ -70,18 +103,18 @@ export default function Signup() {
       const res = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, action: 'send' }),
+        body: JSON.stringify({ email, action: 'send', language }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Erreur envoi du code.');
+        throw new Error(data.error || t.errors.sendCodeError);
       }
       setCodeSent(true);
       setResendCooldown(30);
       setStep(1);
       setTimeout(() => codeRefs.current[0]?.focus(), 100);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur.');
+      setError(err instanceof Error ? err.message : t.errors.generic);
     }
     setLoading(false);
   }
@@ -94,15 +127,15 @@ export default function Signup() {
       const res = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: fullCode, action: 'verify' }),
+        body: JSON.stringify({ email, code: fullCode, action: 'verify', language }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Code incorrect.');
+        throw new Error(data.error || t.errors.invalidCode);
       }
       setStep(2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur.');
+      setError(err instanceof Error ? err.message : t.errors.generic);
     }
     setLoading(false);
   }
@@ -132,14 +165,28 @@ export default function Signup() {
     }
   }
 
+  function handleStep3Next() {
+    setError('');
+    // Sans une vraie description de l'activité, l'IA n'a que le secteur
+    // générique (saas/agence/e-commerce/...) pour calibrer ses seuils de
+    // risque — beaucoup trop grossier (ex: usage quotidien type réseau
+    // social vs hebdomadaire type outil B2B). On la rend donc obligatoire
+    // dès l'inscription plutôt que de l'ajouter comme option ignorable.
+    if (businessDescription.trim().length < 15) {
+      setError(t.errors.businessDescriptionTooShort);
+      return;
+    }
+    setStep(4);
+  }
+
   function handlePasswordNext() {
     setError('');
     if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères.');
+      setError(t.errors.passwordTooShort);
       return;
     }
     if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas.');
+      setError(t.errors.passwordMismatch);
       return;
     }
     setStep(3);
@@ -157,12 +204,12 @@ export default function Signup() {
     const completeRes = await fetch('/api/complete-signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, companyName, clientCount, monthlyRevenue, industry }),
+      body: JSON.stringify({ email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language }),
     });
 
     if (!completeRes.ok) {
       const data = await completeRes.json().catch(() => ({}));
-      setError(data.error || 'Impossible de créer le compte.');
+      setError(data.error || t.errors.cannotCreateAccount);
       setLoading(false);
       return;
     }
@@ -186,7 +233,7 @@ export default function Signup() {
       // sans passer par la page d'accroche "3 jours gratuits".
       if (isManager) {
         if (!token) {
-          setError('Compte créé, mais impossible de démarrer le paiement. Réessayez depuis le dashboard.');
+          setError(t.errors.accountCreatedNoPayment);
           setLoading(false);
           router.push('/dashboard');
           return;
@@ -198,12 +245,12 @@ export default function Signup() {
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ tier }),
           });
-          if (!response.ok) throw new Error('Impossible de démarrer le paiement.');
+          if (!response.ok) throw new Error(t.errors.checkoutStartFailed);
           const { url } = await response.json();
           window.location.href = url;
           return;
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'Compte créé, mais le paiement a échoué. Réessayez depuis le dashboard.');
+          setError(err instanceof Error ? err.message : t.errors.accountCreatedPaymentFailed);
           setLoading(false);
           router.push('/dashboard');
           return;
@@ -263,29 +310,50 @@ export default function Signup() {
             <AnimatePresence mode="wait">
               {step === 0 && (
                 <motion.div key="step0" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
-                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Créez votre compte</h1>
-                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">Commencez gratuitement.</p>
+                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.step0.title}</h1>
+                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{t.step0.subtitle}</p>
+
+                  <button
+                    type="button"
+                    onClick={handleStripeSignup}
+                    disabled={stripeSignupLoading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700 dark:hover:text-brand-400"
+                  >
+                    {stripeSignupLoading ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> {t.step0.stripeSignupLoading}</>
+                    ) : (
+                      t.step0.stripeSignupButton
+                    )}
+                  </button>
+                  <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">{t.step0.stripeSignupNote}</p>
+
+                  <div className="my-5 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+                    <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                    {t.step0.or}
+                    <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                  </div>
+
                   <div className="space-y-4">
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.step0.emailLabel}</label>
                       <div className="relative">
                         <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && email && sendCode()} className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white" placeholder="vous@entreprise.com" />
+                        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && email && sendCode()} className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white" placeholder={t.step0.emailPlaceholder} />
                       </div>
                     </div>
                   </div>
                   {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
                   <button onClick={sendCode} disabled={loading || !email} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-50">
-                    {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Envoi…</> : <>Recevoir un code <ArrowRight className="h-4 w-4" /></>}
+                    {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> {t.step0.sending}</> : <>{t.step0.submit} <ArrowRight className="h-4 w-4" /></>}
                   </button>
-                  <p className="mt-6 text-center text-sm text-slate-500">Déjà inscrit ? <Link href="/login" className="font-medium text-brand-600 hover:underline">Se connecter</Link></p>
+                  <p className="mt-6 text-center text-sm text-slate-500">{t.step0.alreadyHaveAccount} <Link href="/login" className="font-medium text-brand-600 hover:underline">{t.step0.login}</Link></p>
                 </motion.div>
               )}
 
               {step === 1 && (
                 <motion.div key="step1" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
-                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Vérifiez votre email</h1>
-                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">Code envoyé à <span className="font-semibold text-slate-700 dark:text-slate-200">{email}</span></p>
+                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.step1.title}</h1>
+                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{t.step1.subtitlePrefix} <span className="font-semibold text-slate-700 dark:text-slate-200">{email}</span></p>
                   <div className="flex justify-center gap-3">
                     {code.map((digit, i) => (
                       <input key={i} ref={(el) => { codeRefs.current[i] = el; }} type="text" inputMode="numeric" maxLength={1} value={digit} onChange={(e) => handleCodeChange(i, e.target.value)} onKeyDown={(e) => handleCodeKeyDown(i, e)} onPaste={i === 0 ? handleCodePaste : undefined} className="h-16 w-14 rounded-xl border border-slate-200 text-center text-2xl font-bold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
@@ -293,35 +361,35 @@ export default function Signup() {
                   </div>
                   {error && <p className="mt-4 text-center text-sm text-red-600 dark:text-red-400">{error}</p>}
                   <button onClick={verifyCode} disabled={loading || code.some((c) => !c)} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-50">
-                    {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Vérification…</> : <>Vérifier <ArrowRight className="h-4 w-4" /></>}
+                    {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> {t.step1.verifying}</> : <>{t.step1.submit} <ArrowRight className="h-4 w-4" /></>}
                   </button>
                   <div className="mt-6 flex items-center justify-between">
-                    <button onClick={() => setStep(0)} className="flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"><ArrowLeft className="h-4 w-4" /> Retour</button>
-                    <button onClick={sendCode} disabled={resendCooldown > 0 || loading} className="text-sm text-brand-600 transition hover:underline disabled:opacity-50 dark:text-brand-400">{resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : 'Renvoyer le code'}</button>
+                    <button onClick={() => setStep(0)} className="flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"><ArrowLeft className="h-4 w-4" /> {t.step1.back}</button>
+                    <button onClick={sendCode} disabled={resendCooldown > 0 || loading} className="text-sm text-brand-600 transition hover:underline disabled:opacity-50 dark:text-brand-400">{resendCooldown > 0 ? t.step1.resendIn(resendCooldown) : t.step1.resend}</button>
                   </div>
                 </motion.div>
               )}
 
               {step === 2 && (
                 <motion.div key="step2" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
-                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Créez votre mot de passe</h1>
-                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">8 caractères minimum.</p>
+                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.step2.title}</h1>
+                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{t.step2.subtitle}</p>
                   <div className="space-y-4">
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Mot de passe</label>
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.step2.passwordLabel}</label>
                       <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white" placeholder="••••••••" />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmer</label>
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.step2.confirmLabel}</label>
                       <input type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handlePasswordNext()} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white" placeholder="••••••••" />
                     </div>
-                    {password && (
+                    {password && pwStrengthKey && (
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-slate-500 dark:text-slate-400">Force:</span>
+                        <span className="text-slate-500 dark:text-slate-400">{t.passwordStrength.label}</span>
                         <span className={`font-semibold ${pwStrength.color}`}>{pwStrength.label}</span>
                         <div className="flex gap-1">
                           {[1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className={`h-1.5 w-8 rounded-full ${i <= (pwStrength.label === 'Fort' ? 5 : pwStrength.label === 'Moyen' ? 3 : 1) ? (pwStrength.label === 'Fort' ? 'bg-emerald-500' : pwStrength.label === 'Moyen' ? 'bg-amber-500' : 'bg-red-500') : 'bg-slate-200 dark:bg-slate-700'}`} />
+                            <div key={i} className={`h-1.5 w-8 rounded-full ${i <= (pwStrengthKey === 'strong' ? 5 : pwStrengthKey === 'medium' ? 3 : 1) ? (pwStrengthKey === 'strong' ? 'bg-emerald-500' : pwStrengthKey === 'medium' ? 'bg-amber-500' : 'bg-red-500') : 'bg-slate-200 dark:bg-slate-700'}`} />
                           ))}
                         </div>
                       </div>
@@ -329,26 +397,38 @@ export default function Signup() {
                   </div>
                   {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
                   <div className="mt-6 flex gap-3">
-                    <button onClick={() => setStep(1)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> Retour</button>
-                    <button onClick={handlePasswordNext} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700">Continuer <ArrowRight className="h-4 w-4" /></button>
+                    <button onClick={() => setStep(1)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> {t.step2.back}</button>
+                    <button onClick={handlePasswordNext} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700">{t.step2.continue} <ArrowRight className="h-4 w-4" /></button>
                   </div>
                 </motion.div>
               )}
 
               {step === 3 && (
                 <motion.div key="step3" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
-                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Configurez votre profil</h1>
-                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">Analyse personnalisée.</p>
+                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.step3.title}</h1>
+                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{t.step3.subtitle}</p>
                   <div className="space-y-5">
                     <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-4 dark:border-brand-800/40 dark:bg-brand-500/5">
-                      <label className="mb-2 block text-sm font-semibold text-brand-700 dark:text-brand-400">Nom de l&apos;entreprise</label>
+                      <label className="mb-2 block text-sm font-semibold text-brand-700 dark:text-brand-400">{t.step3.companyLabel}</label>
                       <div className="relative">
                         <Building2 className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400 dark:text-brand-500" />
-                        <input type="text" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full rounded-xl border border-brand-200 bg-white py-3.5 pl-12 pr-4 text-lg font-semibold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-brand-800/60 dark:bg-slate-900 dark:text-white" placeholder="Acme Inc" />
+                        <input type="text" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full rounded-xl border border-brand-200 bg-white py-3.5 pl-12 pr-4 text-lg font-semibold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-brand-800/60 dark:bg-slate-900 dark:text-white" placeholder={t.step3.companyPlaceholder} />
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Type d&apos;industrie</label>
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.step3.businessDescriptionLabel}</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={businessDescription}
+                        onChange={(e) => setBusinessDescription(e.target.value)}
+                        className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                        placeholder={t.step3.businessDescriptionPlaceholder}
+                      />
+                      <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">{t.step3.businessDescriptionHint}</p>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">{t.step3.industryLabel}</label>
                       <div className="grid grid-cols-2 gap-2">
                         {(Object.keys(INDUSTRY_LABELS) as Industry[]).map((key) => (
                           <button
@@ -375,7 +455,7 @@ export default function Signup() {
                       </div>
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">{industry === 'manager' ? 'Nombre de modèles gérés' : 'Nombre de clients'}</label>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">{industry === 'manager' ? t.step3.modelsCountLabel : t.step3.clientsCountLabel}</label>
                       <div className="flex items-center gap-3">
                         <Users className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                         <input type="range" min={clientCountMin} max={clientCountMax} step={1} value={clientCount} onChange={(e) => setClientCount(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
@@ -386,12 +466,12 @@ export default function Signup() {
                           value={clientCount}
                           onChange={(e) => setClientCount(Number(e.target.value) || 0)}
                           onBlur={(e) => setClientCount(Math.max(clientCountMin, Math.min(clientCountMax, Number(e.target.value) || clientCountMin)))}
-                          className="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
+                          className="w-24 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">{isManager ? 'CA mensuel par modèle (€)' : 'CA mensuel (€)'}</label>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">{isManager ? t.step3.revenuePerModelLabel : t.step3.revenueLabel}</label>
                       <div className="flex items-center gap-3">
                         <Euro className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                         <input type="range" min={revenueMin} max={revenueMax} step={revenueStep} value={monthlyRevenue} onChange={(e) => setMonthlyRevenue(Number(e.target.value))} className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700" />
@@ -403,39 +483,39 @@ export default function Signup() {
                           value={monthlyRevenue}
                           onChange={(e) => setMonthlyRevenue(Number(e.target.value) || 0)}
                           onBlur={(e) => setMonthlyRevenue(Math.max(revenueMin, Math.min(revenueMax, Number(e.target.value) || revenueMin)))}
-                          className="w-24 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
+                          className="w-28 rounded-lg border border-slate-200 px-2.5 py-1.5 text-right text-sm font-semibold text-brand-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-900 dark:text-brand-400"
                         />
                       </div>
                     </div>
                   </div>
                   <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-                    Pas besoin de connaître votre taux de churn — c&apos;est justement ce que Churnly calcule pour vous, à partir de vos vraies données.
+                    {t.step3.churnNote}
                   </p>
                   {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
                   <div className="mt-6 flex gap-3">
-                    <button onClick={() => setStep(2)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> Retour</button>
-                    <button onClick={() => setStep(4)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700">Analyser mes données <ArrowRight className="h-4 w-4" /></button>
+                    <button onClick={() => setStep(2)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> {t.step3.back}</button>
+                    <button onClick={handleStep3Next} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700">{t.step3.analyze} <ArrowRight className="h-4 w-4" /></button>
                   </div>
                 </motion.div>
               )}
 
               {step === 4 && (
                 <motion.div key="step4" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
-                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Votre analyse</h1>
-                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">Calculé à partir de vos chiffres réels.</p>
+                  <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t.step4.title}</h1>
+                  <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{t.step4.subtitle}</p>
                   <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, duration: 0.4 }} className="mb-4 rounded-2xl border border-red-100 bg-red-50/60 p-5 dark:border-red-800/40 dark:bg-red-950/20">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" />
-                      <p className="text-xs font-semibold uppercase tracking-wide text-red-500 dark:text-red-400">Revenue à risque</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-red-500 dark:text-red-400">{t.step4.atRiskRevenue}</p>
                     </div>
                     <p className="mt-2 text-3xl font-extrabold text-red-600 dark:text-red-400">{formatEuro(annualLoss)}</p>
-                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">perte annuelle projetée</p>
+                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">{t.step4.annualLossProjected}</p>
                   </motion.div>
                   <div className="mb-3 grid grid-cols-3 gap-3">
                     {[
-                      { label: 'Clients', value: `${clientCount}`, icon: Users, color: 'text-slate-700 dark:text-slate-300' },
-                      { label: 'À risque (estimé)', value: `${atRisk}`, icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400' },
-                      { label: 'MRR', value: formatEuro(monthlyRevenue), icon: Euro, color: 'text-slate-700 dark:text-slate-300' },
+                      { label: t.step4.statsClients, value: `${clientCount}`, icon: Users, color: 'text-slate-700 dark:text-slate-300' },
+                      { label: t.step4.statsAtRisk, value: `${atRisk}`, icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400' },
+                      { label: t.step4.statsMrr, value: formatEuro(monthlyRevenue), icon: Euro, color: 'text-slate-700 dark:text-slate-300' },
                     ].map((stat, i) => (
                       <motion.div key={stat.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.1 }} className="rounded-xl border border-slate-100 bg-white p-4 text-center dark:border-slate-800 dark:bg-slate-900">
                         <stat.icon className={`mx-auto mb-1.5 h-4 w-4 ${stat.color}`} />
@@ -445,10 +525,10 @@ export default function Signup() {
                     ))}
                   </div>
                   <p className="mb-4 text-xs text-slate-400 dark:text-slate-500">
-                    Estimation basée sur un taux de churn moyen de {ASSUMED_CHURN_RATE}% — votre vrai chiffre sera calculé après votre première analyse.
+                    {t.step4.estimationNote(ASSUMED_CHURN_RATE)}
                   </p>
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mb-4 rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-                    <p className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400">Projection sur 12 mois (revenue perdue cumulée)</p>
+                    <p className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400">{t.step4.projectionLabel}</p>
                     <div className="flex h-24 items-end gap-1">
                       {Array.from({ length: 12 }, (_, i) => {
                         const cumulative = monthlyLoss * (i + 1);
@@ -460,23 +540,23 @@ export default function Signup() {
                     </div>
                   </motion.div>
                   <div className="mb-4 rounded-xl border border-brand-100 bg-brand-50/50 p-4 dark:border-brand-800/40 dark:bg-brand-500/5">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Votre prix Churnly</p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t.step4.yourPrice}</p>
                     <motion.p key={displayedTier} initial={{ opacity: 0.5, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mt-1 text-2xl font-extrabold text-brand-700 dark:text-brand-400">
-                      {formatEuro(displayedTier)}<span className="text-sm font-medium text-slate-400 dark:text-slate-500">/mois</span>
+                      {formatEuro(displayedTier)}<span className="text-sm font-medium text-slate-400 dark:text-slate-500">{t.step4.perMonth}</span>
                     </motion.p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {isManager ? `${clientCount} modèle${clientCount > 1 ? 's' : ''} géré${clientCount > 1 ? 's' : ''} · Annulable à tout moment.` : `Palier ${pricing.tierName} · Annulable à tout moment.`}
+                      {isManager ? t.step4.managedModelsLabel(clientCount) : t.step4.tierLabel(tierName(pricing.tierName))}
                     </p>
                   </div>
                   <div className="mb-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                    <p>ARPU: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatEuro(arpu)}</span> / client</p>
-                    <p>Perte mensuelle: <span className="font-semibold text-red-500 dark:text-red-400">{formatEuro(monthlyLoss)}</span></p>
+                    <p>{t.step4.arpuLabel} <span className="font-semibold text-slate-700 dark:text-slate-200">{formatEuro(arpu)}</span> {t.step4.arpuSuffix}</p>
+                    <p>{t.step4.monthlyLossLabel} <span className="font-semibold text-red-500 dark:text-red-400">{formatEuro(monthlyLoss)}</span></p>
                   </div>
                   {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
                   <div className="mt-6 flex gap-3">
-                    <button onClick={() => setStep(3)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> Retour</button>
+                    <button onClick={() => setStep(3)} className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> {t.step4.back}</button>
                     <button onClick={handleCreateAccount} disabled={loading} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60">
-                      {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> {isManager ? 'Redirection…' : 'Création…'}</> : isManager ? <>Continuer vers le paiement <ArrowRight className="h-4 w-4" /></> : <>Voir mon impact <ArrowRight className="h-4 w-4" /></>}
+                      {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> {isManager ? t.step4.redirecting : t.step4.creating}</> : isManager ? <>{t.step4.continueToPayment} <ArrowRight className="h-4 w-4" /></> : <>{t.step4.seeMyImpact} <ArrowRight className="h-4 w-4" /></>}
                     </button>
                   </div>
                 </motion.div>
@@ -486,5 +566,13 @@ export default function Signup() {
         </motion.div>
       </main>
     </>
+  );
+}
+
+export default function Signup() {
+  return (
+    <Suspense fallback={null}>
+      <SignupContent />
+    </Suspense>
   );
 }

@@ -7,8 +7,9 @@ import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle } from 'lucide-react';
+import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2 } from 'lucide-react';
 import type { HexagonStatus } from '@/components/MagicHexagon';
+import { useTranslations } from '@/lib/i18n/LanguageContext';
 
 interface Profile {
   company_name: string;
@@ -17,9 +18,11 @@ interface Profile {
   client_count: number | null;
   monthly_revenue: number | null;
   industry: string | null;
+  business_description: string | null;
   churn_rate: number | null;
   stripe_connected: boolean;
   intercom_connected: boolean;
+  stripe_connect_account_id: string | null;
 }
 
 import { calcPrice, formatEuro } from '@/lib/pricing';
@@ -68,9 +71,15 @@ export default function Settings() {
   const [editRevenue, setEditRevenue] = useState(50000);
   const [editCompany, setEditCompany] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
+  const [editBusinessDescription, setEditBusinessDescription] = useState('');
 
   const [newPassword, setNewPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState('');
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'disconnecting'>('idle');
+  const [stripeMessage, setStripeMessage] = useState('');
+  const [planMessage, setPlanMessage] = useState('');
+  const t = useTranslations('settings');
 
   // 'trialing' oublié ici verrouillerait la visualisation pour un compte
   // pourtant déjà en essai gratuit actif — même règle que le dashboard.
@@ -91,14 +100,25 @@ export default function Settings() {
       setEditRevenue(p?.monthly_revenue ?? 50000);
       setEditCompany(p?.company_name ?? '');
       setEditIndustry(p?.industry ?? '');
+      setEditBusinessDescription(p?.business_description ?? '');
+      setStripeConnected(!!p?.stripe_connect_account_id);
       setLoading(false);
     });
   }, [router]);
 
   const handleSave = useCallback(async () => {
     if (!user) return;
+    // Même seuil que /signup (voir app/signup/page.tsx handleStep3Next) : une
+    // description trop courte ou vide prive l'IA du contexte dont elle a
+    // besoin pour calibrer ses seuils de risque par type de produit (voir
+    // businessContextInstruction dans lib/claude.ts).
+    if (editBusinessDescription.trim().length < 15) {
+      setError(t.businessDescriptionTooShort);
+      return;
+    }
     setSaving(true);
     setError('');
+    setPlanMessage('');
     setHexStatus('loading');
     const { error: updateError } = await supabase
       .from('users')
@@ -107,33 +127,99 @@ export default function Settings() {
         client_count: editClients,
         monthly_revenue: editRevenue,
         industry: editIndustry,
+        business_description: editBusinessDescription.trim(),
       })
       .eq('id', user.id);
 
-    setSaving(false);
     if (updateError) {
-      setError('Erreur lors de la mise à jour.');
+      setSaving(false);
+      setError(t.updateError);
       setHexStatus('error');
       setTimeout(() => setHexStatus('idle'), 3000);
-    } else {
-      setSavedToast(true);
-      setHexStatus('success');
-      setTimeout(() => setSavedToast(false), 3000);
-      setTimeout(() => setHexStatus('idle'), 2500);
+      return;
     }
-  }, [user, editCompany, editClients, editRevenue, editIndustry]);
+
+    // Un client déjà abonné doit voir son abonnement Stripe suivre ces
+    // nouvelles valeurs — sinon les modifier ici ne change rien à ce qu'il
+    // paie réellement. Best-effort : ses infos sont déjà enregistrées même
+    // si cet ajustement échoue.
+    if (profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing') {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        const response = await fetch('/api/update-subscription-tier', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setPlanMessage(t.planUpdateError);
+        } else if (result.updated) {
+          setProfile((prev) => (prev ? { ...prev, subscription_tier: String(result.tier) } : prev));
+          setPlanMessage(t.planUpdated(formatEuro(Number(result.tier))));
+        }
+      } catch {
+        setPlanMessage(t.planUpdateError);
+      }
+    }
+
+    setSaving(false);
+    setSavedToast(true);
+    setHexStatus('success');
+    setTimeout(() => setSavedToast(false), 3000);
+    setTimeout(() => setHexStatus('idle'), 2500);
+  }, [user, editCompany, editClients, editRevenue, editIndustry, editBusinessDescription, profile?.subscription_status, t]);
 
   async function handlePasswordChange(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPasswordStatus('');
     const { error: pwError } = await supabase.auth.updateUser({ password: newPassword });
-    setPasswordStatus(pwError ? 'Erreur lors du changement de mot de passe.' : 'Mot de passe mis à jour.');
+    setPasswordStatus(pwError ? t.passwordUpdateError : t.passwordUpdated);
     if (!pwError) setNewPassword('');
   }
 
   async function handleLogout() {
     await supabase.auth.signOut();
     router.push('/login');
+  }
+
+  async function handleConnectStripe() {
+    setStripeStatus('connecting');
+    setStripeMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/stripe/connect/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t.stripeConnectError);
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err) {
+      setStripeStatus('idle');
+      setStripeMessage(err instanceof Error ? err.message : t.stripeConnectError);
+    }
+  }
+
+  async function handleDisconnectStripe() {
+    setStripeStatus('disconnecting');
+    setStripeMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/stripe/connect/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t.stripeDisconnectError);
+      setStripeConnected(false);
+      setStripeMessage(t.stripeDisconnected);
+    } catch (err) {
+      setStripeMessage(err instanceof Error ? err.message : t.stripeDisconnectError);
+    } finally {
+      setStripeStatus('idle');
+    }
   }
 
   if (loading || !user) {
@@ -150,19 +236,17 @@ export default function Settings() {
   }
 
   const currentPrice = calcPrice(editRevenue);
-
-  const industryLabels: Record<string, string> = {
-    saas: 'SaaS', agency: 'Agence', ecommerce: 'E-commerce', manager: 'Manager / Talents', other: 'Autre',
-  };
+  const industryLabels = t.industries;
 
   const staticInfo = [
-    { label: 'Entreprise', value: profile?.company_name || '—', icon: Building2 },
-    { label: 'Clients', value: (profile?.client_count ?? 0).toString(), icon: Users },
-    { label: 'Revenue mensuel', value: formatEuro(profile?.monthly_revenue ?? 0), icon: Euro },
-    { label: 'Industrie', value: (profile?.industry && industryLabels[profile.industry]) || '—', icon: Building2 },
+    { label: t.infoLabels.company, value: profile?.company_name || '—', icon: Building2 },
+    { label: t.infoLabels.clients, value: (profile?.client_count ?? 0).toString(), icon: Users },
+    { label: t.infoLabels.monthlyRevenue, value: formatEuro(profile?.monthly_revenue ?? 0), icon: Euro },
+    { label: t.infoLabels.industry, value: (profile?.industry && industryLabels[profile.industry]) || '—', icon: Building2 },
+    { label: t.infoLabels.businessDescription, value: profile?.business_description || '—', icon: Building2 },
     {
-      label: 'Taux de churn (calculé par Churnly)',
-      value: profile?.churn_rate != null ? `${profile.churn_rate.toFixed(1)}%` : 'Pas encore analysé',
+      label: t.infoLabels.churnRate,
+      value: profile?.churn_rate != null ? `${profile.churn_rate.toFixed(1)}%` : t.infoLabels.notAnalyzedYet,
       icon: TrendingDown,
     },
   ];
@@ -177,7 +261,7 @@ export default function Settings() {
           transition={{ duration: 0.6, ease: EASE_OUT }}
           className="mb-10 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
         >
-          Paramètres
+          {t.title}
         </motion.h1>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -187,7 +271,7 @@ export default function Settings() {
             transition={{ duration: 0.6, ease: EASE_OUT }}
             className="space-y-4"
           >
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Profil actuel</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.currentProfile}</h2>
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               {staticInfo.map((item) => (
                 <div key={item.label} className="flex items-center justify-between border-b border-slate-50 py-3 last:border-0 dark:border-slate-800">
@@ -201,7 +285,7 @@ export default function Settings() {
             </div>
 
             <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-6 shadow-sm dark:border-brand-800/40 dark:bg-brand-500/5">
-              <h3 className="text-sm font-semibold text-brand-700 dark:text-brand-400">Votre prix</h3>
+              <h3 className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.yourPrice}</h3>
               <motion.p
                 key={currentPrice}
                 initial={{ opacity: 0.5, y: 8 }}
@@ -209,9 +293,11 @@ export default function Settings() {
                 transition={{ duration: 0.3 }}
                 className="mt-2 text-4xl font-extrabold text-brand-700 dark:text-brand-400"
               >
-                {formatEuro(currentPrice)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">/mois</span>
+                {formatEuro(currentPrice)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
               </motion.p>
-              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">Basé sur votre CA mensuel. Modifiez-le à droite pour voir le prix changer en direct.</p>
+              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                {isLocked ? t.priceNote : t.priceNoteSubscribed}
+              </p>
             </div>
           </motion.div>
 
@@ -239,14 +325,14 @@ export default function Settings() {
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
                       <Lock className="h-8 w-8" />
                     </div>
-                    <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">Débloquez avec Churnly</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">À partir de {formatEuro(currentPrice)}/mois</p>
+                    <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.unlockWithChurnly}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.startingAt} {formatEuro(currentPrice)}{t.perMonth}</p>
                   </motion.div>
                 </div>
               )}
             </div>
             <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
-              Taille: clients · Couleur: churn · Épaisseur: revenue · Vitesse: urgence
+              {t.legend}
             </p>
           </motion.div>
 
@@ -256,12 +342,12 @@ export default function Settings() {
             transition={{ duration: 0.6, ease: EASE_OUT }}
             className="space-y-5"
           >
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Modifier</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.edit}</h2>
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> Nom de l'entreprise
+                    <Building2 className="h-3.5 w-3.5" /> {t.companyNameLabel}
                   </label>
                   <input
                     type="text"
@@ -270,15 +356,15 @@ export default function Settings() {
                     className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
-                <EditField label="Nombre de clients" value={editClients} onChange={setEditClients} min={1} max={10000} step={1} icon={Users} />
-                <EditField label="Revenue mensuel" value={editRevenue} onChange={setEditRevenue} min={0} max={1000000} step={1000} suffix="€" icon={Euro} />
+                <EditField label={t.clientCountLabel} value={editClients} onChange={setEditClients} min={1} max={10000} step={1} icon={Users} />
+                <EditField label={t.monthlyRevenueLabel} value={editRevenue} onChange={setEditRevenue} min={0} max={1000000} step={1000} suffix="€" icon={Euro} />
                 <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                   <TrendingDown className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                  Le taux de churn n&apos;est pas à saisir — Churnly le calcule automatiquement à partir de vos vraies données, à chaque nouvelle analyse.
+                  {t.churnRateNote}
                 </p>
                 <div>
                   <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> Industrie
+                    <Building2 className="h-3.5 w-3.5" /> {t.industryLabel}
                   </label>
                   <select
                     value={editIndustry}
@@ -290,25 +376,41 @@ export default function Settings() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <Building2 className="h-3.5 w-3.5" /> {t.businessDescriptionLabel}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editBusinessDescription}
+                    onChange={(e) => setEditBusinessDescription(e.target.value)}
+                    placeholder={t.businessDescriptionPlaceholder}
+                    className="w-full resize-none rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                  <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">{t.businessDescriptionHint}</p>
+                </div>
               </div>
               <button
                 onClick={handleSave}
                 disabled={saving}
                 className="mt-5 w-full rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
               >
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
+                {saving ? t.saving : t.save}
               </button>
               {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+              {planMessage && (
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{planMessage}</p>
+              )}
             </div>
 
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Mot de passe</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.passwordTitle}</h3>
               <form onSubmit={handlePasswordChange} className="mt-4 flex flex-col gap-3">
                 <input
                   type="password"
                   required
                   minLength={8}
-                  placeholder="Nouveau mot de passe"
+                  placeholder={t.newPasswordPlaceholder}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
@@ -317,17 +419,49 @@ export default function Settings() {
                   type="submit"
                   className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
                 >
-                  Mettre à jour
+                  {t.updatePassword}
                 </button>
               </form>
               {passwordStatus && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{passwordStatus}</p>}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.stripeConnectTitle}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.stripeConnectDescription}</p>
+              <div className="mt-4 flex items-center justify-between">
+                <span className={`flex items-center gap-1.5 text-xs font-semibold ${stripeConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {stripeConnected ? t.stripeConnectedLabel : t.stripeNotConnectedLabel}
+                </span>
+                {stripeConnected ? (
+                  <button
+                    onClick={handleDisconnectStripe}
+                    disabled={stripeStatus === 'disconnecting'}
+                    className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {stripeStatus === 'disconnecting' ? t.stripeDisconnecting : t.stripeDisconnectButton}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectStripe}
+                    disabled={stripeStatus === 'connecting'}
+                    className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                  >
+                    {stripeStatus === 'connecting' ? t.stripeConnecting : t.stripeConnectButton}
+                  </button>
+                )}
+              </div>
+              {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
             </div>
 
             <button
               onClick={handleLogout}
               className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              Déconnexion
+              {t.logout}
             </button>
           </motion.div>
         </div>
@@ -342,7 +476,7 @@ export default function Settings() {
             transition={{ duration: 0.3, ease: EASE_OUT }}
             className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg"
           >
-            <Check className="h-4 w-4" /> Infos mises à jour
+            <Check className="h-4 w-4" /> {t.savedToast}
           </motion.div>
         )}
       </AnimatePresence>

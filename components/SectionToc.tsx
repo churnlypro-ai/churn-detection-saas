@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface TocItem {
   id: string;
@@ -11,6 +12,7 @@ interface TocItem {
 export default function SectionToc({ items }: { items: TocItem[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const railRef = useRef<HTMLDivElement>(null);
+  const { dict } = useLanguage();
 
   useEffect(() => {
     const elements = items
@@ -40,7 +42,7 @@ export default function SectionToc({ items }: { items: TocItem[] }) {
 
   return (
     <nav
-      aria-label="Sommaire de la page"
+      aria-label={dict.common.tocLabel}
       className="fixed left-6 top-1/2 z-40 hidden -translate-y-1/2 lg:block"
     >
       <div ref={railRef} className="relative flex flex-col gap-5 pl-4">
