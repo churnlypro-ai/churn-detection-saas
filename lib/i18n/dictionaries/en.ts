@@ -474,6 +474,11 @@ export const en: Dictionary = {
       title: 'Your insights',
       body: (monthlyLoss: string, annualLoss: string, potentialSavings: string) => `At your current pace, you're losing about ${monthlyLoss}/mo to churn, or ${annualLoss}/year. By cutting your churn in half with Churnly's targeted actions, you could recover up to ${potentialSavings}/mo.`,
     },
+    modelTier: {
+      premiumBadge: 'Premium analysis · Claude Opus 5',
+      standardNote: 'This analysis uses our standard model. Subscribe to unlock Premium analysis (Claude Opus 5), more precise.',
+      upgradeCta: 'Upgrade to Premium',
+    },
     revenueProjectionTitle: 'Revenue projection',
     riskDistributionTitle: 'Risk distribution',
     riskBuckets: ['Stable', 'Watch', 'At risk', 'Critical'],

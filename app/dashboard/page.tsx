@@ -1209,6 +1209,26 @@ export default function Dashboard() {
           })}
         </div>
 
+        {hasAccess && clients.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative z-10">
+            {status === 'active' ? (
+              <div className="flex w-fit items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-400">
+                <Sparkles className="h-3.5 w-3.5" /> {t.modelTier.premiumBadge}
+              </div>
+            ) : (
+              <div className="flex flex-col items-start gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/40 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.modelTier.standardNote}</p>
+                <button
+                  onClick={() => handleSubscribe()}
+                  className="flex-shrink-0 rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 dark:hover:bg-brand-500"
+                >
+                  {t.modelTier.upgradeCta}
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

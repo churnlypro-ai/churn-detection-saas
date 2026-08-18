@@ -472,6 +472,11 @@ export const fr = {
       title: 'Vos insights',
       body: (monthlyLoss: string, annualLoss: string, potentialSavings: string) => `À votre rythme actuel, vous perdez environ ${monthlyLoss}/mois à cause du churn, soit ${annualLoss}/an. En réduisant votre churn de moitié grâce aux actions ciblées de Churnly, vous pourriez récupérer jusqu'à ${potentialSavings}/mois.`,
     },
+    modelTier: {
+      premiumBadge: 'Analyse Premium · Claude Opus 5',
+      standardNote: 'Cette analyse utilise notre modèle standard. Abonnez-vous pour débloquer l\'analyse Premium (Claude Opus 5), plus précise.',
+      upgradeCta: 'Passer en Premium',
+    },
     revenueProjectionTitle: 'Projection de revenu',
     riskDistributionTitle: 'Distribution du risque',
     riskBuckets: ['Stable', 'Surveiller', 'Risque', 'Critique'],
