@@ -9,6 +9,25 @@ function mapStripeStatus(status: string): 'trialing' | 'active' | 'canceled' | '
   return 'past_due';
 }
 
+// became_paying_at doit être posé une seule fois, à la toute première
+// activation — jamais réécrit sur un renouvellement ou une réactivation
+// ultérieure (voir /api/cron/referral-rewards, qui compte les filleuls
+// devenus payants pendant UN mois donné, pas leur statut actuel).
+async function isFirstTimeActive(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  matchValue: string,
+  newStatus: string,
+  matchColumn: 'id' | 'stripe_subscription_id' = 'id',
+): Promise<boolean> {
+  if (newStatus !== 'active') return false;
+  const { data } = await supabaseAdmin
+    .from('users')
+    .select('became_paying_at')
+    .eq(matchColumn, matchValue)
+    .maybeSingle();
+  return !data?.became_paying_at;
+}
+
 export async function POST(req: NextRequest) {
   const stripe = getStripe();
   const signature = req.headers.get('stripe-signature');
@@ -40,14 +59,17 @@ export async function POST(req: NextRequest) {
         const tier = session.metadata?.tier;
         if (userId && tier && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
+          const newStatus = mapStripeStatus(subscription.status);
+          const becamePayingNow = await isFirstTimeActive(supabaseAdmin, userId, newStatus);
           const { error, data } = await supabaseAdmin
             .from('users')
             .update({
               subscription_tier: tier,
-              subscription_status: mapStripeStatus(subscription.status),
+              subscription_status: newStatus,
               stripe_subscription_id: subscription.id,
               trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
               ...(subscription.trial_end ? { trial_used: true } : {}),
+              ...(becamePayingNow ? { became_paying_at: new Date().toISOString() } : {}),
             })
             .eq('id', userId)
             .select('id');
@@ -69,12 +91,15 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
+        const newStatus = mapStripeStatus(subscription.status);
+        const becamePayingNow = await isFirstTimeActive(supabaseAdmin, subscription.id, newStatus, 'stripe_subscription_id');
         const { error, data } = await supabaseAdmin
           .from('users')
           .update({
-            subscription_status: mapStripeStatus(subscription.status),
+            subscription_status: newStatus,
             trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
             ...(subscription.trial_end ? { trial_used: true } : {}),
+            ...(becamePayingNow ? { became_paying_at: new Date().toISOString() } : {}),
           })
           .eq('stripe_subscription_id', subscription.id)
           .select('id');

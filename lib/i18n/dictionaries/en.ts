@@ -273,6 +273,7 @@ export const en: Dictionary = {
         stripeConnected: 'Stripe account connected',
         stripeDisconnected: 'Stripe account disconnected',
         subscriptionTierChanged: (fromTier: string, toTier: string) => `Subscription tier changed from $${fromTier} to $${toTier}`,
+        referralRewardApplied: (referralCount: number, percentOff: number) => `Referral reward applied: ${referralCount} paying referral${referralCount > 1 ? 's' : ''} → ${percentOff}% off next invoice`,
       },
     },
     team: {
@@ -315,9 +316,12 @@ export const en: Dictionary = {
     },
     referral: {
       title: 'Referrals',
-      description: 'Share this link — we track how many accounts came from you (no automatic reward yet, that\'s coming).',
+      description: 'Share this link: 2 referrals who become paying customers in a month = -50% off your next invoice, 3 or more = next month free.',
       copyButton: 'Copy',
       countLabel: (count: number) => `${count} signup${count > 1 ? 's' : ''} via your link.`,
+      monthProgress: (count: number) => `${count}/3 paying referrals this month`,
+      rewardFree: '🎉 Your next month is free!',
+      rewardHalf: '🎉 Your next month is -50%!',
     },
   },
   dashboard: {
