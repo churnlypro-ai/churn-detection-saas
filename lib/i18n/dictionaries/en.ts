@@ -609,6 +609,9 @@ export const en: Dictionary = {
     magicLinkError: 'Could not send the link. Try again.',
     teamInviteError: 'This invite link is invalid, expired, or already used. Ask the person who invited you for a new one.',
     googleButton: 'Continue with Google',
+    stripeButton: 'Continue with Stripe',
+    stripeButtonLoading: 'Connecting to Stripe…',
+    stripeButtonError: 'Could not connect to Stripe. Try again.',
     or: 'or',
   },
   pricing: {

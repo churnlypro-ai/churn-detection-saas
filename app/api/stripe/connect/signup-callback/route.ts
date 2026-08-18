@@ -71,58 +71,88 @@ export async function GET(req: NextRequest) {
       user_metadata: { company_name: companyName, language },
     });
 
+    let userId: string;
+    let isNewAccount: boolean;
+
     if (createError || !created?.user) {
-      // Email déjà utilisé par un compte Churnly existant : on ne peut pas
-      // créer de doublon. On envoie vers /login plutôt que d'échouer
-      // silencieusement — ce client peut lier Stripe depuis /settings une
-      // fois connecté.
-      if (createError?.message?.toLowerCase().includes('already been registered') || createError?.status === 422) {
+      const alreadyRegistered = createError?.message?.toLowerCase().includes('already been registered') || createError?.status === 422;
+      if (!alreadyRegistered) {
+        console.error('[stripe/connect/signup-callback] createUser failed', JSON.stringify({ email, createError }));
+        return redirectToSignup(req, 'error', language);
+      }
+
+      // Ce même bouton sert aussi à la CONNEXION (voir app/login/page.tsx) :
+      // un email Stripe qui correspond déjà à un compte Churnly ne doit pas
+      // échouer ni renvoyer un email de lien magique à cliquer — il doit
+      // connecter directement, exactement comme le ferait Google.
+      const { data: existingProfile, error: lookupError } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (lookupError || !existingProfile) {
+        console.error('[stripe/connect/signup-callback] existing account lookup failed', JSON.stringify({ email, lookupError }));
         return redirectToLogin(req, 'account_exists', email);
       }
-      console.error('[stripe/connect/signup-callback] createUser failed', JSON.stringify({ email, createError }));
-      return redirectToSignup(req, 'error', language);
-    }
 
-    const userId = created.user.id;
+      userId = existingProfile.id;
+      isNewAccount = false;
 
-    // Les vrais abonnements du compte Stripe fraîchement lié servent
-    // directement à remplir le profil — jamais redemandés à la main.
-    const clients = await fetchClientsFromConnectedAccount(accountId);
-    const monthlyRevenue = Math.round(clients.reduce((sum, c) => sum + (Number(c.revenue_monthly) || 0), 0) * 100) / 100;
+      // Ne lie ce compte Stripe que s'il n'y en a pas déjà un — on ne touche
+      // à aucun autre champ du profil existant (pas de resync ni d'écrasement
+      // silencieux des données déjà en place à chaque connexion).
+      const { data: currentProfile } = await supabaseAdmin
+        .from('users')
+        .select('stripe_connect_account_id')
+        .eq('id', userId)
+        .maybeSingle();
+      if (!currentProfile?.stripe_connect_account_id) {
+        await supabaseAdmin.from('users').update({ stripe_connect_account_id: accountId }).eq('id', userId);
+      }
+    } else {
+      userId = created.user.id;
+      isNewAccount = true;
 
-    const { error: profileError } = await supabaseAdmin
-      .from('users')
-      .update({
-        client_count: clients.length,
-        monthly_revenue: monthlyRevenue,
-        industry: 'saas',
-        stripe_connect_account_id: accountId,
-        // Peut rester null si le compte Stripe connecté ne l'a pas renseigné
-        // — dans ce cas /dashboard invite le client à le compléter (voir la
-        // bannière de la section "business context" ajoutée à cette page).
-        business_description: businessDescription,
-      })
-      .eq('id', userId);
+      // Les vrais abonnements du compte Stripe fraîchement lié servent
+      // directement à remplir le profil — jamais redemandés à la main.
+      const clients = await fetchClientsFromConnectedAccount(accountId);
+      const monthlyRevenue = Math.round(clients.reduce((sum, c) => sum + (Number(c.revenue_monthly) || 0), 0) * 100) / 100;
 
-    if (profileError) {
-      console.error('[stripe/connect/signup-callback] profile update failed', JSON.stringify({ userId, profileError }));
-    }
+      const { error: profileError } = await supabaseAdmin
+        .from('users')
+        .update({
+          client_count: clients.length,
+          monthly_revenue: monthlyRevenue,
+          industry: 'saas',
+          stripe_connect_account_id: accountId,
+          // Peut rester null si le compte Stripe connecté ne l'a pas renseigné
+          // — dans ce cas /dashboard invite le client à le compléter (voir la
+          // bannière de la section "business context" ajoutée à cette page).
+          business_description: businessDescription,
+        })
+        .eq('id', userId);
 
-    // Analyse immédiate si des abonnements existent : le client arrive sur
-    // /dashboard avec un vrai résultat déjà prêt plutôt qu'un import à
-    // refaire lui-même juste après avoir créé son compte.
-    if (clients.length > 0) {
-      try {
-        await runChurnAnalysis(supabaseAdmin, userId, clients, 'Stripe', language);
-      } catch (err) {
-        console.error('[stripe/connect/signup-callback] initial analysis failed', JSON.stringify({ userId, err: err instanceof Error ? err.message : err }));
+      if (profileError) {
+        console.error('[stripe/connect/signup-callback] profile update failed', JSON.stringify({ userId, profileError }));
+      }
+
+      // Analyse immédiate si des abonnements existent : le client arrive sur
+      // /dashboard avec un vrai résultat déjà prêt plutôt qu'un import à
+      // refaire lui-même juste après avoir créé son compte.
+      if (clients.length > 0) {
+        try {
+          await runChurnAnalysis(supabaseAdmin, userId, clients, 'Stripe', language);
+        } catch (err) {
+          console.error('[stripe/connect/signup-callback] initial analysis failed', JSON.stringify({ userId, err: err instanceof Error ? err.message : err }));
+        }
       }
     }
 
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email,
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?stripe=signup` },
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?stripe=${isNewAccount ? 'signup' : 'login'}` },
     });
 
     if (linkError || !linkData?.properties?.action_link) {
