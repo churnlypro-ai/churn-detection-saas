@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data: invite, error: inviteError } = await supabaseAdmin
       .from('team_members')
-      .select('id, owner_user_id, invited_email, status')
+      .select('id, owner_user_id, invited_email, status, expires_at')
       .eq('invite_token', token)
       .maybeSingle();
 
@@ -35,6 +35,9 @@ export async function GET(req: NextRequest) {
       // Déjà acceptée (lien recliqué) : pas une erreur, on renvoie juste
       // vers la connexion normale.
       return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL || req.url));
+    }
+    if (invite.expires_at && new Date(invite.expires_at).getTime() < Date.now()) {
+      return redirectToLogin(req, 'invalid');
     }
 
     let memberUserId: string;

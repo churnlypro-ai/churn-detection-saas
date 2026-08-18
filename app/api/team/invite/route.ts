@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cette personne fait déjà partie de votre équipe.' }, { status: 400 });
   }
 
+  const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
   let inviteToken = existing?.invite_token;
   if (!inviteToken) {
     const { data: created, error: insertError } = await supabaseAdmin
@@ -80,20 +82,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Impossible de créer l\'invitation.' }, { status: 500 });
     }
     inviteToken = created.invite_token;
+  } else {
+    // Renvoi d'une invitation déjà en attente : on garde le même lien (moins
+    // déroutant qu'un nouveau token) mais on repousse son expiration — sinon
+    // "renvoyer" un lien sur le point d'expirer ne servirait à rien.
+    await supabaseAdmin
+      .from('team_members')
+      .update({ expires_at: sevenDaysFromNow })
+      .eq('invite_token', inviteToken);
   }
 
   const resolvedLanguage = language === 'en' ? 'en' : language === 'fr' ? 'fr' : profile?.language === 'en' ? 'en' : 'fr';
+  const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/team/accept?token=${inviteToken}&lang=${resolvedLanguage}`;
 
+  let emailStatus: 'sent' | 'failed' = 'sent';
   try {
     await sendTeamInviteEmail({
       to: email,
       inviterCompanyName: profile?.company_name || 'Churnly',
-      acceptUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/team/accept?token=${inviteToken}&lang=${resolvedLanguage}`,
+      acceptUrl,
       language: resolvedLanguage,
     });
   } catch (err) {
     console.error('[team/invite] email send failed', JSON.stringify({ ownerId, err: err instanceof Error ? err.message : err }));
+    emailStatus = 'failed';
   }
 
-  return NextResponse.json({ success: true });
+  await supabaseAdmin.from('team_members').update({ email_status: emailStatus }).eq('invite_token', inviteToken);
+
+  // acceptUrl est toujours renvoyé (pas seulement si l'email échoue) : le
+  // propriétaire peut le copier-coller lui-même (Slack, SMS...) sans dépendre
+  // de la boîte mail de la personne invitée.
+  return NextResponse.json({ success: true, emailStatus, acceptUrl });
 }
