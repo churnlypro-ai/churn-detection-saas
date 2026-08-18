@@ -762,6 +762,16 @@ export default function Dashboard() {
         }
         return;
       }
+
+      // Le compte ambassadeur (ADMIN_EMAILS) n'est pas un vrai client
+      // Churnly — il n'a pas d'abonnement, donc jamais le dashboard client
+      // (bannières d'essai/paiement compris) : direction /admin.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const adminCheck = await fetch('/api/admin/check', {
+        headers: { Authorization: `Bearer ${sessionData?.session?.access_token}` },
+      }).then((r) => r.json()).catch(() => ({ isAdmin: false }));
+      if (adminCheck.isAdmin) { router.replace('/admin'); return; }
+
       setUser(data.user);
       const resolvedAccountId = await resolveAccountIdClient(supabase, data.user.id);
       setAccountId(resolvedAccountId);

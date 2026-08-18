@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { computeAdminChurnRisk } from '@/lib/adminChurnRisk';
+import { isAdminEmail } from '@/lib/admin';
 
 interface UserRow {
   id: string;
@@ -11,16 +12,6 @@ interface UserRow {
   created_at: string;
   became_paying_at: string | null;
   trial_end: string | null;
-}
-
-// Réservé au(x) compte(s) "ambassadeur" listés dans ADMIN_EMAILS (variable
-// d'env, séparée par des virgules) — jamais un rôle stocké en base ni
-// modifiable depuis l'app, pour qu'aucun utilisateur ne puisse jamais se
-// l'attribuer lui-même.
-function isAdminEmail(email: string | undefined | null): boolean {
-  if (!email) return false;
-  const allowlist = (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
-  return allowlist.includes(email.toLowerCase());
 }
 
 export async function GET(req: NextRequest) {

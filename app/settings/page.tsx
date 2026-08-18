@@ -183,6 +183,16 @@ export default function Settings() {
         }
         return;
       }
+
+      // Le compte ambassadeur (ADMIN_EMAILS) n'a pas de profil business à
+      // configurer ici — direction /admin, voir la note équivalente dans
+      // app/dashboard/page.tsx.
+      const { data: sessionDataForAdminCheck } = await supabase.auth.getSession();
+      const adminCheck = await fetch('/api/admin/check', {
+        headers: { Authorization: `Bearer ${sessionDataForAdminCheck?.session?.access_token}` },
+      }).then((r) => r.json()).catch(() => ({ isAdmin: false }));
+      if (adminCheck.isAdmin) { router.replace('/admin'); return; }
+
       // La facturation, le profil d'entreprise et Stripe Connect restent
       // réservés au propriétaire du compte — un membre d'équipe accepté est
       // renvoyé directement vers /dashboard plutôt que de voir une page
