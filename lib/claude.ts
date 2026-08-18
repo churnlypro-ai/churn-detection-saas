@@ -2,6 +2,20 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export type AnalysisLanguage = 'fr' | 'en';
 
+// Décision produit du 18/08 : Opus 5 (le modèle le plus cher) est réservé
+// aux comptes réellement abonnés ('active') — un compte gratuit/en essai
+// reçoit une analyse Sonnet, toujours de qualité mais nettement moins
+// coûteuse. Le compte le voit clairement sur son dashboard (badge +
+// incitation à s'abonner), ce n'est pas une dégradation cachée. Voir
+// runChurnAnalysis dans lib/analysis.ts pour la logique qui choisit le tier
+// à partir de subscription_status.
+export type ModelTier = 'standard' | 'premium';
+
+const MODEL_BY_TIER: Record<ModelTier, string> = {
+  standard: 'claude-sonnet-4-20250514',
+  premium: 'claude-opus-5',
+};
+
 export interface BusinessContext {
   companyName?: string | null;
   industry?: string | null;
@@ -258,11 +272,12 @@ async function analyzeChurnRiskBatchOnce(
   clients: Array<Record<string, unknown>>,
   language: AnalysisLanguage,
   businessContext?: BusinessContext | null,
+  modelTier: ModelTier = 'standard',
 ): Promise<ChurnAnalysisItem[]> {
   const client = getClient();
 
   const message = await client.messages.create({
-    model: 'claude-opus-5',
+    model: MODEL_BY_TIER[modelTier],
     max_tokens: 8192,
     system: ANALYSIS_SYSTEM_PROMPT + businessContextInstruction(businessContext) + languageInstruction(language),
     messages: [
@@ -303,11 +318,12 @@ async function analyzeChurnRiskBatch(
   clients: Array<Record<string, unknown>>,
   language: AnalysisLanguage,
   businessContext?: BusinessContext | null,
+  modelTier: ModelTier = 'standard',
 ): Promise<ChurnAnalysisItem[]> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= BATCH_MAX_RETRIES; attempt++) {
     try {
-      return await analyzeChurnRiskBatchOnce(clients, language, businessContext);
+      return await analyzeChurnRiskBatchOnce(clients, language, businessContext, modelTier);
     } catch (err) {
       lastError = err;
       if (attempt < BATCH_MAX_RETRIES) {
@@ -352,6 +368,7 @@ export async function analyzeChurnRisk(
   clients: Array<Record<string, unknown>>,
   language: AnalysisLanguage = 'fr',
   businessContext?: BusinessContext | null,
+  modelTier: ModelTier = 'standard',
 ): Promise<ChurnAnalysisItem[]> {
   const batches: Array<Record<string, unknown>>[] = [];
   for (let i = 0; i < clients.length; i += BATCH_SIZE) {
@@ -359,7 +376,7 @@ export async function analyzeChurnRisk(
   }
 
   const results = await mapWithConcurrency(batches, MAX_CONCURRENT_BATCHES, (batch) =>
-    analyzeChurnRiskBatch(batch, language, businessContext),
+    analyzeChurnRiskBatch(batch, language, businessContext, modelTier),
   );
   return results.flat();
 }

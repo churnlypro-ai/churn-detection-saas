@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { analyzeChurnRisk, type AnalysisLanguage } from '@/lib/claude';
+import { analyzeChurnRisk, type AnalysisLanguage, type ModelTier } from '@/lib/claude';
 import { triggerRiskWebhooks } from '@/lib/webhooks';
 
 function parseDateOrNull(value: unknown): string | null {
@@ -26,15 +26,20 @@ export async function runChurnAnalysis(
   // fonction et ne devraient pas avoir à redupliquer cette lecture.
   const { data: businessProfile } = await supabaseAdmin
     .from('users')
-    .select('company_name, industry, business_description')
+    .select('company_name, industry, business_description, subscription_status')
     .eq('id', userId)
     .maybeSingle();
+
+  // Opus 5 (le plus cher) n'est déclenché que pour un compte réellement
+  // abonné — un essai ou un compte gratuit reçoit une analyse Sonnet. Voir
+  // la note dans lib/claude.ts pour la décision produit derrière ce choix.
+  const modelTier: ModelTier = businessProfile?.subscription_status === 'active' ? 'premium' : 'standard';
 
   const analysis = await analyzeChurnRisk(clients, language, {
     companyName: businessProfile?.company_name ?? null,
     industry: businessProfile?.industry ?? null,
     description: businessProfile?.business_description ?? null,
-  });
+  }, modelTier);
 
   // Doit être lu AVANT d'insérer les nouveaux résultats plus bas : c'est la
   // photo "avant ce ré-import" qui sert de référence pour détecter les
