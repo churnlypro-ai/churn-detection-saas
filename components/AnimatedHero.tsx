@@ -218,6 +218,12 @@ export default function AnimatedHero() {
           >
             {t.cta}
           </Link>
+          <Link
+            href="/demo"
+            className="text-sm font-medium text-slate-500 underline-offset-4 transition hover:text-brand-600 hover:underline dark:text-slate-400 dark:hover:text-brand-400"
+          >
+            {t.demoLink}
+          </Link>
           <span className="text-xs text-slate-400 dark:text-slate-500">{t.ctaNote}</span>
         </motion.div>
       </motion.div>
