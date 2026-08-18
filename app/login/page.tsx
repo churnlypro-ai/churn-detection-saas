@@ -4,9 +4,10 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
-import { useTranslations } from '@/lib/i18n/LanguageContext';
+import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
 
 function LoginContent() {
   const router = useRouter();
@@ -20,6 +21,8 @@ function LoginContent() {
   const [magicLinkStatus, setMagicLinkStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [teamInviteError, setTeamInviteError] = useState(false);
   const [oauthError, setOauthError] = useState('');
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const { language } = useLanguage();
   const t = useTranslations('login');
 
   // Un compte créé via "S'inscrire avec Stripe" n'a jamais de mot de passe —
@@ -85,6 +88,29 @@ function LoginContent() {
     });
   }
 
+  // Même bouton que sur /signup, et même route derrière (signup-callback
+  // gère maintenant aussi bien la création que la connexion à un compte
+  // existant reconnu par email — voir la note dans cette route) : Stripe
+  // doit se comporter exactement comme Google, connexion directe sans étape
+  // manuelle intermédiaire.
+  async function handleStripeSignIn() {
+    setError('');
+    setStripeLoading(true);
+    try {
+      const res = await fetch('/api/stripe/connect/signup-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language }),
+      });
+      if (!res.ok) throw new Error();
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch {
+      setError(t.stripeButtonError);
+      setStripeLoading(false);
+    }
+  }
+
   return (
     <>
       <Navigation user={null} />
@@ -145,6 +171,19 @@ function LoginContent() {
               <path fill="#EA4335" d="M12 4.77c1.76 0 3.35.61 4.6 1.8l3.44-3.44C17.94 1.19 15.23 0 12 0 7.31 0 3.28 2.7 1.31 6.57l4 3.09c.94-2.82 3.58-4.89 6.69-4.89z" />
             </svg>
             {t.googleButton}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleStripeSignIn}
+            disabled={stripeLoading}
+            className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700 dark:hover:text-brand-400"
+          >
+            {stripeLoading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> {t.stripeButtonLoading}</>
+            ) : (
+              t.stripeButton
+            )}
           </button>
 
           <div className="my-5 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">

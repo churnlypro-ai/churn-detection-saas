@@ -607,6 +607,9 @@ export const fr = {
     magicLinkError: 'Impossible d\'envoyer le lien. Réessayez.',
     teamInviteError: 'Ce lien d\'invitation est invalide, expiré, ou a déjà été utilisé. Demandez une nouvelle invitation à la personne qui vous a invité.',
     googleButton: 'Continuer avec Google',
+    stripeButton: 'Continuer avec Stripe',
+    stripeButtonLoading: 'Connexion à Stripe…',
+    stripeButtonError: 'Impossible de se connecter à Stripe. Réessayez.',
     or: 'ou',
   },
   pricing: {
