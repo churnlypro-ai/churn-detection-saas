@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Users, Euro, AlertTriangle, TrendingUp, XCircle, Clock } from 'lucide-react';
+import { Users, Euro, AlertTriangle, TrendingUp, XCircle, Clock, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -155,6 +156,7 @@ export default function AdminOverview() {
                     <th className="px-4 py-3 font-medium">Prix</th>
                     <th className="px-4 py-3 font-medium">Dernière activité</th>
                     <th className="px-4 py-3 font-medium">Risque</th>
+                    <th className="px-4 py-3 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -176,6 +178,14 @@ export default function AdminOverview() {
                           {account.risk.score}
                         </span>
                         <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{account.risk.reason}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/admin/accounts/${account.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                          Voir <ExternalLink className="h-3 w-3" />
+                        </Link>
                       </td>
                     </tr>
                   ))}

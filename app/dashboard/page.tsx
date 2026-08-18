@@ -3,12 +3,13 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
 import {
   AlertTriangle, Lock, X, Mail, Gift, GraduationCap, Zap, Check, TrendingDown, Users, Euro,
-  BarChart3, Clock, Sparkles, ShieldCheck, Target, ChevronDown, Info,
+  BarChart3, Clock, Sparkles, ShieldCheck, Target, ChevronDown, Info, Download, Printer,
 } from 'lucide-react';
 import { formatEuro as formatEuroShared } from '@/lib/pricing';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
@@ -739,6 +740,27 @@ export default function Dashboard() {
     setMarkingClientName(null);
   }
 
+  function handleExportCsv() {
+    const csv = Papa.unparse(clients.map((c) => ({
+      client: c.client_name,
+      revenu_mensuel: c.revenue_monthly,
+      score_risque: c.churn_score,
+      raison: c.reason,
+      solution: c.solution,
+    })));
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `churnly-clients-a-risque-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportPdf() {
+    window.print();
+  }
+
   useEffect(() => {
     // Après un retour OAuth (Google), Supabase ajoute soit les tokens de
     // session soit un `error`/`error_description` dans le hash de l'URL.
@@ -982,7 +1004,9 @@ export default function Dashboard() {
 
   return (
     <>
-      <Navigation user={user} />
+      <div className="print:hidden">
+        <Navigation user={user} />
+      </div>
       <main className="relative mx-auto max-w-6xl space-y-8 px-6 py-10">
 
         <AnimatePresence>
@@ -1254,7 +1278,25 @@ export default function Dashboard() {
         />
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
-          <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">{t.atRiskClientsTitle}</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t.atRiskClientsTitle}</h2>
+            {hasAccess && clients.length > 0 && (
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  onClick={handleExportCsv}
+                  className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <Download className="h-3.5 w-3.5" /> {t.exportCsv}
+                </button>
+                <button
+                  onClick={handleExportPdf}
+                  className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <Printer className="h-3.5 w-3.5" /> {t.exportPdf}
+                </button>
+              </div>
+            )}
+          </div>
           {hasAccess ? (
             <PaidClientTable
               clients={clients}

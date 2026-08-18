@@ -30,6 +30,7 @@ export const fr = {
       subtitle: 'Prédisez qui va partir avant qu\'il ne parte. Uploadez vos données clients, notre IA détecte les signaux de risque et vous dit exactement quoi faire.',
       cta: 'Commencer gratuitement',
       ctaNote: 'Pas de carte bancaire requise · Aperçu gratuit',
+      demoLink: 'Voir une démo sans inscription',
     },
     reality: {
       eyebrow: 'Le constat',
@@ -476,6 +477,8 @@ export const fr = {
     riskBuckets: ['Stable', 'Surveiller', 'Risque', 'Critique'],
     months: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'],
     atRiskClientsTitle: 'Clients à risque',
+    exportCsv: 'Exporter CSV',
+    exportPdf: 'Exporter PDF',
     historyTitle: 'Historique',
     historyEmpty: 'Aucun événement pour l\'instant.',
     historyEmailSent: (name: string) => `Email envoyé à ${name}`,

@@ -32,6 +32,7 @@ export const en: Dictionary = {
       subtitle: 'Predict who\'s about to leave before they leave. Upload your customer data, our AI detects the risk signals and tells you exactly what to do.',
       cta: 'Start for free',
       ctaNote: 'No credit card required · Instant free preview',
+      demoLink: 'See a demo, no signup needed',
     },
     reality: {
       eyebrow: 'The reality',
@@ -478,6 +479,8 @@ export const en: Dictionary = {
     riskBuckets: ['Stable', 'Watch', 'At risk', 'Critical'],
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     atRiskClientsTitle: 'At-risk customers',
+    exportCsv: 'Export CSV',
+    exportPdf: 'Export PDF',
     historyTitle: 'History',
     historyEmpty: 'No events yet.',
     historyEmailSent: (name: string) => `Email sent to ${name}`,

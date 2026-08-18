@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { fetchClientsFromConnectedAccount } from '@/lib/stripeConnect';
 import { runChurnAnalysis } from '@/lib/analysis';
+import { runWeeklyReports } from '@/lib/weeklyReports';
 
 // Un compte qui connecte Stripe n'obtenait une analyse qu'une seule fois, au
 // moment de la connexion — rien ne la remettait à jour ensuite, ni cron ni
@@ -64,7 +65,20 @@ async function handleCron(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ results });
+  // Le plan Vercel Hobby limite à 2 cron jobs — pas de créneau dédié pour le
+  // bilan hebdomadaire. Ce cron tourne déjà tous les jours ; il déclenche en
+  // plus l'envoi des bilans chaque lundi (juste après le resync, données
+  // fraîches), sans rien faire les autres jours.
+  let weeklyReports: Awaited<ReturnType<typeof runWeeklyReports>> = [];
+  if (new Date().getUTCDay() === 1) {
+    try {
+      weeklyReports = await runWeeklyReports(supabaseAdmin);
+    } catch (err) {
+      console.error('[cron/resync-stripe] weekly reports failed', err instanceof Error ? err.message : err);
+    }
+  }
+
+  return NextResponse.json({ results, weeklyReports });
 }
 
 export async function GET(req: NextRequest) {

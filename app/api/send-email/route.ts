@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { sendWeeklyReportEmail, sendWelcomeEmail } from '@/lib/email';
 import { resolveAccountId } from '@/lib/team';
+import { runWeeklyReports } from '@/lib/weeklyReports';
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  return handleCron(req);
+  return handleCron();
 }
 
 export async function GET(req: NextRequest) {
@@ -74,79 +74,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  return handleCron(req);
+  return handleCron();
 }
 
-async function handleCron(req: NextRequest) {
+async function handleCron() {
   const supabaseAdmin = getSupabaseAdmin();
-
-  const { data: users, error: usersError } = await supabaseAdmin
-    .from('users')
-    .select('id, email, company_name, subscription_status, subscription_tier, created_at, language')
-    .eq('subscription_status', 'active');
-
-  if (usersError) {
-    console.error('[send-email] failed to load users', usersError);
-    return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
-  }
-
-  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-  const results: { userId: string; sent: boolean; type: string }[] = [];
-
-  for (const user of (users ?? []) as { id: string; email: string; company_name: string; subscription_tier: string | null; created_at: string; language: string | null }[]) {
-    try {
-      const { data: recentAnalysis } = await supabaseAdmin
-        .from('analysis_results')
-        .select('churn_score, revenue_monthly')
-        .eq('user_id', user.id)
-        .gte('analyzed_at', oneWeekAgo);
-
-      const { data: completedActions } = await supabaseAdmin
-        .from('actions')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('completed', true)
-        .gte('created_at', oneWeekAgo);
-
-      const rows = (recentAnalysis ?? []) as { churn_score: number; revenue_monthly: number }[];
-      const atRisk = rows.filter((r) => r.churn_score >= 60);
-      const churnRateNow = rows.length ? (atRisk.length / rows.length) * 100 : 0;
-      const clientsSaved = completedActions?.length ?? 0;
-      const revenueSaved = atRisk.reduce((sum, r) => sum + (Number(r.revenue_monthly) || 0), 0);
-      const roiPercent = rows.length ? Math.round((clientsSaved / rows.length) * 100) : 0;
-
-      const language = user.language === 'en' ? 'en' : 'fr';
-
-      await sendWeeklyReportEmail({
-        to: user.email,
-        companyName: user.company_name || (language === 'en' ? 'there' : 'là'),
-        clientsSaved,
-        revenueSaved,
-        roiPercent,
-        churnRateNow: Number(churnRateNow.toFixed(1)),
-        churnRateBefore: Number(churnRateNow.toFixed(1)),
-        dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
-        language,
-      });
-      results.push({ userId: user.id, sent: true, type: 'weekly' });
-
-      if (user.created_at && user.created_at <= fourteenDaysAgo) {
-        const monthlyPrice = Number(user.subscription_tier) || 300;
-        await sendWelcomeEmail({
-          to: user.email,
-          companyName: user.company_name || '',
-          monthlyPrice,
-          appUrl: process.env.NEXT_PUBLIC_APP_URL || '',
-          language,
-        });
-        results.push({ userId: user.id, sent: true, type: 'welcome' });
-      }
-    } catch (err) {
-      console.error(`[send-email] failed for user ${user.id}`, err);
-      results.push({ userId: user.id, sent: false, type: 'error' });
-    }
-  }
-
+  const results = await runWeeklyReports(supabaseAdmin);
   return NextResponse.json({ results });
 }
