@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
@@ -200,6 +201,9 @@ function UploadContent() {
         </p>
 
         <label className="mt-10 flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-8 py-12 transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-brand-600 dark:hover:bg-brand-500/5">
+          {(status === 'parsing' || status === 'analyzing') && (
+            <Loader2 className="mb-1 h-6 w-6 animate-spin text-brand-500 dark:text-brand-400" />
+          )}
           <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
             {status === 'parsing' || status === 'analyzing' ? t.processing : t.uploadCsv}
           </span>
@@ -216,7 +220,14 @@ function UploadContent() {
         </label>
 
         {status === 'analyzing' && (
-          <p className="mt-4 animate-pulse text-sm text-slate-500 dark:text-slate-400">{t.analyzing}</p>
+          <p className="mt-4 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <span className="flex gap-1">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-400 [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-400 [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-400" />
+            </span>
+            {t.analyzing}
+          </p>
         )}
         {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
