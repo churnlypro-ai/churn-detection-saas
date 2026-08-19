@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabaseAdmin
     .from('users')
-    .select('stripe_connect_account_id, subscription_status')
+    .select('stripe_connect_account_id, subscription_status, trial_used')
     .eq('id', userId)
     .maybeSingle();
 
@@ -43,8 +43,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Voir la même note dans app/api/analyze/route.ts : chaque resync coûte un
-  // vrai appel Claude, il ne doit pas rester possible une fois l'essai fini.
-  const hasAccess = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
+  // vrai appel Claude, un compte gratuit n'y a droit qu'une seule fois.
+  const hasAccess = profile?.subscription_status === 'active'
+    || profile?.subscription_status === 'trialing'
+    || !profile?.trial_used;
   if (!hasAccess) {
     return NextResponse.json({ error: 'subscription_required' }, { status: 402 });
   }

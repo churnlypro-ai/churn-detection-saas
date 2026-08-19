@@ -15,7 +15,6 @@ interface Profile {
   monthly_revenue: number | null;
   churn_rate: number | null;
   industry: string | null;
-  trial_used: boolean | null;
 }
 
 import { calcPrice, tierName, formatEuro } from '@/lib/pricing';
@@ -75,7 +74,7 @@ function PreviewContent() {
     });
   }, [uploadId, router]);
 
-  async function handleSubscribe(wantsTrial: boolean = true) {
+  async function handleSubscribe() {
     setCheckoutLoading(true);
     setCheckoutError('');
 
@@ -88,7 +87,6 @@ function PreviewContent() {
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ wantsTrial }),
       });
 
       if (!response.ok) throw new Error(t.checkoutErrorStart);
@@ -237,7 +235,7 @@ function PreviewContent() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.6 }}
-                  onClick={() => handleSubscribe(true)}
+                  onClick={handleSubscribe}
                   disabled={checkoutLoading}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -255,15 +253,6 @@ function PreviewContent() {
                     </>
                   )}
                 </motion.button>
-                {profile?.industry !== 'manager' && !profile?.trial_used && (
-                  <button
-                    onClick={() => handleSubscribe(false)}
-                    disabled={checkoutLoading}
-                    className="mt-2 flex w-full items-center justify-center text-xs font-medium text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline disabled:opacity-60 dark:text-slate-500 dark:hover:text-slate-300"
-                  >
-                    {t.payNowLink}
-                  </button>
-                )}
 
                 {checkoutError && (
                   <motion.p

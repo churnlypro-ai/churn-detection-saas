@@ -66,16 +66,20 @@ export async function POST(req: NextRequest) {
     const accountId = await resolveAccountId(supabaseAdmin, userId);
 
     // Chaque analyse coûte un vrai appel Claude — sans ce garde-fou, un
-    // compte dont l'essai est terminé (ou jamais payé) pouvait continuer à
-    // déclencher des analyses indéfiniment, le résultat restant juste caché
-    // derrière le teaser côté dashboard. Le blocage doit être ici, pas
-    // seulement à l'affichage.
+    // compte non abonné pouvait continuer à en déclencher indéfiniment, le
+    // résultat restant juste caché derrière le teaser côté dashboard. Le
+    // blocage doit être ici, pas seulement à l'affichage. Un compte gratuit
+    // a droit à une seule analyse (trial_used posé à true par
+    // runChurnAnalysis une fois celle-ci aboutie, voir lib/analysis.ts) —
+    // au-delà, seul un abonnement débloque de nouvelles analyses.
     const { data: accountProfile } = await supabaseAdmin
       .from('users')
-      .select('subscription_status')
+      .select('subscription_status, trial_used')
       .eq('id', accountId)
       .maybeSingle();
-    const hasAccess = accountProfile?.subscription_status === 'active' || accountProfile?.subscription_status === 'trialing';
+    const hasAccess = accountProfile?.subscription_status === 'active'
+      || accountProfile?.subscription_status === 'trialing'
+      || !accountProfile?.trial_used;
     if (!hasAccess) {
       return NextResponse.json({ error: 'subscription_required' }, { status: 402 });
     }

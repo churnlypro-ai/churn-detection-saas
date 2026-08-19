@@ -18,7 +18,6 @@ interface Profile {
   monthly_revenue: number | null;
   industry: string | null;
   churn_rate: number | null;
-  trial_used: boolean | null;
 }
 
 function useCountUp(target: number, duration = 1.5, start = false) {
@@ -78,7 +77,7 @@ export default function ImpactPage() {
     });
   }, [router]);
 
-  async function handleSubscribe(wantsTrial: boolean = true) {
+  async function handleSubscribe() {
     setCheckoutLoading(true);
     setCheckoutError('');
 
@@ -91,7 +90,6 @@ export default function ImpactPage() {
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ wantsTrial }),
       });
 
       if (!response.ok) throw new Error(t.checkoutErrorStart);
@@ -271,7 +269,7 @@ export default function ImpactPage() {
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.5 }} className="space-y-3">
           <button
-            onClick={() => handleSubscribe(true)}
+            onClick={handleSubscribe}
             disabled={checkoutLoading}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-700 disabled:opacity-60"
           >
@@ -286,15 +284,6 @@ export default function ImpactPage() {
               </>
             )}
           </button>
-          {profile?.industry !== 'manager' && !profile?.trial_used && (
-            <button
-              onClick={() => handleSubscribe(false)}
-              disabled={checkoutLoading}
-              className="flex w-full items-center justify-center text-xs font-medium text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline disabled:opacity-60 dark:text-slate-500 dark:hover:text-slate-300"
-            >
-              {t.payNowLink(formatEuro(pricing.monthly))}
-            </button>
-          )}
           {checkoutError && (
             <p className="text-center text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
           )}
