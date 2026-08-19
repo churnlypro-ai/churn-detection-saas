@@ -141,6 +141,7 @@ export const en: Dictionary = {
     importingStripe: 'Importing from Stripe…',
     stripeDenied: 'Connection cancelled.',
     stripeError: 'Connecting to Stripe failed. Try again.',
+    subscribeCta: 'Subscribe',
     errors: {
       noValidRows: 'No valid rows found in the CSV. Check the columns (name, revenue_monthly, ...).',
       analysisFailed: 'The analysis failed.',
@@ -148,6 +149,7 @@ export const en: Dictionary = {
       cannotReadFile: 'Could not read this CSV file.',
       stripeNotConnected: 'No Stripe account connected.',
       stripeImportFailed: 'Import from Stripe failed. Try again.',
+      subscriptionRequired: 'Your free trial has ended. Subscribe to keep analyzing your customers.',
     },
   },
   preview: {

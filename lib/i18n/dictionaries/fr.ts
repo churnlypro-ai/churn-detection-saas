@@ -139,6 +139,7 @@ export const fr = {
     importingStripe: 'Import depuis Stripe…',
     stripeDenied: 'Connexion annulée.',
     stripeError: 'La connexion à Stripe a échoué. Réessayez.',
+    subscribeCta: 'S\'abonner',
     errors: {
       noValidRows: 'Aucune ligne valide trouvée dans le CSV. Vérifiez les colonnes (name, revenue_monthly, ...).',
       analysisFailed: 'L\'analyse a échoué.',
@@ -146,6 +147,7 @@ export const fr = {
       cannotReadFile: 'Impossible de lire ce fichier CSV.',
       stripeNotConnected: 'Aucun compte Stripe connecté.',
       stripeImportFailed: 'Import depuis Stripe échoué. Réessayez.',
+      subscriptionRequired: 'Votre essai gratuit est terminé. Abonnez-vous pour continuer à analyser vos clients.',
     },
   },
   preview: {

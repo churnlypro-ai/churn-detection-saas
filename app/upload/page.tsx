@@ -27,6 +27,7 @@ function UploadContent() {
   const [status, setStatus] = useState<'idle' | 'parsing' | 'analyzing' | 'error'>('idle');
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
+  const [subscriptionRequired, setSubscriptionRequired] = useState(false);
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'importing' | 'error'>('idle');
   const [stripeMessage, setStripeMessage] = useState('');
@@ -96,6 +97,7 @@ function UploadContent() {
     setFileName(file.name);
     setStatus('parsing');
     setError('');
+    setSubscriptionRequired(false);
 
     Papa.parse(file, {
       header: true,
@@ -128,6 +130,10 @@ function UploadContent() {
 
           if (!response.ok) {
             const body = await response.json().catch(() => ({}));
+            if (response.status === 402) {
+              setSubscriptionRequired(true);
+              throw new Error(t.errors.subscriptionRequired);
+            }
             throw new Error(body.error || t.errors.analysisFailed);
           }
 
@@ -167,6 +173,7 @@ function UploadContent() {
   async function handleImportFromStripe() {
     setStripeStatus('importing');
     setStripeMessage('');
+    setSubscriptionRequired(false);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -177,6 +184,10 @@ function UploadContent() {
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
+        if (response.status === 402) {
+          setSubscriptionRequired(true);
+          throw new Error(t.errors.subscriptionRequired);
+        }
         throw new Error(body.error || t.errors.stripeImportFailed);
       }
       const result = await response.json();
@@ -229,7 +240,19 @@ function UploadContent() {
             {t.analyzing}
           </p>
         )}
-        {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {subscriptionRequired ? (
+          <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-5 py-4 text-center dark:border-brand-800/60 dark:bg-brand-500/10">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.errors.subscriptionRequired}</p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+            >
+              {t.subscribeCta}
+            </button>
+          </div>
+        ) : (
+          error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>
+        )}
 
         <div className="mt-8 flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
           <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
@@ -251,7 +274,7 @@ function UploadContent() {
             ? t.importFromStripe
             : t.connectStripe}
         </button>
-        {stripeMessage && (
+        {stripeMessage && !subscriptionRequired && (
           <p className="mt-3 text-sm text-red-600 dark:text-red-400">{stripeMessage}</p>
         )}
       </main>

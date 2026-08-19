@@ -64,6 +64,22 @@ export async function POST(req: NextRequest) {
     // Un membre d'équipe qui importe un CSV analyse les clients du compte
     // auquel il appartient, pas un compte vide à son propre nom.
     const accountId = await resolveAccountId(supabaseAdmin, userId);
+
+    // Chaque analyse coûte un vrai appel Claude — sans ce garde-fou, un
+    // compte dont l'essai est terminé (ou jamais payé) pouvait continuer à
+    // déclencher des analyses indéfiniment, le résultat restant juste caché
+    // derrière le teaser côté dashboard. Le blocage doit être ici, pas
+    // seulement à l'affichage.
+    const { data: accountProfile } = await supabaseAdmin
+      .from('users')
+      .select('subscription_status')
+      .eq('id', accountId)
+      .maybeSingle();
+    const hasAccess = accountProfile?.subscription_status === 'active' || accountProfile?.subscription_status === 'trialing';
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'subscription_required' }, { status: 402 });
+    }
+
     const result = await runChurnAnalysis(supabaseAdmin, accountId, clients, filename ?? null, parseLanguage(language));
     return NextResponse.json(result);
   } catch (err) {
