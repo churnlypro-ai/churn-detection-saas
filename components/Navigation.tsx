@@ -20,6 +20,18 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
     setMenuOpen(false);
   }, [pathname]);
 
+  // Sans ça, le contenu de la page défile visiblement sous le menu mobile
+  // ouvert — un doigt qui scrolle par réflexe referme visuellement le menu
+  // sans le fermer, effet désorientant sur petit écran.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [menuOpen]);
+
   async function handleLogout() {
     setMenuOpen(false);
     await supabase.auth.signOut();
