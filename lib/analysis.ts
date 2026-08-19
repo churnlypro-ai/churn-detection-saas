@@ -26,7 +26,7 @@ export async function runChurnAnalysis(
   // fonction et ne devraient pas avoir à redupliquer cette lecture.
   const { data: businessProfile } = await supabaseAdmin
     .from('users')
-    .select('company_name, industry, business_description, subscription_status')
+    .select('company_name, industry, business_description, subscription_status, trial_used')
     .eq('id', userId)
     .maybeSingle();
 
@@ -34,6 +34,7 @@ export async function runChurnAnalysis(
   // abonné — un essai ou un compte gratuit reçoit une analyse Sonnet. Voir
   // la note dans lib/claude.ts pour la décision produit derrière ce choix.
   const modelTier: ModelTier = businessProfile?.subscription_status === 'active' ? 'premium' : 'standard';
+  const isPaying = businessProfile?.subscription_status === 'active' || businessProfile?.subscription_status === 'trialing';
 
   const analysis = await analyzeChurnRisk(clients, language, {
     companyName: businessProfile?.company_name ?? null,
@@ -131,7 +132,15 @@ export async function runChurnAnalysis(
   const computedChurnRate = clients.length > 0 ? (atRiskCount / clients.length) * 100 : 0;
   const { error: churnUpdateError } = await supabaseAdmin
     .from('users')
-    .update({ churn_rate: Number(computedChurnRate.toFixed(1)) })
+    .update({
+      churn_rate: Number(computedChurnRate.toFixed(1)),
+      // Un compte gratuit n'a droit qu'à une seule analyse (voir le
+      // garde-fou dans app/api/analyze et app/api/stripe/connect/import,
+      // qui autorise cette analyse précisément parce que trial_used est
+      // encore false) — on la marque consommée seulement une fois qu'elle a
+      // réellement abouti, jamais avant l'appel Claude.
+      ...(isPaying ? {} : { trial_used: true }),
+    })
     .eq('id', userId);
   if (churnUpdateError) {
     console.error('[analysis] churn_rate update failed', JSON.stringify({ userId, churnUpdateError }));

@@ -15,17 +15,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  // Le client ne peut que RENONCER à l'essai (payer tout de suite), jamais
-  // s'en accorder un en plus de ce que le serveur autorise déjà plus bas
-  // (isManagerProfile / trialAlreadyUsed) — 'wantsTrial: true' envoyé par un
-  // utilisateur qui n'y a pas droit reste sans effet.
-  const wantsTrial = body?.wantsTrial !== false;
-
   const user = userData.user;
   const { data: profile } = await supabaseAdmin
     .from('users')
-    .select('stripe_customer_id, industry, trial_used, client_count, monthly_revenue')
+    .select('stripe_customer_id, industry, client_count, monthly_revenue')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -69,26 +62,15 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from('users').update({ stripe_customer_id: customerId }).eq('id', user.id);
     }
 
-    // Ce profil paie directement, sans période d'essai.
-    // Un compte ne reçoit son essai gratuit qu'une seule fois : trial_used est
-    // posé de façon permanente au premier essai (voir stripe-webhook) et n'est
-    // jamais effacé, contrairement à trial_end qui repart à null à l'annulation.
-    const trialAlreadyUsed = (profile as { trial_used?: boolean })?.trial_used === true;
-    const grantsTrial = wantsTrial && !isManagerProfile && !trialAlreadyUsed;
-
+    // Chaque compte reçoit une seule analyse gratuite à l'inscription (voir
+    // le garde-fou dans app/api/analyze et app/api/stripe/connect/import) —
+    // il n'y a donc plus de période d'essai Stripe à accorder ici, l'abonnement
+    // est facturé immédiatement dès le checkout.
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      // Sans carte pendant l'essai : rien à payer aujourd'hui, donc rien à
-      // demander. Si personne n'ajoute de carte avant la fin des 3 jours,
-      // l'abonnement passe directement à "canceled" (déjà géré partout
-      // ailleurs dans l'app) plutôt que de rester bloqué en attente.
-      ...(grantsTrial ? { payment_method_collection: 'if_required' as const } : {}),
       subscription_data: {
-        ...(grantsTrial
-          ? { trial_period_days: 3, trial_settings: { end_behavior: { missing_payment_method: 'cancel' as const } } }
-          : {}),
         metadata: { supabase_user_id: user.id, tier: String(tier) },
       },
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,

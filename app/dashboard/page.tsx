@@ -446,7 +446,7 @@ const TEASER_META = [
   { revenue: 890, score: 58 },
 ];
 
-function LockedClientsTeaser({ atRisk, trialEligible, onSubscribe, loading, error, isTeamMember }: { atRisk: number; trialEligible: boolean; onSubscribe: (wantsTrial?: boolean) => void; loading: boolean; error: string; isTeamMember: boolean }) {
+function LockedClientsTeaser({ atRisk, onSubscribe, loading, error, isTeamMember }: { atRisk: number; onSubscribe: () => void; loading: boolean; error: string; isTeamMember: boolean }) {
   const t = useTranslations('dashboard');
   const TEASER_CLIENTS = t.teaser.samples.map((s, i) => ({ ...s, ...TEASER_META[i] }));
 
@@ -495,7 +495,7 @@ function LockedClientsTeaser({ atRisk, trialEligible, onSubscribe, loading, erro
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => onSubscribe(true)}
+              onClick={onSubscribe}
               disabled={loading}
               className="mt-1 flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
             >
@@ -504,21 +504,10 @@ function LockedClientsTeaser({ atRisk, trialEligible, onSubscribe, loading, erro
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   {t.teaser.redirecting}
                 </>
-              ) : trialEligible ? (
-                t.teaser.startTrial
               ) : (
                 t.unlockBanner.subscribeButton
               )}
             </motion.button>
-            {trialEligible && (
-              <button
-                onClick={() => onSubscribe(false)}
-                disabled={loading}
-                className="text-xs font-medium text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline disabled:opacity-60 dark:text-slate-500 dark:hover:text-slate-300"
-              >
-                {t.unlockBanner.payNowLink}
-              </button>
-            )}
           </>
         )}
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -830,7 +819,7 @@ export default function Dashboard() {
     });
   }, [router, loadData, fetchProfile]);
 
-  async function handleSubscribe(wantsTrial: boolean = true) {
+  async function handleSubscribe() {
     setCheckoutLoading(true);
     setCheckoutError('');
 
@@ -840,12 +829,9 @@ export default function Dashboard() {
 
       // Le palier facturé est calculé côté serveur à partir du profil en
       // base (voir /api/create-checkout-session) — pas besoin de l'envoyer.
-      // wantsTrial ne peut que renoncer à l'essai, jamais s'en accorder un :
-      // le serveur vérifie de toute façon l'éligibilité réelle.
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ wantsTrial }),
       });
 
       if (!response.ok) throw new Error(t.checkoutErrorStart);
@@ -967,7 +953,7 @@ export default function Dashboard() {
     : status === 'trialing' ? t.planLabel.trialing(trialDaysLeft)
     : status === 'past_due' ? t.planLabel.pastDue
     : status === 'canceled' ? t.planLabel.canceled
-    : t.planLabel.free;
+    : t.planLabel.free(!!profile?.trial_used);
 
   const estimatedLifetimeMonths = metrics.churnRate > 0 ? Math.round(100 / metrics.churnRate) : 0;
 
@@ -1129,28 +1115,14 @@ export default function Dashboard() {
           >
             <p className="text-sm text-slate-600 dark:text-slate-400">
               {t.unlockBanner.textBase}
-              {profile?.industry === 'manager' || profile?.trial_used
-                ? '.'
-                : <strong className="text-slate-900 dark:text-white">{t.unlockBanner.textTrialSuffix}</strong>}
             </p>
-            <div className="flex flex-shrink-0 flex-col items-start gap-1.5 sm:items-end">
-              <button
-                onClick={() => handleSubscribe(true)}
-                disabled={checkoutLoading}
-                className="flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-              >
-                {checkoutLoading ? t.unlockBanner.redirecting : profile?.industry === 'manager' || profile?.trial_used ? t.unlockBanner.subscribeButton : t.unlockBanner.trialButton}
-              </button>
-              {profile?.industry !== 'manager' && !profile?.trial_used && (
-                <button
-                  onClick={() => handleSubscribe(false)}
-                  disabled={checkoutLoading}
-                  className="text-xs font-medium text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline disabled:opacity-60 dark:text-slate-500 dark:hover:text-slate-300"
-                >
-                  {t.unlockBanner.payNowLink}
-                </button>
-              )}
-            </div>
+            <button
+              onClick={handleSubscribe}
+              disabled={checkoutLoading}
+              className="flex flex-shrink-0 items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+            >
+              {checkoutLoading ? t.unlockBanner.redirecting : t.unlockBanner.subscribeButton}
+            </button>
           </motion.div>
         )}
 
@@ -1219,7 +1191,7 @@ export default function Dashboard() {
               <div className="flex flex-col items-start gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/40 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.modelTier.standardNote}</p>
                 <button
-                  onClick={() => handleSubscribe()}
+                  onClick={handleSubscribe}
                   className="flex-shrink-0 rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 dark:hover:bg-brand-500"
                 >
                   {t.modelTier.upgradeCta}
@@ -1328,7 +1300,6 @@ export default function Dashboard() {
           ) : (
             <LockedClientsTeaser
               atRisk={metrics.atRisk}
-              trialEligible={profile?.industry !== 'manager' && !profile?.trial_used}
               onSubscribe={handleSubscribe}
               loading={checkoutLoading}
               error={checkoutError}

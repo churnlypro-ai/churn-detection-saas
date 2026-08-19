@@ -238,8 +238,8 @@ function SignupContent() {
         });
       }
 
-      // Ce profil paie directement (pas d'essai gratuit) : direction Stripe
-      // sans passer par la page d'accroche "3 jours gratuits".
+      // Ce profil paie directement : direction Stripe sans passer par la
+      // page d'accroche /impact.
       if (isManager) {
         if (!token) {
           setError(t.errors.accountCreatedNoPayment);
