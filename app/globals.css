@@ -69,9 +69,18 @@
   }
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;
+    /* Un seul élément trop large quelque part sur la page (table, carte, texte
+       non cassable) suffit à rendre toute la page défilable horizontalement
+       sur mobile — perçu comme un swipe gauche/droite au lieu d'un simple
+       scroll vertical. Les tableaux qui ont vraiment besoin de défiler
+       horizontalement le font dans leur propre conteneur overflow-x-auto
+       (voir ClientTable, dashboard), donc ce garde-fou global ne casse rien. */
+    overflow-x: hidden;
+    max-width: 100vw;
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
