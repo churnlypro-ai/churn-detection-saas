@@ -2,17 +2,21 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export type AnalysisLanguage = 'fr' | 'en';
 
-// Décision produit du 18/08 : Opus 5 (le modèle le plus cher) est réservé
-// aux comptes réellement abonnés ('active') — un compte gratuit/en essai
-// reçoit une analyse Sonnet, toujours de qualité mais nettement moins
-// coûteuse. Le compte le voit clairement sur son dashboard (badge +
-// incitation à s'abonner), ce n'est pas une dégradation cachée. Voir
-// runChurnAnalysis dans lib/analysis.ts pour la logique qui choisit le tier
-// à partir de subscription_status.
+// Décision produit du 18/08, révisée le 19/08 : Opus 5 (le modèle le plus
+// cher) est réservé aux comptes réellement abonnés ('active'). Un compte en
+// essai ('trialing') reçoit désormais une analyse Haiku 4.5 plutôt que
+// Sonnet — Haiku coûte nettement moins cher par appel, ce qui compte vu que
+// runChurnAnalysis appelle Claude par lots (BATCH_SIZE) et que l'essai
+// gratuit ne doit pas coûter plus que ce qu'il rapporte. Le compte le voit
+// clairement sur son dashboard (badge + incitation à s'abonner), ce n'est
+// pas une dégradation cachée. Voir runChurnAnalysis dans lib/analysis.ts
+// pour la logique qui choisit le tier à partir de subscription_status, et
+// app/api/analyze + app/api/stripe/connect/import pour le blocage complet
+// une fois l'essai terminé (subscription_status ni 'active' ni 'trialing').
 export type ModelTier = 'standard' | 'premium';
 
 const MODEL_BY_TIER: Record<ModelTier, string> = {
-  standard: 'claude-sonnet-5',
+  standard: 'claude-haiku-4-5-20251001',
   premium: 'claude-opus-5',
 };
 
