@@ -12,7 +12,7 @@ export type AnalysisLanguage = 'fr' | 'en';
 export type ModelTier = 'standard' | 'premium';
 
 const MODEL_BY_TIER: Record<ModelTier, string> = {
-  standard: 'claude-sonnet-4-20250514',
+  standard: 'claude-sonnet-5',
   premium: 'claude-opus-5',
 };
 
@@ -186,7 +186,7 @@ Règles:
     : `${client.solution}`;
 
   const message = await clientInstance.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-5',
     max_tokens: 1024,
     system: systemPrompt,
     messages: [
