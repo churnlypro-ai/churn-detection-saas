@@ -353,29 +353,14 @@ function CTASection() {
   const t = useTranslations('home').cta;
 
   return (
-    <section ref={ctaRef} className="relative overflow-hidden bg-brand-600 px-6 py-28 text-center">
-      <div className="no-theme-transition pointer-events-none absolute inset-0 opacity-10">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute h-32 w-32 rounded-full border-2 border-white"
-            style={{ left: `${10 + i * 11}%`, top: `${20 + (i % 3) * 25}%` }}
-            initial={{ scale: 0, opacity: 0 }}
-            whileInView={{ scale: 1, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, ease: EASE_OUT, delay: i * 0.1 }}
-            animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.1, 0.3] }}
-          />
-        ))}
-      </div>
-
+    <section ref={ctaRef} className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/40 px-6 py-28 text-center dark:from-slate-950 dark:to-slate-900">
       <motion.div style={{ scale }} className="relative mx-auto max-w-2xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, ease: EASE_OUT }}
-          className="text-3xl font-bold text-white sm:text-5xl"
+          className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl"
         >
           {t.title}
         </motion.h2>
@@ -384,7 +369,7 @@ function CTASection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.15 }}
-          className="mt-4 text-lg text-brand-100"
+          className="mt-4 text-lg leading-relaxed text-slate-600 dark:text-slate-400"
         >
           {t.body}
         </motion.p>
@@ -394,9 +379,9 @@ function CTASection() {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }}
-          whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+          whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
           whileTap={{ scale: 0.98 }}
-          className="mt-10 inline-block rounded-full bg-white px-10 py-4 text-lg font-bold text-brand-700 shadow-2xl shadow-brand-900/30 transition"
+          className="mt-10 inline-block rounded-full bg-brand-600 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
         >
           {t.button}
         </motion.a>
@@ -405,7 +390,7 @@ function CTASection() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-4 text-sm text-brand-200"
+          className="mt-4 text-sm text-slate-400 dark:text-slate-500"
         >
           {t.note}
         </motion.p>
