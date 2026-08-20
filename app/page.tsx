@@ -201,29 +201,36 @@ function HowItWorksSection() {
         </motion.p>
 
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
-          {steps.map((step, i) => (
-            <motion.div
-              key={step.title}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.6, ease: EASE_OUT, delay: i * 0.15 }}
-              whileHover={{ y: -6, transition: { duration: 0.2 } }}
-              className="relative rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
-            >
-              <span className="absolute right-6 top-6 text-3xl font-extrabold text-slate-100 dark:text-slate-800">{step.step}</span>
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
-                <step.icon className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{step.description}</p>
-              {i < steps.length - 1 && (
-                <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-slate-300 dark:text-slate-700 sm:block">
-                  <ArrowRight className="h-5 w-5" />
+          {steps.map((step, i) => {
+            const isAction = i === steps.length - 1;
+            return (
+              <motion.div
+                key={step.title}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.6, ease: EASE_OUT, delay: i * 0.15 }}
+                whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                className={`relative rounded-3xl p-8 shadow-sm transition-shadow hover:shadow-md ${
+                  isAction
+                    ? 'border-2 border-brand-200 bg-brand-50/50 dark:border-brand-700/60 dark:bg-brand-500/5'
+                    : 'border border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950'
+                }`}
+              >
+                <span className={`absolute right-6 top-6 text-3xl font-extrabold ${isAction ? 'text-brand-100 dark:text-brand-800/60' : 'text-slate-100 dark:text-slate-800'}`}>{step.step}</span>
+                <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-full ${isAction ? 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400' : 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'}`}>
+                  <step.icon className="h-6 w-6" />
                 </div>
-              )}
-            </motion.div>
-          ))}
+                <h3 className={`text-lg font-semibold ${isAction ? 'text-brand-800 dark:text-brand-400' : 'text-slate-900 dark:text-white'}`}>{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{step.description}</p>
+                {i < steps.length - 1 && (
+                  <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-slate-300 dark:text-slate-700 sm:block">
+                    <ArrowRight className="h-5 w-5" />
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
 
         <motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }} className="mt-20">
