@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await auth.supabaseAdmin
     .from('prospecting_emails')
-    .select('id, company_name, recipient_email, subject, status, error_message, created_at, sent_at')
+    .select('id, company_name, recipient_email, subject, body, status, error_message, created_at, sent_at')
     .order('created_at', { ascending: false })
     .limit(200);
 
