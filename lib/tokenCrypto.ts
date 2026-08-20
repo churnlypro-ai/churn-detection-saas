@@ -5,9 +5,13 @@ import crypto from 'crypto';
 // migration 20260820000000). Pas d'usage plus large prévu : un seul secret
 // à protéger, pas la peine d'un vault dédié.
 function getKey(): Buffer {
-  const hex = process.env.GMAIL_TOKEN_ENCRYPTION_KEY;
-  if (!hex || hex.length !== 64) {
-    throw new Error('GMAIL_TOKEN_ENCRYPTION_KEY manquante ou invalide (attendu: 64 caractères hex, 32 octets).');
+  // .trim() + guillemets retirés : un copier-coller depuis un terminal ou
+  // un gestionnaire de mots de passe ajoute facilement un retour à la ligne
+  // ou des guillemets autour de la valeur collée dans Vercel.
+  const raw = process.env.GMAIL_TOKEN_ENCRYPTION_KEY ?? '';
+  const hex = raw.trim().replace(/^["']|["']$/g, '');
+  if (!hex || hex.length !== 64 || !/^[0-9a-fA-F]{64}$/.test(hex)) {
+    throw new Error(`GMAIL_TOKEN_ENCRYPTION_KEY invalide : ${hex.length} caractère(s) reçu(s), 64 attendus (hex uniquement). Valeur brute: "${raw.slice(0, 10)}..."`);
   }
   return Buffer.from(hex, 'hex');
 }
