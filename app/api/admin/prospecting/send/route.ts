@@ -37,6 +37,13 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
+
+  // Deux modes : une sélection explicite d'ids (contrôle fin depuis l'UI),
+  // ou à défaut les N plus anciens de la file (ancien comportement, gardé
+  // en repli). Dans les deux cas, plafonné à MAX_BATCH_SIZE.
+  const requestedIds = Array.isArray(body?.ids)
+    ? body.ids.filter((id: unknown): id is string => typeof id === 'string').slice(0, MAX_BATCH_SIZE)
+    : null;
   const requestedCount = Number(body?.count) || 5;
   const count = Math.min(Math.max(1, requestedCount), MAX_BATCH_SIZE);
 
@@ -49,12 +56,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Gmail non connecté. Connecte-le depuis cette page avant d\'envoyer.' }, { status: 400 });
   }
 
-  const { data: queued, error: queueError } = await supabaseAdmin
+  if (requestedIds && requestedIds.length === 0) {
+    return NextResponse.json({ error: 'Aucun email sélectionné.' }, { status: 400 });
+  }
+
+  let queuedQuery = supabaseAdmin
     .from('prospecting_emails')
     .select('id, recipient_email, subject, body')
     .eq('status', 'queued')
-    .order('created_at', { ascending: true })
-    .limit(count);
+    .order('created_at', { ascending: true });
+
+  queuedQuery = requestedIds ? queuedQuery.in('id', requestedIds) : queuedQuery.limit(count);
+
+  const { data: queued, error: queueError } = await queuedQuery;
 
   if (queueError) return NextResponse.json({ error: 'Lecture de la file échouée.' }, { status: 500 });
   if (!queued || queued.length === 0) {
@@ -102,7 +116,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await logAuditEvent(supabaseAdmin, userData!.user!.id, 'prospecting_batch_sent', { sent, failed, requested: count });
+  await logAuditEvent(supabaseAdmin, userData!.user!.id, 'prospecting_batch_sent', { sent, failed, requested: requestedIds ? requestedIds.length : count });
 
   return NextResponse.json({ sent, failed });
 }

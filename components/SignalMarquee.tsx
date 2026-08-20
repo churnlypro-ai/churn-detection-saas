@@ -21,7 +21,7 @@ const SIGNAL_ICONS = [
 
 // px/s en défilement libre — volontairement lent, la bande sert de fond
 // discret, pas d'élément qu'on doit "suivre".
-const AUTOPLAY_SPEED = 14;
+const AUTOPLAY_SPEED = 24;
 
 export default function SignalMarquee() {
   const [selected, setSelected] = useState<number | null>(null);

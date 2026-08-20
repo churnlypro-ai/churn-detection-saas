@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, XCircle, Mail, CheckCircle2, Clock, AlertTriangle, Send, Trash2, Plug } from 'lucide-react';
+import { ArrowLeft, XCircle, Mail, CheckCircle2, Clock, AlertTriangle, Send, Trash2, Plug, Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -14,6 +14,7 @@ interface QueueEntry {
   company_name: string | null;
   recipient_email: string;
   subject: string;
+  body: string;
   status: 'queued' | 'sent' | 'failed';
   error_message: string | null;
   created_at: string;
@@ -58,6 +59,16 @@ function ProspectingContent() {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState('');
   const [sendError, setSendError] = useState('');
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCompany, setEditCompany] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editSubject, setEditSubject] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const loadStatus = useCallback(async (authToken: string) => {
     const res = await fetch('/api/admin/gmail/status', { headers: { Authorization: `Bearer ${authToken}` } });
@@ -148,7 +159,56 @@ function ProspectingContent() {
 
   async function handleRemove(id: string) {
     await fetch(`/api/admin/prospecting/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
     await loadQueue(token);
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const queuedIds = queue.filter((q) => q.status === 'queued').map((q) => q.id);
+    const allSelected = queuedIds.length > 0 && queuedIds.every((id) => selectedIds.has(id));
+    setSelectedIds(allSelected ? new Set() : new Set(queuedIds));
+  }
+
+  function startEdit(entry: QueueEntry) {
+    setEditingId(entry.id);
+    setEditCompany(entry.company_name ?? '');
+    setEditEmail(entry.recipient_email);
+    setEditSubject(entry.subject);
+    setEditBody(entry.body);
+    setEditError('');
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditError('');
+  }
+
+  async function handleSaveEdit(id: string) {
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const res = await fetch(`/api/admin/prospecting/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ companyName: editCompany, recipientEmail: editEmail, subject: editSubject, emailBody: editBody }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Modification échouée.');
+      setEditingId(null);
+      await loadQueue(token);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Modification échouée.');
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   async function handleSendBatch() {
@@ -156,14 +216,16 @@ function ProspectingContent() {
     setSendResult('');
     setSendError('');
     try {
+      const hasSelection = selectedIds.size > 0;
       const res = await fetch('/api/admin/prospecting/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ count: batchCount }),
+        body: JSON.stringify(hasSelection ? { ids: Array.from(selectedIds) } : { count: batchCount }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || 'Envoi échoué.');
       setSendResult(`${result.sent} envoyé${result.sent > 1 ? 's' : ''}${result.failed ? `, ${result.failed} échoué${result.failed > 1 ? 's' : ''}` : ''}.`);
+      setSelectedIds(new Set());
       await loadQueue(token);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : 'Envoi échoué.');
@@ -173,6 +235,8 @@ function ProspectingContent() {
   }
 
   const queuedCount = queue.filter((q) => q.status === 'queued').length;
+  const queuedIds = queue.filter((q) => q.status === 'queued').map((q) => q.id);
+  const allQueuedSelected = queuedIds.length > 0 && queuedIds.every((id) => selectedIds.has(id));
 
   if (forbidden) {
     return (
@@ -298,72 +362,165 @@ function ProspectingContent() {
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Envoyer le prochain lot <span className="text-slate-400 dark:text-slate-500">({queuedCount} en attente)</span>
+                  {selectedIds.size > 0 ? 'Envoyer la sélection' : 'Envoyer le prochain lot'}{' '}
+                  <span className="text-slate-400 dark:text-slate-500">
+                    ({selectedIds.size > 0 ? `${selectedIds.size} sélectionné${selectedIds.size > 1 ? 's' : ''}` : `${queuedCount} en attente`})
+                  </span>
                 </h2>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    max={15}
-                    value={batchCount}
-                    onChange={(e) => setBatchCount(Number(e.target.value))}
-                    className="w-16 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                  />
+                  {selectedIds.size === 0 && (
+                    <input
+                      type="number"
+                      min={1}
+                      max={15}
+                      value={batchCount}
+                      onChange={(e) => setBatchCount(Number(e.target.value))}
+                      className="w-16 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    />
+                  )}
                   <button
                     onClick={handleSendBatch}
-                    disabled={sending || !gmailConnected || queuedCount === 0}
+                    disabled={sending || !gmailConnected || (selectedIds.size === 0 && queuedCount === 0)}
                     className="flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
                   >
                     <Send className="h-4 w-4" />
-                    {sending ? 'Envoi en cours…' : 'Envoyer'}
+                    {sending ? 'Envoi en cours…' : selectedIds.size > 0 ? `Envoyer la sélection (${selectedIds.size})` : 'Envoyer'}
                   </button>
                 </div>
               </div>
               <p className="text-xs text-slate-400 dark:text-slate-500">
-                Envoi espacé (10-18s entre chaque) — un lot de 15 prend jusqu&apos;à ~4 minutes, ne quitte pas la page pendant l&apos;envoi.
+                {selectedIds.size > 0
+                  ? 'Coche des emails dans la file ci-dessous pour choisir précisément lesquels envoyer.'
+                  : 'Aucune sélection : envoie les plus anciens de la file, dans la limite choisie. Coche des emails ci-dessous pour choisir précisément lesquels envoyer.'}
+                {' '}Envoi espacé (10-18s entre chaque) — un lot de 15 prend jusqu&apos;à ~4 minutes, ne quitte pas la page pendant l&apos;envoi.
               </p>
               {sendResult && <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">{sendResult}</p>}
               {sendError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{sendError}</p>}
             </div>
 
             <div className="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">File d&apos;attente</h2>
+                {queuedIds.length > 0 && (
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={allQueuedSelected}
+                      onChange={toggleSelectAll}
+                      className="h-3.5 w-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-400 dark:border-slate-600"
+                    />
+                    Tout sélectionner
+                  </label>
+                )}
               </div>
               {queue.length === 0 ? (
                 <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">Aucun email pour l&apos;instant.</p>
               ) : (
                 <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {queue.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between gap-4 px-6 py-3.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
-                          {entry.company_name || entry.recipient_email}
-                        </p>
-                        <p className="truncate text-xs text-slate-400 dark:text-slate-500">
-                          {entry.recipient_email} · {entry.subject}
-                        </p>
-                        {entry.error_message && (
-                          <p className="mt-1 flex items-center gap-1 text-xs text-red-500"><AlertTriangle className="h-3 w-3" /> {entry.error_message}</p>
+                  {queue.map((entry) => {
+                    const isEditing = editingId === entry.id;
+                    return (
+                      <div key={entry.id} className="px-6 py-3.5">
+                        {isEditing ? (
+                          <div className="space-y-2.5">
+                            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                              <input
+                                type="text"
+                                placeholder="Entreprise (optionnel)"
+                                value={editCompany}
+                                onChange={(e) => setEditCompany(e.target.value)}
+                                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                              />
+                              <input
+                                type="email"
+                                placeholder="Email destinataire"
+                                value={editEmail}
+                                onChange={(e) => setEditEmail(e.target.value)}
+                                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Objet"
+                              value={editSubject}
+                              onChange={(e) => setEditSubject(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            />
+                            <textarea
+                              rows={5}
+                              placeholder="Corps du mail"
+                              value={editBody}
+                              onChange={(e) => setEditBody(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            />
+                            {editError && <p className="text-sm text-red-600 dark:text-red-400">{editError}</p>}
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleSaveEdit(entry.id)}
+                                disabled={editSaving}
+                                className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                              >
+                                {editSaving ? 'Enregistrement…' : 'Enregistrer'}
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                disabled={editSaving}
+                                className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-4">
+                            {entry.status === 'queued' && (
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(entry.id)}
+                                onChange={() => toggleSelect(entry.id)}
+                                className="h-3.5 w-3.5 flex-shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-400 dark:border-slate-600"
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
+                                {entry.company_name || entry.recipient_email}
+                              </p>
+                              <p className="truncate text-xs text-slate-400 dark:text-slate-500">
+                                {entry.recipient_email} · {entry.subject}
+                              </p>
+                              {entry.error_message && (
+                                <p className="mt-1 flex items-center gap-1 text-xs text-red-500"><AlertTriangle className="h-3 w-3" /> {entry.error_message}</p>
+                              )}
+                            </div>
+                            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[entry.status]}`}>
+                              {entry.status === 'sent' && <CheckCircle2 className="h-3 w-3" />}
+                              {entry.status === 'queued' && <Clock className="h-3 w-3" />}
+                              {entry.status === 'failed' && <AlertTriangle className="h-3 w-3" />}
+                              {STATUS_LABELS[entry.status]}
+                            </span>
+                            {entry.status === 'queued' && (
+                              <div className="flex flex-shrink-0 items-center gap-3">
+                                <button
+                                  onClick={() => startEdit(entry)}
+                                  className="text-slate-300 transition hover:text-brand-500 dark:text-slate-600"
+                                  aria-label="Modifier"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleRemove(entry.id)}
+                                  className="text-slate-300 transition hover:text-red-500 dark:text-slate-600"
+                                  aria-label="Retirer"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
-                      <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[entry.status]}`}>
-                        {entry.status === 'sent' && <CheckCircle2 className="h-3 w-3" />}
-                        {entry.status === 'queued' && <Clock className="h-3 w-3" />}
-                        {entry.status === 'failed' && <AlertTriangle className="h-3 w-3" />}
-                        {STATUS_LABELS[entry.status]}
-                      </span>
-                      {entry.status === 'queued' && (
-                        <button
-                          onClick={() => handleRemove(entry.id)}
-                          className="flex-shrink-0 text-slate-300 transition hover:text-red-500 dark:text-slate-600"
-                          aria-label="Retirer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
