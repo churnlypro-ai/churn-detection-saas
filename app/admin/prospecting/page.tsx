@@ -39,7 +39,6 @@ function ProspectingContent() {
   const [user, setUser] = useState<{ id?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
-  const [token, setToken] = useState('');
 
   const [gmailConnected, setGmailConnected] = useState(false);
   const [gmailEmail, setGmailEmail] = useState<string | null>(null);
@@ -70,6 +69,16 @@ function ProspectingContent() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
+  // Toujours relire la session au moment de l'appel plutôt que de garder un
+  // token capté une seule fois au chargement de la page : sur une page
+  // laissée ouverte longtemps, ce token capté expire alors que la session
+  // Supabase, elle, reste valide (rafraîchie en arrière-plan) — on se
+  // retrouvait avec un "Forbidden" sur des actions pourtant légitimes.
+  const getAuthToken = useCallback(async (): Promise<string> => {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token ?? '';
+  }, []);
+
   const loadStatus = useCallback(async (authToken: string) => {
     const res = await fetch('/api/admin/gmail/status', { headers: { Authorization: `Bearer ${authToken}` } });
     if (res.ok) {
@@ -92,9 +101,7 @@ function ProspectingContent() {
       if (!data?.user) { router.replace('/login'); return; }
       setUser(data.user);
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const authToken = sessionData?.session?.access_token ?? '';
-      setToken(authToken);
+      const authToken = await getAuthToken();
 
       const check = await fetch('/api/admin/check', { headers: { Authorization: `Bearer ${authToken}` } })
         .then((r) => r.json()).catch(() => ({ isAdmin: false }));
@@ -117,7 +124,8 @@ function ProspectingContent() {
   async function handleConnectGmail() {
     setConnecting(true);
     try {
-      const res = await fetch('/api/admin/gmail/connect', { headers: { Authorization: `Bearer ${token}` } });
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/gmail/connect', { headers: { Authorization: `Bearer ${authToken}` } });
       if (!res.ok) throw new Error();
       const { url } = await res.json();
       window.location.href = url;
@@ -128,7 +136,8 @@ function ProspectingContent() {
   }
 
   async function handleDisconnectGmail() {
-    await fetch('/api/admin/gmail/disconnect', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    const authToken = await getAuthToken();
+    await fetch('/api/admin/gmail/disconnect', { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } });
     setGmailConnected(false);
     setGmailEmail(null);
   }
@@ -138,9 +147,10 @@ function ProspectingContent() {
     setAdding(true);
     setAddError('');
     try {
+      const authToken = await getAuthToken();
       const res = await fetch('/api/admin/prospecting', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ companyName, recipientEmail, subject, emailBody }),
       });
       const result = await res.json().catch(() => ({}));
@@ -149,7 +159,7 @@ function ProspectingContent() {
       setRecipientEmail('');
       setSubject('');
       setEmailBody('');
-      await loadQueue(token);
+      await loadQueue(authToken);
     } catch (err) {
       setAddError(err instanceof Error ? err.message : 'Ajout échoué.');
     } finally {
@@ -158,9 +168,10 @@ function ProspectingContent() {
   }
 
   async function handleRemove(id: string) {
-    await fetch(`/api/admin/prospecting/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    const authToken = await getAuthToken();
+    await fetch(`/api/admin/prospecting/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
     setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
-    await loadQueue(token);
+    await loadQueue(authToken);
   }
 
   function toggleSelect(id: string) {
@@ -195,15 +206,16 @@ function ProspectingContent() {
     setEditSaving(true);
     setEditError('');
     try {
+      const authToken = await getAuthToken();
       const res = await fetch(`/api/admin/prospecting/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ companyName: editCompany, recipientEmail: editEmail, subject: editSubject, emailBody: editBody }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || 'Modification échouée.');
       setEditingId(null);
-      await loadQueue(token);
+      await loadQueue(authToken);
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Modification échouée.');
     } finally {
@@ -216,17 +228,18 @@ function ProspectingContent() {
     setSendResult('');
     setSendError('');
     try {
+      const authToken = await getAuthToken();
       const hasSelection = selectedIds.size > 0;
       const res = await fetch('/api/admin/prospecting/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify(hasSelection ? { ids: Array.from(selectedIds) } : { count: batchCount }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || 'Envoi échoué.');
       setSendResult(`${result.sent} envoyé${result.sent > 1 ? 's' : ''}${result.failed ? `, ${result.failed} échoué${result.failed > 1 ? 's' : ''}` : ''}.`);
       setSelectedIds(new Set());
-      await loadQueue(token);
+      await loadQueue(authToken);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : 'Envoi échoué.');
     } finally {
