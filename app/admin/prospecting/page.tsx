@@ -94,7 +94,10 @@ function ProspectingContent() {
 
       const gmailParam = searchParams.get('gmail');
       if (gmailParam === 'connected') setBanner('Gmail connecté avec succès.');
-      else if (gmailParam === 'error') setBanner('La connexion Gmail a échoué — réessaie.');
+      else if (gmailParam === 'error') {
+        const reason = searchParams.get('reason');
+        setBanner(reason ? `Connexion Gmail échouée : ${reason}` : 'La connexion Gmail a échoué — réessaie.');
+      }
       if (gmailParam) window.history.replaceState({}, '', '/admin/prospecting');
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
