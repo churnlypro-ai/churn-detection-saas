@@ -5,9 +5,13 @@ import { encryptSecret } from '@/lib/tokenCrypto';
 
 const STATE_COOKIE = 'gmail_oauth_state';
 
-function redirectTo(status: 'connected' | 'error'): NextResponse {
+function redirectTo(status: 'connected' | 'error', reason?: string): NextResponse {
   const url = new URL('/admin/prospecting', process.env.NEXT_PUBLIC_APP_URL);
   url.searchParams.set('gmail', status);
+  // Message d'erreur brut affiché directement sur la page — évite d'avoir à
+  // aller chercher dans les logs Vercel pour une erreur de configuration
+  // (env var manquante, migration pas encore lancée, etc.).
+  if (reason) url.searchParams.set('reason', reason.slice(0, 300));
   const response = NextResponse.redirect(url);
   response.cookies.delete(STATE_COOKIE);
   return response;
@@ -23,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   if (!code || !state || !expectedState || state !== expectedState) {
     console.error('[gmail/callback] state mismatch or missing code');
-    return redirectTo('error');
+    return redirectTo('error', 'Le lien de retour Google est invalide ou a expiré (cookie state manquant/différent). Réessaie depuis le bouton Connecter.');
   }
 
   try {
@@ -32,7 +36,7 @@ export async function GET(req: NextRequest) {
       // Arrive si le compte avait déjà autorisé l'app sans prompt=consent
       // forcé quelque part — normalement couvert par buildGmailAuthUrl.
       console.error('[gmail/callback] no refresh_token returned');
-      return redirectTo('error');
+      return redirectTo('error', 'Google n\'a renvoyé aucun refresh_token.');
     }
 
     // Identifie le compte Google réellement connecté (churnly.pro@gmail.com
@@ -54,12 +58,13 @@ export async function GET(req: NextRequest) {
     });
     if (error) {
       console.error('[gmail/callback] insert failed', JSON.stringify(error));
-      return redirectTo('error');
+      return redirectTo('error', `Échec en base: ${error.message}`);
     }
 
     return redirectTo('connected');
   } catch (err) {
-    console.error('[gmail/callback] failed', err instanceof Error ? err.message : err);
-    return redirectTo('error');
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[gmail/callback] failed', message);
+    return redirectTo('error', message);
   }
 }
