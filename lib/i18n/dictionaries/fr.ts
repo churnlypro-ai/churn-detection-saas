@@ -24,10 +24,10 @@ export const fr = {
   },
   home: {
     hero: {
-      badge: 'Analyse par IA · Prévention de churn en temps réel',
+      badge: 'L\'expertise Churnly · Prévention de churn en temps réel',
       titleLine1: 'Churnly',
       titleLine2: 'Sauvez votre revenu.',
-      subtitle: 'Prédisez qui va partir avant qu\'il ne parte. Uploadez vos données clients, notre IA détecte les signaux de risque et vous dit exactement quoi faire.',
+      subtitle: 'Prédisez qui va partir avant qu\'il ne parte. Uploadez vos données clients, Churnly détecte les signaux de risque et vous dit exactement quoi faire.',
       cta: 'Commencer gratuitement',
       ctaNote: 'Pas de carte bancaire requise · Aperçu gratuit',
       demoLink: 'Voir une démo sans inscription',
@@ -80,7 +80,7 @@ export const fr = {
       cases: [
         { company: 'Startup SaaS B2B', unit: '€/an sauvés', description: 'Détection de 12 clients à risque sur 200. 8 sauvés grâce aux actions recommandées par Churnly.', metric: '8 clients sauvés' },
         { company: 'Agence digitale', unit: '% de churn (était 10%)', description: 'Réduction du churn de 10% à 3% en 4 mois. Actions ciblées sur les clients inactifs.', metric: 'Churn divisé par 3' },
-        { company: 'E-commerce premium', unit: '€/an récupérés', description: '15 clients réactivés via des offres personnalisées générées par l\'IA. ROI 64x.', metric: 'ROI 64x' },
+        { company: 'E-commerce premium', unit: '€/an récupérés', description: '15 clients réactivés via des offres personnalisées générées par Churnly. ROI 64x.', metric: 'ROI 64x' },
       ],
     },
     cta: {
@@ -166,7 +166,7 @@ export const fr = {
       'Liste complète des clients à risque',
       'Score de churn et raison détaillée par client',
       '5 templates d\'email personnalisés par client',
-      'Actions recommandées par IA',
+      'Actions recommandées par Churnly',
       'Mise à jour après chaque upload',
     ],
     redirecting: 'Redirection vers le paiement…',
@@ -243,7 +243,7 @@ export const fr = {
     } as Record<string, string>,
     businessDescriptionLabel: 'Qu\'est-ce que vous faites exactement ?',
     businessDescriptionPlaceholder: 'Ex: un SaaS de gestion de projet utilisé quotidiennement par des équipes marketing...',
-    businessDescriptionHint: 'Utilisé par l\'IA pour calibrer ses seuils de risque selon votre type de produit (usage quotidien vs hebdomadaire/mensuel).',
+    businessDescriptionHint: 'Utilisé par Churnly pour calibrer ses seuils de risque selon votre type de produit (usage quotidien vs hebdomadaire/mensuel).',
     businessDescriptionTooShort: 'Décrivez votre activité en quelques mots (15 caractères minimum).',
     saving: 'Enregistrement…',
     save: 'Enregistrer',
@@ -338,7 +338,7 @@ export const fr = {
     precision: {
       title: 'Précision de l\'analyse',
       detail: (correct: number, total: number) => `de précision sur les clients identifiés à risque dont vous avez confirmé le sort (${correct}/${total} ont vraiment quitté).`,
-      unresolvedHint: 'Marquez si vos clients à risque sont partis ou sont restés (dans le détail de chaque client ci-dessous) pour voir apparaître ici la précision réelle de l\'IA.',
+      unresolvedHint: 'Marquez si vos clients à risque sont partis ou sont restés (dans le détail de chaque client ci-dessous) pour voir apparaître ici la précision réelle de l\'analyse.',
     },
     noDataBanner: {
       title: 'Commencez par importer vos données',
@@ -347,7 +347,7 @@ export const fr = {
     },
     businessDescriptionBanner: {
       title: 'Décrivez votre activité pour affiner l\'analyse',
-      body: 'L\'IA calibre ses seuils de risque (inactivité, fréquence d\'usage...) selon le type de produit — sans cette description, elle applique des seuils génériques.',
+      body: 'Churnly calibre ses seuils de risque (inactivité, fréquence d\'usage...) selon le type de produit — sans cette description, il applique des seuils génériques.',
       cta: 'Compléter dans les paramètres',
     },
     riskBadge: {
@@ -447,7 +447,7 @@ export const fr = {
     activatingBanner: 'Paiement reçu — activation de votre abonnement en cours, ça ne prend que quelques secondes...',
     activationDelayedBanner: 'Votre paiement a bien été reçu, mais l\'activation prend un peu plus de temps que d\'habitude. Rafraîchissez cette page dans quelques instants — inutile de payer à nouveau.',
     unlockBanner: {
-      textBase: 'Débloquez la liste complète de vos clients à risque, les emails générés par IA et bien plus.',
+      textBase: 'Débloquez la liste complète de vos clients à risque, les emails générés automatiquement et bien plus.',
       subscribeButton: 'Démarrer mon abonnement',
       redirecting: 'Redirection…',
     },
@@ -508,7 +508,7 @@ export const fr = {
       accountCreatedPaymentFailed: 'Compte créé, mais le paiement a échoué. Réessayez depuis le dashboard.',
       stripeSignupDenied: 'Connexion Stripe annulée.',
       stripeSignupError: 'La connexion via Stripe a échoué. Réessayez ou créez votre compte avec un email.',
-      businessDescriptionTooShort: 'Décrivez votre activité en quelques mots (15 caractères minimum) — l\'IA en a besoin pour calibrer son analyse.',
+      businessDescriptionTooShort: 'Décrivez votre activité en quelques mots (15 caractères minimum) — Churnly en a besoin pour calibrer son analyse.',
     },
     passwordStrength: {
       label: 'Force:',
@@ -555,7 +555,7 @@ export const fr = {
       companyPlaceholder: 'Acme Inc',
       businessDescriptionLabel: 'Qu\'est-ce que vous faites exactement ?',
       businessDescriptionPlaceholder: 'Ex: un SaaS de gestion de projet utilisé quotidiennement par des équipes marketing, ou une agence qui livre un rapport mensuel à ses clients...',
-      businessDescriptionHint: 'Essentiel pour l\'analyse : l\'IA s\'en sert pour savoir ce qui est un usage normal ou un signal d\'alerte pour VOTRE produit (une app à usage quotidien et un outil consulté une fois par mois n\'ont pas les mêmes seuils de risque).',
+      businessDescriptionHint: 'Essentiel pour l\'analyse : Churnly s\'en sert pour savoir ce qui est un usage normal ou un signal d\'alerte pour VOTRE produit (une app à usage quotidien et un outil consulté une fois par mois n\'ont pas les mêmes seuils de risque).',
       industryLabel: 'Type d\'industrie',
       modelsCountLabel: 'Nombre de modèles gérés',
       clientsCountLabel: 'Nombre de clients',
@@ -632,7 +632,7 @@ export const fr = {
       'Liste complète des clients à risque',
       'Score de churn détaillé par client',
       '5 templates d\'email personnalisés',
-      'Actions recommandées par IA',
+      'Actions recommandées par Churnly',
       'Support par email',
     ],
     annualOfferPrefix: 'Ou',
@@ -657,7 +657,7 @@ export const fr = {
       { q: 'Comment le prix est-il calculé ?', a: 'Votre prix dépend uniquement de votre chiffre d\'affaires mensuel — pas besoin de connaître votre taux de churn à l\'avance, c\'est justement ce que Churnly calcule pour vous à partir de vos vraies données.' },
       { q: 'Puis-je changer de palier plus tard ?', a: 'Oui. Votre palier est recalculé automatiquement à chaque mise à jour de votre CA — vous n\'avez rien à faire manuellement.' },
       { q: 'Y a-t-il un engagement ?', a: 'Aucun. Vous pouvez annuler à tout moment depuis vos réglages, sans frais ni préavis.' },
-      { q: 'Qu\'est-ce qui est inclus dans tous les plans ?', a: 'Tous les paliers incluent la liste complète de vos clients à risque, un score de churn détaillé, des templates d\'email personnalisés, des actions recommandées par IA, et le support par email.' },
+      { q: 'Qu\'est-ce qui est inclus dans tous les plans ?', a: 'Tous les paliers incluent la liste complète de vos clients à risque, un score de churn détaillé, des templates d\'email personnalisés, des actions recommandées par Churnly, et le support par email.' },
       { q: 'Proposez-vous une remise à l\'engagement annuel ?', a: 'Oui — l\'engagement annuel revient à environ un mois offert par rapport au paiement mensuel.' },
       { q: 'Que se passe-t-il si mes chiffres changent après l\'inscription ?', a: 'Votre prix se recalcule automatiquement à partir de vos données réelles. Aucune surprise, aucune renégociation nécessaire.' },
     ],
