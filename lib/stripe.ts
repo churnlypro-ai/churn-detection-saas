@@ -19,4 +19,6 @@ export const PRICE_IDS: Record<string, string | undefined> = {
   '400': process.env.STRIPE_PRICE_400,
   '600': process.env.STRIPE_PRICE_600,
   '800': process.env.STRIPE_PRICE_800,
+  '1200': process.env.STRIPE_PRICE_1200,
+  '2500': process.env.STRIPE_PRICE_2500,
 };
