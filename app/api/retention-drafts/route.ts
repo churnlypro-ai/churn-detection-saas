@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { resolveAccountId } from '@/lib/team';
-import { generateClientEmail, pickBestTemplate, type AnalysisLanguage, type RiskFactor, type RecommendedAction } from '@/lib/claude';
+import { generateClientEmail, pickBestTemplate, type AnalysisLanguage, type ModelTier, type RiskFactor, type RecommendedAction } from '@/lib/claude';
 
 // Même seuil que la stat de précision affichée sur le dashboard
 // (churn_score >= 60 = "à risque" ou plus) — pas la peine d'un brouillon de
@@ -37,6 +37,17 @@ export async function GET(req: NextRequest) {
   const accountId = await resolveAccountId(supabaseAdmin, userData.user.id);
 
   const language: AnalysisLanguage = req.nextUrl.searchParams.get('language') === 'en' ? 'en' : 'fr';
+
+  // Même règle que runChurnAnalysis (lib/analysis.ts) : Opus réservé aux
+  // comptes réellement abonnés, un essai gratuit reçoit Haiku 4.5 — la
+  // génération de brouillons de rétention ne doit pas coûter plus cher
+  // qu'un essai ne rapporte.
+  const { data: businessProfile } = await supabaseAdmin
+    .from('users')
+    .select('subscription_status')
+    .eq('id', accountId)
+    .maybeSingle();
+  const modelTier: ModelTier = businessProfile?.subscription_status === 'active' ? 'premium' : 'standard';
 
   const { data: rows, error: rowsError } = await supabaseAdmin
     .from('analysis_results')
@@ -83,7 +94,7 @@ export async function GET(req: NextRequest) {
           revenue_monthly: client.revenue_monthly,
           risk_factors: client.details?.risk_factors,
           recommended_actions: client.details?.recommended_actions,
-        }, language);
+        }, language, modelTier);
         return { client, templateId, email, error: null as string | null };
       } catch (err) {
         return { client, templateId, email: null, error: err instanceof Error ? err.message : 'Génération échouée.' };
