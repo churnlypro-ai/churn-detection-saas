@@ -74,10 +74,14 @@ export default function RetentionDraftsPanel() {
     setLoadingDrafts(false);
   }, [getAuthToken, language]);
 
-  useEffect(() => {
-    loadStatus();
-    loadDrafts();
+  useEffect(() => { loadStatus(); }, [loadStatus]);
 
+  // Dépend de loadDrafts (donc de language) plutôt que d'un montage unique :
+  // si le compte bascule FR/EN, les prochains brouillons générés doivent
+  // suivre la langue actuellement affichée, pas celle du premier chargement.
+  useEffect(() => { loadDrafts(); }, [loadDrafts]);
+
+  useEffect(() => {
     // Pas de useSearchParams() ici : ce composant vit dans une page déjà
     // statiquement pré-rendue, lire directement l'URL évite d'imposer une
     // frontière Suspense supplémentaire juste pour ce petit bandeau.
