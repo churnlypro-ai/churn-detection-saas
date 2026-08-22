@@ -151,6 +151,24 @@ function UploadContent() {
     });
   }
 
+  function handleDownloadSample() {
+    const rows = [
+      ['name', 'email', 'revenue_monthly', 'days_since_last_login', 'support_tickets_open', 'payment_status', 'renewal_date'],
+      ['Atelier Dubois', 'contact@atelierdubois.fr', '890', '42', '3', 'late', '2026-09-05'],
+      ['Studio Lumiere', '', '450', '3', '0', 'ok', '2027-01-15'],
+      ['Agence Nova Digital', 'hello@novadigital.io', '1750', '2', '0', 'ok', '2027-02-01'],
+      ['Garage Perrin', '', '650', '48', '6', 'failed', '2026-08-28'],
+    ];
+    const csv = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'churnly-exemple.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleConnectStripe() {
     setStripeStatus('connecting');
     setStripeMessage('');
@@ -229,6 +247,14 @@ function UploadContent() {
             disabled={status === 'analyzing'}
           />
         </label>
+
+        <button
+          type="button"
+          onClick={handleDownloadSample}
+          className="mt-3 text-xs font-medium text-slate-400 underline-offset-2 transition hover:text-brand-600 hover:underline dark:text-slate-500 dark:hover:text-brand-400"
+        >
+          {t.downloadSample}
+        </button>
 
         {status === 'analyzing' && (
           <p className="mt-4 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
