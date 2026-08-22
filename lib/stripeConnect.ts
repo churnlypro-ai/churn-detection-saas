@@ -167,6 +167,7 @@ function monthlyAmountFromPrice(price: Stripe.Price, quantity: number): number {
 
 export interface StripeSourcedClient {
   name: string;
+  email: string | null;
   revenue_monthly: number;
   payment_status: string;
   renewal_date: string;
@@ -217,6 +218,11 @@ export async function fetchClientsFromConnectedAccount(
 
     clients.push({
       name: customer.name || customer.email || customer.id,
+      // Gardé comme vraie adresse de contact (pas juste un repli d'affichage
+      // pour le nom ci-dessus) — c'est ce qui permet un jour d'écrire
+      // vraiment à CE client plutôt qu'au compte Churnly lui-même, voir la
+      // migration 20260822010000_add_client_email.
+      email: customer.email ?? null,
       revenue_monthly: Math.round(revenueMonthly * 100) / 100,
       // 'past_due' / 'unpaid' sont les statuts Stripe eux-mêmes qui
       // signalent un problème de paiement — transmis tels quels, l'IA sait
