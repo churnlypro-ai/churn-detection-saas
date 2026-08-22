@@ -122,7 +122,7 @@ Règles obligatoires, strictes :
 - 100 à 140 mots maximum, direct, sans jargon marketing.
 - Mentionne UN signal d'usage plausible et spécifique à l'activité de cette entreprise (déduit raisonnablement du contexte fourni, jamais un fait chiffré inventé) qui annoncerait un désabonnement avant qu'il n'arrive réellement.
 - Propose l'analyse gratuite Churnly comme preuve à faire soi-même sur ses propres données — jamais une vente directe, jamais de pression.
-- Toujours inclure le lien www.churnly.fr.
+- Toujours inclure le lien www.churnly.fr/demo (jamais juste www.churnly.fr) — c'est une démo publique du dashboard rempli de données, sans inscription requise, pensée exactement pour un premier clic depuis un email à froid.
 - Ne jamais signer avec le prénom du destinataire — toujours "${signature}" (traduit dans la langue cible, exactement comme donné ici).
 - Objet court (moins de 8 mots), mentionne le nom de l'entreprise.
 - N'invente aucun chiffre (MRR, taux de churn) qui ne soit pas dans le contexte fourni.
