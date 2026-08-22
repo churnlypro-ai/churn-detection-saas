@@ -16,7 +16,7 @@ const DEFAULT_CLIENT_COUNT = 100;
 const TIER_EXAMPLE_META = [
   { name: 'Petit', price: 150, highlight: false },
   { name: 'Moyen', price: 400, highlight: true },
-  { name: 'Enterprise', price: 800, highlight: false },
+  { name: 'Enterprise', price: 2500, highlight: false },
 ];
 
 function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
