@@ -59,6 +59,10 @@ function ProspectingContent() {
   const [bulkError, setBulkError] = useState('');
   const [bulkResult, setBulkResult] = useState('');
 
+  const [fileImporting, setFileImporting] = useState(false);
+  const [fileImportError, setFileImportError] = useState('');
+  const [fileImportResult, setFileImportResult] = useState('');
+
   const [batchCount, setBatchCount] = useState(8);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState('');
@@ -243,6 +247,48 @@ function ProspectingContent() {
     }
   }
 
+  function readFileAsBase64(file: File): Promise<{ filename: string; contentBase64: string }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.slice(result.indexOf(',') + 1);
+        resolve({ filename: file.name, contentBase64: base64 });
+      };
+      reader.onerror = () => reject(new Error('Lecture du fichier échouée.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    setFileImporting(true);
+    setFileImportError('');
+    setFileImportResult('');
+    try {
+      const encoded = await Promise.all(Array.from(fileList).map(readFileAsBase64));
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/prospecting/import-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ files: encoded }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Import échoué.');
+      const skippedText = result.skippedDuplicate
+        ? ` (${result.skippedDuplicate} déjà dans la file ou déjà contacté${result.skippedDuplicate > 1 ? 's' : ''}, ignoré${result.skippedDuplicate > 1 ? 's' : ''})`
+        : '';
+      setFileImportResult(`${result.added} prospect${result.added !== 1 ? 's' : ''} ajouté${result.added !== 1 ? 's' : ''} à la file${skippedText}.`);
+      await loadQueue(authToken);
+    } catch (err) {
+      setFileImportError(err instanceof Error ? err.message : 'Import échoué.');
+    } finally {
+      setFileImporting(false);
+      e.target.value = '';
+    }
+  }
+
   async function handleRemove(id: string) {
     const authToken = await getAuthToken();
     await fetch(`/api/admin/prospecting/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
@@ -403,8 +449,36 @@ function ProspectingContent() {
               </div>
             </div>
 
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Importer des fichiers (automatique)</h2>
+              <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+                Dépose un ou plusieurs fichiers (.xlsx, .csv, .txt, .md) contenant tes prospects — Churnly extrait automatiquement chaque entreprise avec un email exploitable et rédige l&apos;email de prospection à sa place, dans le même style que d&apos;habitude. Aucune entreprise déjà présente dans la file (ou déjà contactée) n&apos;est ajoutée en double.
+              </p>
+              <label className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-6 py-8 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-brand-700">
+                <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
+                  {fileImporting ? 'Extraction et rédaction en cours…' : 'Choisir des fichiers'}
+                </span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">.xlsx, .csv, .txt, .md — plusieurs fichiers à la fois possibles</span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".xlsx,.xls,.csv,.txt,.md"
+                  className="hidden"
+                  onChange={handleFileImport}
+                  disabled={fileImporting}
+                />
+              </label>
+              {fileImporting && (
+                <p className="mt-3 animate-pulse text-xs text-slate-400 dark:text-slate-500">
+                  Peut prendre quelques minutes pour beaucoup de prospects — ne quitte pas la page.
+                </p>
+              )}
+              {fileImportError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{fileImportError}</p>}
+              {fileImportResult && <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">{fileImportResult}</p>}
+            </div>
+
             <form onSubmit={handleAddToQueue} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="mb-4 text-sm font-semibold text-slate-900 dark:text-white">Ajouter un email à la file</h2>
+              <h2 className="mb-4 text-sm font-semibold text-slate-900 dark:text-white">Ajouter un email à la file (manuel)</h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <input
                   type="text"
@@ -449,9 +523,9 @@ function ProspectingContent() {
             </form>
 
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Import en masse</h2>
+              <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Import en masse (texte déjà rédigé)</h2>
               <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-                Colle plusieurs prospects d&apos;un coup, un bloc par prospect séparé par une ligne <code className="rounded bg-slate-100 px-1 py-0.5 dark:bg-slate-800">---</code> :
+                Pour des emails déjà rédigés à l&apos;avance (relances par exemple) : colle plusieurs prospects d&apos;un coup, un bloc par prospect séparé par une ligne <code className="rounded bg-slate-100 px-1 py-0.5 dark:bg-slate-800">---</code> :
               </p>
               <pre className="mb-3 overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400">{`company: Alchie
 email: pierre@alchie.fr
