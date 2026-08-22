@@ -54,6 +54,11 @@ function ProspectingContent() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
 
+  const [bulkText, setBulkText] = useState('');
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [bulkError, setBulkError] = useState('');
+  const [bulkResult, setBulkResult] = useState('');
+
   const [batchCount, setBatchCount] = useState(8);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState('');
@@ -164,6 +169,77 @@ function ProspectingContent() {
       setAddError(err instanceof Error ? err.message : 'Ajout échoué.');
     } finally {
       setAdding(false);
+    }
+  }
+
+  // Format volontairement pensé pour être écrit à la main (par moi ou par
+  // toi) plutôt que du JSON strict : un bloc par prospect séparé par une
+  // ligne "---", avec "body:" suivi du corps du mail sur autant de lignes
+  // que nécessaire. Beaucoup plus lisible/robuste à coller que du JSON
+  // quand le corps contient des guillemets, des sauts de ligne, des liens.
+  function parseBulkBlocks(text: string): { companyName: string; recipientEmail: string; subject: string; emailBody: string }[] {
+    const blocks = text.split(/^---$/m).map((b) => b.trim()).filter(Boolean);
+    return blocks.map((block) => {
+      const lines = block.split('\n');
+      let companyName = '';
+      let recipientEmail = '';
+      let subject = '';
+      const bodyLines: string[] = [];
+      let inBody = false;
+      for (const line of lines) {
+        if (inBody) { bodyLines.push(line); continue; }
+        if (line.toLowerCase().startsWith('company:')) companyName = line.slice(line.indexOf(':') + 1).trim();
+        else if (line.toLowerCase().startsWith('email:')) recipientEmail = line.slice(line.indexOf(':') + 1).trim();
+        else if (line.toLowerCase().startsWith('subject:')) subject = line.slice(line.indexOf(':') + 1).trim();
+        else if (line.toLowerCase().startsWith('body:')) {
+          inBody = true;
+          const rest = line.slice(line.indexOf(':') + 1);
+          if (rest.trim()) bodyLines.push(rest.trim());
+        }
+      }
+      return { companyName, recipientEmail, subject, emailBody: bodyLines.join('\n').trim() };
+    });
+  }
+
+  async function handleBulkAdd() {
+    setBulkAdding(true);
+    setBulkError('');
+    setBulkResult('');
+    try {
+      const parsed = parseBulkBlocks(bulkText);
+      if (parsed.length === 0) {
+        setBulkError('Aucun bloc reconnu — vérifie le format (company: / email: / subject: / body: séparés par ---).');
+        return;
+      }
+      const invalid = parsed.filter((p) => !p.recipientEmail || !p.subject || !p.emailBody);
+      if (invalid.length > 0) {
+        setBulkError(`${invalid.length} bloc(s) incomplet(s) (email/objet/corps manquant) — rien n'a été importé, corrige et réessaie.`);
+        return;
+      }
+
+      const authToken = await getAuthToken();
+      let added = 0;
+      let failed = 0;
+      for (const entry of parsed) {
+        const res = await fetch('/api/admin/prospecting', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({
+            companyName: entry.companyName || null,
+            recipientEmail: entry.recipientEmail,
+            subject: entry.subject,
+            emailBody: entry.emailBody,
+          }),
+        });
+        if (res.ok) added += 1; else failed += 1;
+      }
+      setBulkResult(`${added} ajouté${added > 1 ? 's' : ''} à la file${failed ? `, ${failed} échoué${failed > 1 ? 's' : ''}` : ''}.`);
+      if (added > 0) setBulkText('');
+      await loadQueue(authToken);
+    } catch {
+      setBulkError('Import échoué.');
+    } finally {
+      setBulkAdding(false);
     }
   }
 
@@ -371,6 +447,42 @@ function ProspectingContent() {
                 {adding ? 'Ajout…' : 'Ajouter à la file'}
               </button>
             </form>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Import en masse</h2>
+              <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                Colle plusieurs prospects d&apos;un coup, un bloc par prospect séparé par une ligne <code className="rounded bg-slate-100 px-1 py-0.5 dark:bg-slate-800">---</code> :
+              </p>
+              <pre className="mb-3 overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400">{`company: Alchie
+email: pierre@alchie.fr
+subject: Petite relance — Alchie
+body:
+Bonjour Pierre,
+...
+L'équipe Churnly
+---
+company: ...
+email: ...
+subject: ...
+body:
+...`}</pre>
+              <textarea
+                placeholder="Colle ici tes blocs de prospects…"
+                rows={8}
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-mono text-xs text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+              {bulkError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{bulkError}</p>}
+              {bulkResult && <p className="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">{bulkResult}</p>}
+              <button
+                onClick={handleBulkAdd}
+                disabled={bulkAdding || !bulkText.trim()}
+                className="mt-3 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+              >
+                {bulkAdding ? 'Import…' : 'Importer en masse'}
+              </button>
+            </div>
 
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
