@@ -10,12 +10,15 @@ export interface PricingResult {
 // ne connaît généralement pas son propre taux de churn (c'est précisément
 // le problème que Churnly résout). C'est Churnly qui le calcule, à partir
 // de la vraie analyse des données une fois importées — jamais demandé en
-// amont. Paliers de 2000€ de CA mensuel, sur les 5 prix Stripe existants.
+// amont. Paliers de 5000€ de CA mensuel jusqu'à 20 000€ (prix plafonné
+// au-delà), sur les 5 prix Stripe existants — le prix d'entrée doit
+// rester nettement inférieur à ce qu'une réduction de churn peut
+// réalistement faire économiser à ce niveau de CA.
 export function calcPrice(revenue: number): number {
-  if (revenue < 2000) return 150;
-  if (revenue < 4000) return 250;
-  if (revenue < 6000) return 400;
-  if (revenue < 8000) return 600;
+  if (revenue < 5000) return 150;
+  if (revenue < 10000) return 250;
+  if (revenue < 15000) return 400;
+  if (revenue < 20000) return 600;
   return 800;
 }
 
