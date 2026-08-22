@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
-import { extractLeadsFromRawText, draftProspectEmailsBatch, type ExtractedLead } from '@/lib/prospectingDraft';
+import { extractLeadsFromRawText, draftProspectEmailsBatch, type ExtractedLead, type ProspectLanguage } from '@/lib/prospectingDraft';
 
 // Extraction + rédaction par fichier, potentiellement plusieurs fichiers et
 // plusieurs lots de rédaction par lead (voir lib/prospectingDraft.ts) — même
@@ -11,6 +11,7 @@ import { extractLeadsFromRawText, draftProspectEmailsBatch, type ExtractedLead }
 export const maxDuration = 300;
 
 const EXTRACT_CONCURRENCY = 3;
+const VALID_LANGUAGES: ProspectLanguage[] = ['fr', 'en', 'es', 'de', 'pt'];
 
 async function requireAdmin(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
   if (files.length === 0) {
     return NextResponse.json({ error: 'Aucun fichier reçu.' }, { status: 400 });
   }
+  const language: ProspectLanguage = VALID_LANGUAGES.includes(body?.language) ? body.language : 'fr';
 
   const rawTexts = files
     .map((f) => fileToRawText(f))
@@ -98,7 +100,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ added: 0, skippedDuplicate, message: 'Toutes les entreprises trouvées sont déjà dans la file ou ont déjà été contactées.' });
   }
 
-  const drafted = await draftProspectEmailsBatch(newLeads);
+  const drafted = await draftProspectEmailsBatch(newLeads, language);
 
   const toInsert = drafted
     .filter((d) => d.subject && d.body)
