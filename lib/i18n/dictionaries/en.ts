@@ -407,6 +407,9 @@ export const en: Dictionary = {
       bodyLabel: 'Body',
       sent: 'Email sent',
       send: 'Send email',
+      noEmailWarning: 'This client has no email on file — add an email column to your CSV or connect Stripe so you can email them directly.',
+      teamMemberWarning: 'Only the account owner can send an email (it goes out from their connected Gmail).',
+      connectGmailWarning: 'Connect your Gmail from the dashboard to be able to send this email.',
     },
     clientDetail: {
       confidenceLabel: 'Analysis confidence: ',

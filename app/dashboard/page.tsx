@@ -96,11 +96,12 @@ const INDUSTRY_BENCHMARK_RATES: Record<string, number> = {
 
 const EMAIL_TEMPLATE_ICONS = [Zap, Gift, BarChart3, GraduationCap, Mail];
 
-function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose: () => void; onSent: () => void }) {
+function EmailModal({ client, isTeamMember, onClose, onSent }: { client: AnalysisRow; isTeamMember: boolean; onClose: () => void; onSent: () => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [generated, setGenerated] = useState<{ subject: string; body: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sendError, setSendError] = useState('');
   const t = useTranslations('dashboard');
   const { language } = useLanguage();
   const EMAIL_TEMPLATES = t.emailTemplates.map((tpl, i) => ({ ...tpl, id: String(i), icon: EMAIL_TEMPLATE_ICONS[i] }));
@@ -128,21 +129,29 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
   }
 
   async function sendEmail() {
-    if (!generated) return;
+    if (!generated || !client.client_email) return;
     setLoading(true);
+    setSendError('');
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-      await fetch('/api/send-email', {
+      const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject: generated.subject, body: generated.body, clientName: client.client_name }),
+        body: JSON.stringify({
+          subject: generated.subject,
+          body: generated.body,
+          clientName: client.client_name,
+          clientEmail: client.client_email,
+        }),
       });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || t.emailModal.connectGmailWarning);
       setSent(true);
       onSent();
       setTimeout(onClose, 1500);
-    } catch {
-      // ignore
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : t.emailModal.connectGmailWarning);
     }
     setLoading(false);
   }
@@ -214,13 +223,20 @@ function EmailModal({ client, onClose, onSent }: { client: AnalysisRow; onClose:
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{generated.subject}</p>
               <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.emailModal.bodyLabel}</p>
               <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300">{generated.body}</p>
-              <button
-                onClick={sendEmail}
-                disabled={sent}
-                className="mt-5 flex items-center gap-2 rounded-full bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
-              >
-                {sent ? <><Check className="h-4 w-4" /> {t.emailModal.sent}</> : <><Mail className="h-4 w-4" /> {t.emailModal.send}</>}
-              </button>
+              {isTeamMember ? (
+                <p className="mt-4 text-xs font-medium text-slate-500 dark:text-slate-400">{t.emailModal.teamMemberWarning}</p>
+              ) : !client.client_email ? (
+                <p className="mt-4 text-xs font-medium text-amber-600 dark:text-amber-400">{t.emailModal.noEmailWarning}</p>
+              ) : (
+                <button
+                  onClick={sendEmail}
+                  disabled={sent || loading}
+                  className="mt-5 flex items-center gap-2 rounded-full bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                >
+                  {sent ? <><Check className="h-4 w-4" /> {t.emailModal.sent}</> : <><Mail className="h-4 w-4" /> {t.emailModal.send}</>}
+                </button>
+              )}
+              {sendError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{sendError}</p>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -346,8 +362,9 @@ function ClientDetailRow({ client, outcome, onMarkOutcome, markingOutcome }: {
   );
 }
 
-function PaidClientTable({ clients, onEmailSent, outcomes, onMarkOutcome, markingClientName }: {
+function PaidClientTable({ clients, isTeamMember, onEmailSent, outcomes, onMarkOutcome, markingClientName }: {
   clients: AnalysisRow[];
+  isTeamMember: boolean;
   onEmailSent: () => void;
   outcomes: Map<string, OutcomeRow>;
   onMarkOutcome: (clientName: string, outcome: 'churned' | 'retained') => void;
@@ -435,7 +452,7 @@ function PaidClientTable({ clients, onEmailSent, outcomes, onMarkOutcome, markin
 
       <AnimatePresence>
         {emailClient && (
-          <EmailModal client={emailClient} onClose={() => setEmailClient(null)} onSent={onEmailSent} />
+          <EmailModal client={emailClient} isTeamMember={isTeamMember} onClose={() => setEmailClient(null)} onSent={onEmailSent} />
         )}
       </AnimatePresence>
     </>
@@ -1303,6 +1320,7 @@ export default function Dashboard() {
           {canViewResults ? (
             <PaidClientTable
               clients={clients}
+              isTeamMember={isTeamMember}
               onEmailSent={() => accountId && loadData(accountId)}
               outcomes={outcomes}
               onMarkOutcome={handleMarkOutcome}

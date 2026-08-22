@@ -405,6 +405,9 @@ export const fr = {
       bodyLabel: 'Corps',
       sent: 'Email envoyé',
       send: 'Envoyer l\'email',
+      noEmailWarning: 'Ce client n\'a pas d\'email enregistré — ajoutez une colonne email à votre CSV ou connectez Stripe pour pouvoir lui envoyer directement.',
+      teamMemberWarning: 'Seul le propriétaire du compte peut envoyer un email (il part de sa boîte Gmail connectée).',
+      connectGmailWarning: 'Connectez votre Gmail depuis le tableau de bord pour pouvoir envoyer cet email.',
     },
     clientDetail: {
       confidenceLabel: 'Confiance de l\'analyse : ',
