@@ -1,25 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { exchangeCodeForTokens, adminRedirectUri } from '@/lib/googleGmail';
+import { exchangeCodeForTokens, customerRedirectUri } from '@/lib/googleGmail';
 import { encryptSecret } from '@/lib/tokenCrypto';
 
-const STATE_COOKIE = 'gmail_oauth_state';
+const STATE_COOKIE = 'customer_gmail_oauth_state';
 
 function redirectTo(status: 'connected' | 'error', reason?: string): NextResponse {
-  const url = new URL('/admin/prospecting', process.env.NEXT_PUBLIC_APP_URL);
+  const url = new URL('/dashboard', process.env.NEXT_PUBLIC_APP_URL);
   url.searchParams.set('gmail', status);
-  // Message d'erreur brut affiché directement sur la page — évite d'avoir à
-  // aller chercher dans les logs Vercel pour une erreur de configuration
-  // (env var manquante, migration pas encore lancée, etc.).
   if (reason) url.searchParams.set('reason', reason.slice(0, 300));
   const response = NextResponse.redirect(url);
   response.cookies.delete(STATE_COOKIE);
   return response;
 }
 
-// Google redirige ici en navigation directe du navigateur (pas d'en-tête
-// Authorization possible) — la protection vient du cookie state posé par
-// /api/admin/gmail/connect, pas d'une vérification de session ici.
+// Google redirige ici en navigation directe (pas d'en-tête Authorization
+// possible) — le compte concerné est extrait du cookie state posé par
+// /api/gmail/connect, jamais d'un paramètre d'URL non vérifié.
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   const state = req.nextUrl.searchParams.get('state');
@@ -27,21 +24,21 @@ export async function GET(req: NextRequest) {
 
   if (!code || !state || !expectedState || state !== expectedState) {
     console.error('[gmail/callback] state mismatch or missing code');
-    return redirectTo('error', 'Le lien de retour Google est invalide ou a expiré (cookie state manquant/différent). Réessaie depuis le bouton Connecter.');
+    return redirectTo('error', 'Le lien de retour Google est invalide ou a expiré. Réessaie depuis le bouton Connecter.');
+  }
+
+  const accountId = expectedState.split('.')[1];
+  if (!accountId) {
+    return redirectTo('error', 'Compte introuvable dans le cookie de connexion.');
   }
 
   try {
-    const tokens = await exchangeCodeForTokens(code, adminRedirectUri());
+    const tokens = await exchangeCodeForTokens(code, customerRedirectUri());
     if (!tokens.refresh_token) {
-      // Arrive si le compte avait déjà autorisé l'app sans prompt=consent
-      // forcé quelque part — normalement couvert par buildGmailAuthUrl.
       console.error('[gmail/callback] no refresh_token returned');
       return redirectTo('error', 'Google n\'a renvoyé aucun refresh_token.');
     }
 
-    // Identifie le compte Google réellement connecté (churnly.pro@gmail.com
-    // attendu) — affiché ensuite dans l'admin pour confirmer visuellement
-    // qu'on n'a pas autorisé le mauvais compte.
     const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
@@ -49,13 +46,15 @@ export async function GET(req: NextRequest) {
     const connectedEmail = profile?.email ?? 'inconnu';
 
     const supabaseAdmin = getSupabaseAdmin();
-    // Une seule ligne à la fois : on remplace plutôt que d'accumuler des
-    // connexions obsolètes.
-    await supabaseAdmin.from('admin_gmail_connection').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    const { error } = await supabaseAdmin.from('admin_gmail_connection').insert({
-      connected_email: connectedEmail,
-      refresh_token_encrypted: encryptSecret(tokens.refresh_token),
-    });
+    const { error } = await supabaseAdmin.from('customer_email_connection').upsert(
+      {
+        account_id: accountId,
+        connected_email: connectedEmail,
+        refresh_token_encrypted: encryptSecret(tokens.refresh_token),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'account_id' },
+    );
     if (error) {
       console.error('[gmail/callback] insert failed', JSON.stringify(error));
       return redirectTo('error', `Échec en base: ${error.message}`);
