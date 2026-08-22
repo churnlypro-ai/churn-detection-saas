@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
   const drafts = atRiskClients
     .map((c) => draftByClient.get(c.client_name))
     .filter((d): d is NonNullable<typeof d> => !!d)
-    .sort((a, b) => (a.status === b.status ? 0 : a.status === 'draft' ? -1 : 1));
+    .sort((a, b) => (a.status === 'draft' ? 0 : 1) - (b.status === 'draft' ? 0 : 1));
 
   return NextResponse.json({ drafts, atRiskCount: atRiskClients.length });
 }
