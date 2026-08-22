@@ -848,6 +848,15 @@ export default function Dashboard() {
 
   const status = profile?.subscription_status ?? 'inactive';
   const hasAccess = status === 'active' || status === 'trialing';
+  // Un compte gratuit qui a déjà consommé son unique analyse gratuite
+  // (trial_used) garde le droit de VOIR ce résultat — c'est sa donnée,
+  // déjà générée et déjà payée par nous. Seul relancer une NOUVELLE analyse
+  // est bloqué côté serveur (voir /api/analyze) tant qu'il n'est pas abonné.
+  // Sans ce distinguo, clients.length > 0 (donc un vrai résultat existant)
+  // se retrouvait caché derrière le teaser à données fictives, ce qui va à
+  // l'encontre de la confiance qu'on cherche justement à construire pendant
+  // l'essai gratuit.
+  const canViewResults = hasAccess || clients.length > 0;
   // La facturation reste réservée au propriétaire (voir /api/create-checkout-session,
   // volontairement non résolu vers le compte partagé) — un membre d'équipe
   // ne doit donc jamais voir de bouton qui déclencherait un paiement sur son
@@ -1183,7 +1192,7 @@ export default function Dashboard() {
           })}
         </div>
 
-        {hasAccess && clients.length > 0 && (
+        {canViewResults && clients.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative z-10">
             {status === 'active' ? (
               <div className="flex w-fit items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-400">
@@ -1291,7 +1300,7 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          {hasAccess ? (
+          {canViewResults ? (
             <PaidClientTable
               clients={clients}
               onEmailSent={() => accountId && loadData(accountId)}
