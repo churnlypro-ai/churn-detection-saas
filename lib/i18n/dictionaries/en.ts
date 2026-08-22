@@ -370,6 +370,8 @@ export const en: Dictionary = {
       save: 'Save',
       cancel: 'Cancel',
       sendAll: (count: number) => `Send to all (${count})`,
+      sendSelected: (count: number) => `Send selection (${count})`,
+      selectAll: 'Select all',
       sending: 'Sending…',
       sendHelper: 'Spaced sending (10-18s apart), from your connected address — stay on this page while it sends.',
       resultSummary: (sent: number, failed: number) => `${sent} sent${failed ? `, ${failed} failed` : ''}.`,

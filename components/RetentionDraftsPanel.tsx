@@ -42,6 +42,7 @@ export default function RetentionDraftsPanel() {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState('');
   const [sendError, setSendError] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Toujours relire la session au moment de l'appel plutôt qu'un token
   // capté une seule fois — voir le même correctif sur /admin/prospecting
@@ -147,19 +148,36 @@ export default function RetentionDraftsPanel() {
     }
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const sendableIds = pendingDrafts.filter((d) => !!d.client_email).map((d) => d.id);
+    const allSelected = sendableIds.length > 0 && sendableIds.every((id) => selectedIds.has(id));
+    setSelectedIds(allSelected ? new Set() : new Set(sendableIds));
+  }
+
   async function handleSendAll() {
     setSending(true);
     setSendResult('');
     setSendError('');
     try {
       const authToken = await getAuthToken();
+      const hasSelection = selectedIds.size > 0;
       const res = await fetch('/api/retention-drafts/send-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify(hasSelection ? { ids: Array.from(selectedIds) } : {}),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || 'Échec.');
       setSendResult(t.resultSummary(result.sent ?? 0, result.failed ?? 0));
+      setSelectedIds(new Set());
       await loadDrafts();
     } catch (err) {
       setSendError(err instanceof Error ? err.message : 'Échec.');
@@ -225,6 +243,17 @@ export default function RetentionDraftsPanel() {
           <p className="text-sm text-slate-400">{t.empty}</p>
         ) : (
           <div className="space-y-3">
+            {gmailConnected && sendableCount > 0 && (
+              <label className="flex cursor-pointer items-center gap-2 pb-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={sendableCount > 0 && pendingDrafts.filter((d) => !!d.client_email).every((d) => selectedIds.has(d.id))}
+                  onChange={toggleSelectAll}
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-400 dark:border-slate-600"
+                />
+                {t.selectAll}
+              </label>
+            )}
             {drafts.map((draft) => {
               const isEditing = editingId === draft.id;
               return (
@@ -270,6 +299,14 @@ export default function RetentionDraftsPanel() {
                     </div>
                   ) : (
                     <div className="flex items-start justify-between gap-4">
+                      {draft.status === 'draft' && draft.client_email && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(draft.id)}
+                          onChange={() => toggleSelect(draft.id)}
+                          className="mt-1 h-3.5 w-3.5 flex-shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-400 dark:border-slate-600"
+                        />
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{draft.client_name}</p>
                         <p className="truncate text-xs text-slate-400 dark:text-slate-500">{draft.subject}</p>
@@ -311,11 +348,11 @@ export default function RetentionDraftsPanel() {
           <div className="mt-5 border-t border-slate-100 pt-5 dark:border-slate-800">
             <button
               onClick={handleSendAll}
-              disabled={sending || sendableCount === 0}
+              disabled={sending || (selectedIds.size === 0 && sendableCount === 0)}
               className="flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
             >
               <Send className="h-4 w-4" />
-              {sending ? t.sending : t.sendAll(sendableCount)}
+              {sending ? t.sending : selectedIds.size > 0 ? t.sendSelected(selectedIds.size) : t.sendAll(sendableCount)}
             </button>
             <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">{t.sendHelper}</p>
             {sendResult && <p className="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">{sendResult}</p>}

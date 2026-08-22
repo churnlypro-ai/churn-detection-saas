@@ -368,6 +368,8 @@ export const fr = {
       save: 'Enregistrer',
       cancel: 'Annuler',
       sendAll: (count: number) => `Envoyer à tous (${count})`,
+      sendSelected: (count: number) => `Envoyer la sélection (${count})`,
+      selectAll: 'Tout sélectionner',
       sending: 'Envoi en cours…',
       sendHelper: 'Envoi espacé (10-18s entre chaque), depuis ton adresse connectée — ne quitte pas la page pendant l\'envoi.',
       resultSummary: (sent: number, failed: number) => `${sent} envoyé${sent > 1 ? 's' : ''}${failed ? `, ${failed} échoué${failed > 1 ? 's' : ''}` : ''}.`,
