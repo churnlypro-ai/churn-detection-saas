@@ -9,6 +9,16 @@ import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
 
+type ImportLanguage = 'fr' | 'en' | 'es' | 'de' | 'pt';
+
+const IMPORT_LANGUAGES: { value: ImportLanguage; label: string }[] = [
+  { value: 'fr', label: 'Français' },
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'pt', label: 'Português' },
+];
+
 interface QueueEntry {
   id: string;
   company_name: string | null;
@@ -62,6 +72,7 @@ function ProspectingContent() {
   const [fileImporting, setFileImporting] = useState(false);
   const [fileImportError, setFileImportError] = useState('');
   const [fileImportResult, setFileImportResult] = useState('');
+  const [importLanguage, setImportLanguage] = useState<ImportLanguage>('fr');
 
   const [batchCount, setBatchCount] = useState(8);
   const [sending, setSending] = useState(false);
@@ -272,7 +283,7 @@ function ProspectingContent() {
       const res = await fetch('/api/admin/prospecting/import-file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ files: encoded }),
+        body: JSON.stringify({ files: encoded, language: importLanguage }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || 'Import échoué.');
@@ -454,6 +465,19 @@ function ProspectingContent() {
               <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
                 Dépose un ou plusieurs fichiers (.xlsx, .csv, .txt, .md) contenant tes prospects — Churnly extrait automatiquement chaque entreprise avec un email exploitable et rédige l&apos;email de prospection à sa place, dans le même style que d&apos;habitude. Aucune entreprise déjà présente dans la file (ou déjà contactée) n&apos;est ajoutée en double.
               </p>
+              <div className="mb-3">
+                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Langue des emails générés</label>
+                <select
+                  value={importLanguage}
+                  onChange={(e) => setImportLanguage(e.target.value as ImportLanguage)}
+                  disabled={fileImporting}
+                  className="w-full max-w-[220px] rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white sm:w-auto"
+                >
+                  {IMPORT_LANGUAGES.map((l) => (
+                    <option key={l.value} value={l.value}>{l.label}</option>
+                  ))}
+                </select>
+              </div>
               <label className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-6 py-8 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-brand-700">
                 <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
                   {fileImporting ? 'Extraction et rédaction en cours…' : 'Choisir des fichiers'}

@@ -82,35 +82,64 @@ export async function extractLeadsFromRawText(rawText: string): Promise<Extracte
     .filter((lead) => lead.company && emailPattern.test(lead.email));
 }
 
+// Un prospect basé en Allemagne, en Israël ou au Pakistan ne lit pas un
+// email de prospection en français — la langue se choisit par lot
+// d'import (un fichier = généralement un même pays/marché), pas déduite
+// automatiquement par entreprise. Limité à 5 langues pertinentes pour un
+// public SaaS/tech plutôt que les 10 langues les plus parlées au monde
+// (mandarin, hindi, arabe... peu utiles ici).
+export type ProspectLanguage = 'fr' | 'en' | 'es' | 'de' | 'pt';
+
+const LANGUAGE_NAMES: Record<ProspectLanguage, string> = {
+  fr: 'français',
+  en: 'anglais',
+  es: 'espagnol',
+  de: 'allemand',
+  pt: 'portugais',
+};
+
+const SIGNATURE_BY_LANGUAGE: Record<ProspectLanguage, string> = {
+  fr: 'L\'équipe Churnly',
+  en: 'The Churnly team',
+  es: 'El equipo de Churnly',
+  de: 'Das Churnly-Team',
+  pt: 'A equipe Churnly',
+};
+
 // Même ton et structure que les vagues précédentes rédigées manuellement
-// (voir historique des emails de prospection) : vouvoiement, court, un
+// (voir historique des emails de prospection) : registre poli, court, un
 // signal d'usage plausible et spécifique au produit plutôt qu'un discours
 // commercial générique, jamais de faits inventés au-delà de ce qui est
 // fourni dans le contexte.
-const DRAFT_SYSTEM_PROMPT = `Tu rédiges des emails de prospection à froid pour Churnly (churnly.fr), un outil qui analyse les données d'abonnement (Stripe) d'un SaaS pour prédire quels clients vont se désabonner, pourquoi, et quoi faire.
+function buildDraftSystemPrompt(language: ProspectLanguage): string {
+  const langName = LANGUAGE_NAMES[language];
+  const signature = SIGNATURE_BY_LANGUAGE[language];
+  return `Tu rédiges des emails de prospection à froid pour Churnly (churnly.fr), un outil qui analyse les données d'abonnement (Stripe) d'un SaaS pour prédire quels clients vont se désabonner, pourquoi, et quoi faire.
 
 Règles obligatoires, strictes :
-- Vouvoiement, jamais de tutoiement.
+- Écris l'objet ET le corps ENTIÈREMENT en ${langName} — aucun mot dans une autre langue.
+- Registre poli et professionnel, adapté à un premier contact B2B en ${langName}${language === 'fr' ? ' (vouvoiement, jamais de tutoiement)' : ''}.
 - 100 à 140 mots maximum, direct, sans jargon marketing.
 - Mentionne UN signal d'usage plausible et spécifique à l'activité de cette entreprise (déduit raisonnablement du contexte fourni, jamais un fait chiffré inventé) qui annoncerait un désabonnement avant qu'il n'arrive réellement.
-- Propose "l'analyse gratuite Churnly" comme preuve à faire soi-même sur ses propres données — jamais une vente directe, jamais de pression.
+- Propose l'analyse gratuite Churnly comme preuve à faire soi-même sur ses propres données — jamais une vente directe, jamais de pression.
 - Toujours inclure le lien www.churnly.fr.
-- Ne jamais signer avec le prénom du destinataire — toujours "L'équipe Churnly".
+- Ne jamais signer avec le prénom du destinataire — toujours "${signature}" (traduit dans la langue cible, exactement comme donné ici).
 - Objet court (moins de 8 mots), mentionne le nom de l'entreprise.
 - N'invente aucun chiffre (MRR, taux de churn) qui ne soit pas dans le contexte fourni.
 
 Réponds UNIQUEMENT avec un JSON valide, un tableau d'objets, un par prospect, EXACTEMENT dans le même ordre que la liste fournie :
 [{"email": "...", "subject": "...", "body": "..."}]`;
+}
 
 const DRAFT_CHUNK_SIZE = 6;
 const DRAFT_CONCURRENCY = 3;
 
-async function draftChunk(leads: ExtractedLead[]): Promise<DraftedProspectEmail[]> {
+async function draftChunk(leads: ExtractedLead[], language: ProspectLanguage): Promise<DraftedProspectEmail[]> {
   const client = getClient();
   const message = await client.messages.create({
     model: 'claude-sonnet-5',
     max_tokens: 4096,
-    system: DRAFT_SYSTEM_PROMPT,
+    system: buildDraftSystemPrompt(language),
     messages: [
       {
         role: 'user',
@@ -149,7 +178,7 @@ async function draftChunk(leads: ExtractedLead[]): Promise<DraftedProspectEmail[
   return results;
 }
 
-export async function draftProspectEmailsBatch(leads: ExtractedLead[]): Promise<DraftedProspectEmail[]> {
+export async function draftProspectEmailsBatch(leads: ExtractedLead[], language: ProspectLanguage = 'fr'): Promise<DraftedProspectEmail[]> {
   const chunks: ExtractedLead[][] = [];
   for (let i = 0; i < leads.length; i += DRAFT_CHUNK_SIZE) {
     chunks.push(leads.slice(i, i + DRAFT_CHUNK_SIZE));
@@ -158,7 +187,7 @@ export async function draftProspectEmailsBatch(leads: ExtractedLead[]): Promise<
   const results: DraftedProspectEmail[] = [];
   for (let i = 0; i < chunks.length; i += DRAFT_CONCURRENCY) {
     const batch = chunks.slice(i, i + DRAFT_CONCURRENCY);
-    const batchResults = await Promise.all(batch.map((chunk) => draftChunk(chunk).catch(() => [] as DraftedProspectEmail[])));
+    const batchResults = await Promise.all(batch.map((chunk) => draftChunk(chunk, language).catch(() => [] as DraftedProspectEmail[])));
     for (const r of batchResults) results.push(...r);
   }
   return results;
