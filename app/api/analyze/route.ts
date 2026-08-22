@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { generateClientEmail, type AnalysisLanguage } from '@/lib/claude';
+import { generateClientEmail, type AnalysisLanguage, type ModelTier } from '@/lib/claude';
 import { runChurnAnalysis } from '@/lib/analysis';
 import { resolveAccountId } from '@/lib/team';
 
@@ -37,11 +37,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing templateId or client data' }, { status: 400 });
     }
     try {
+      // Même règle que runChurnAnalysis (lib/analysis.ts) : Opus réservé aux
+      // comptes réellement abonnés, un essai gratuit reçoit Haiku 4.5.
+      const { data: businessProfile } = await supabaseAdmin
+        .from('users')
+        .select('subscription_status')
+        .eq('id', userId)
+        .maybeSingle();
+      const modelTier: ModelTier = businessProfile?.subscription_status === 'active' ? 'premium' : 'standard';
+
       const email = await generateClientEmail(templateId, {
         ...client,
         risk_factors: client.details?.risk_factors,
         recommended_actions: client.details?.recommended_actions,
-      }, parseLanguage(language));
+      }, parseLanguage(language), modelTier);
       return NextResponse.json({ subject: email.subject, body: email.body });
     } catch (err) {
       console.error('[analyze] email generation failed', err);

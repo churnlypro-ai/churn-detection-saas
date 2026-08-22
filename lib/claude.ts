@@ -194,6 +194,7 @@ export async function generateClientEmail(
     recommended_actions?: RecommendedAction[];
   },
   language: AnalysisLanguage = 'fr',
+  modelTier: ModelTier = 'standard',
 ): Promise<EmailTemplate> {
   const client_for = TEMPLATE_PROMPTS[templateId] ?? TEMPLATE_PROMPTS.direct;
   const clientInstance = getClient();
@@ -217,7 +218,7 @@ Règles:
     : `${client.solution}`;
 
   const message = await clientInstance.messages.create({
-    model: 'claude-sonnet-5',
+    model: MODEL_BY_TIER[modelTier],
     max_tokens: 1024,
     system: systemPrompt,
     messages: [

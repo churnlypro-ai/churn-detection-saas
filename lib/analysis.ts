@@ -31,7 +31,7 @@ export async function runChurnAnalysis(
     .maybeSingle();
 
   // Opus 5 (le plus cher) n'est déclenché que pour un compte réellement
-  // abonné — un essai ou un compte gratuit reçoit une analyse Sonnet. Voir
+  // abonné — un essai ou un compte gratuit reçoit une analyse Haiku 4.5. Voir
   // la note dans lib/claude.ts pour la décision produit derrière ce choix.
   const modelTier: ModelTier = businessProfile?.subscription_status === 'active' ? 'premium' : 'standard';
   const isPaying = businessProfile?.subscription_status === 'active' || businessProfile?.subscription_status === 'trialing';
