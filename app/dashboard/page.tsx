@@ -44,6 +44,7 @@ interface RecommendedAction {
 interface AnalysisRow {
   id: string;
   client_name: string;
+  client_email?: string | null;
   revenue_monthly: number;
   churn_score: number;
   reason: string;

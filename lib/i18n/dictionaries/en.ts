@@ -132,7 +132,7 @@ export const en: Dictionary = {
     subtitle: 'Connect your customer data to see who\'s at risk of leaving.',
     processing: 'Processing…',
     uploadCsv: 'Upload a CSV',
-    columnsHint: 'name, revenue_monthly, days_since_last_login, support_tickets_open, payment_status, renewal_date',
+    columnsHint: 'name, revenue_monthly, days_since_last_login, support_tickets_open, payment_status, renewal_date, email (optional — lets you write directly to this client later)',
     analyzing: 'Churnly is analyzing your customers…',
     or: 'or',
     connectStripe: 'Connect Stripe',

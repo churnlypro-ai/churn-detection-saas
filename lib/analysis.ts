@@ -64,10 +64,18 @@ export async function runChurnAnalysis(
   // saisie dupliquée) : le dernier gagnerait, et TOUS les clients de ce nom
   // hériteraient de son revenu. Une file par nom associe au contraire
   // chaque occurrence à la bonne, dans l'ordre où Claude les a reçues.
-  const byName = new Map<string, Array<{ revenue: number; renewal: string | null }>>();
+  const byName = new Map<string, Array<{ revenue: number; renewal: string | null; email: string | null }>>();
   for (const c of clients) {
     const name = c.name as string;
-    const entry = { revenue: Number(c.revenue_monthly) || 0, renewal: parseDateOrNull(c.renewal_date) };
+    const rawEmail = c.email;
+    const entry = {
+      revenue: Number(c.revenue_monthly) || 0,
+      renewal: parseDateOrNull(c.renewal_date),
+      // Vient soit d'une colonne "email" du CSV, soit de l'import Stripe
+      // Connect (voir StripeSourcedClient dans lib/stripeConnect.ts) —
+      // jamais deviné, laissé vide si absent des deux.
+      email: typeof rawEmail === 'string' && rawEmail.trim() ? rawEmail.trim() : null,
+    };
     const existing = byName.get(name);
     if (existing) existing.push(entry);
     else byName.set(name, [entry]);
@@ -82,6 +90,7 @@ export async function runChurnAnalysis(
       client_name: item.client_name,
       revenue_monthly: matched?.revenue ?? 0,
       renewal_date: matched?.renewal ?? null,
+      client_email: matched?.email ?? null,
       churn_score: item.churn_score,
       reason: item.summary_reason,
       solution: item.recommended_actions[0]?.detail ?? '',

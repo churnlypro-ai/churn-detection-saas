@@ -130,7 +130,7 @@ export const fr = {
     subtitle: 'Connectez vos données clients pour voir qui risque de partir.',
     processing: 'Traitement en cours…',
     uploadCsv: 'Télécharger un CSV',
-    columnsHint: 'name, revenue_monthly, days_since_last_login, support_tickets_open, payment_status, renewal_date',
+    columnsHint: 'name, revenue_monthly, days_since_last_login, support_tickets_open, payment_status, renewal_date, email (optionnel — permet d\'écrire directement à ce client plus tard)',
     analyzing: 'Churnly analyse vos clients…',
     or: 'ou',
     connectStripe: 'Connecter Stripe',
