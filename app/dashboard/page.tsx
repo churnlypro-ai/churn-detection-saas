@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
+import RetentionDraftsPanel from '@/components/RetentionDraftsPanel';
 import { EASE_OUT } from '@/lib/animations';
 import {
   AlertTriangle, Lock, X, Mail, Gift, GraduationCap, Zap, Check, TrendingDown, Users, Euro,
@@ -1308,6 +1309,12 @@ export default function Dashboard() {
             />
           )}
         </motion.div>
+
+        {hasAccess && (
+          <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10 mb-8">
+            <RetentionDraftsPanel />
+          </motion.div>
+        )}
 
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }} className="relative z-10">
           <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">{t.historyTitle}</h2>

@@ -155,6 +155,33 @@ const TEMPLATE_PROMPTS: Record<string, { tone: string; subject: string; approach
   },
 };
 
+// Choisit automatiquement le template le plus pertinent selon la raison du
+// risque, pour ne plus faire deviner à l'utilisateur lequel des 5 templates
+// convient à chaque client — voir la discussion sur l'envoi groupé de
+// brouillons de rétention. Heuristique volontairement simple (mots-clés +
+// type d'action recommandée), pas une nouvelle analyse IA : le but est de
+// retirer une décision répétitive, pas d'ajouter un appel Claude de plus.
+export function pickBestTemplate(client: {
+  reason?: string;
+  risk_factors?: RiskFactor[];
+  recommended_actions?: RecommendedAction[];
+}): string {
+  const haystack = [
+    client.reason ?? '',
+    ...(client.risk_factors?.map((f) => `${f.factor} ${f.evidence}`) ?? []),
+    ...(client.recommended_actions?.map((a) => `${a.detail} ${a.expected_impact}`) ?? []),
+  ].join(' ').toLowerCase();
+
+  const topActionType = client.recommended_actions?.[0]?.type;
+
+  if (/paiement|payment|carte|facturation|billing|card|impayé/.test(haystack)) return 'special';
+  if (topActionType === 'offer') return 'empathy';
+  if (topActionType === 'call') return 'audit';
+  if (/support|ticket/.test(haystack)) return 'empathy';
+  if (/inactif|inactivit|usage|connexion|login|engagement/.test(haystack)) return 'webinar';
+  return 'direct';
+}
+
 export async function generateClientEmail(
   templateId: string,
   client: {

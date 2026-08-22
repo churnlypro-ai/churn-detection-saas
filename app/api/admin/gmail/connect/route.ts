@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
-import { buildGmailAuthUrl } from '@/lib/googleGmail';
+import { buildGmailAuthUrl, adminRedirectUri } from '@/lib/googleGmail';
 
 const STATE_COOKIE = 'gmail_oauth_state';
 
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   // Google d'un autre compte que celui prévu (voir la vérification côté
   // callback).
   const state = crypto.randomBytes(24).toString('hex');
-  const response = NextResponse.json({ url: buildGmailAuthUrl(state) });
+  const response = NextResponse.json({ url: buildGmailAuthUrl(state, adminRedirectUri()) });
   response.cookies.set(STATE_COOKIE, state, {
     httpOnly: true,
     secure: true,

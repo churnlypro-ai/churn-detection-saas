@@ -1,17 +1,27 @@
 const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 
-function redirectUri(): string {
+// Deux parcours de connexion Gmail partagent ce même client OAuth Google
+// (GOOGLE_GMAIL_CLIENT_ID/SECRET) : celui de l'admin (prospection, un seul
+// compte churnly.pro@gmail.com) et celui, par compte, des clients Churnly
+// (rétention). Chacun a sa propre URI de redirection — les deux doivent être
+// déclarées comme "URI de redirection autorisés" sur le même client OAuth
+// dans Google Cloud Console.
+export function adminRedirectUri(): string {
   return `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/gmail/callback`;
+}
+
+export function customerRedirectUri(): string {
+  return `${process.env.NEXT_PUBLIC_APP_URL}/api/gmail/callback`;
 }
 
 // access_type=offline + prompt=consent : sans ça, Google ne renvoie un
 // refresh_token qu'à la toute première autorisation d'un compte donné —
 // une reconnexion (ex: après expiration à 7 jours en mode Testing, voir
 // l'app/admin/prospecting/page.tsx) n'en renverrait plus aucun.
-export function buildGmailAuthUrl(state: string): string {
+export function buildGmailAuthUrl(state: string, redirectUri: string): string {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_GMAIL_CLIENT_ID ?? '',
-    redirect_uri: redirectUri(),
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: GMAIL_SEND_SCOPE,
     access_type: 'offline',
@@ -29,7 +39,7 @@ interface GoogleTokenResponse {
   token_type: string;
 }
 
-export async function exchangeCodeForTokens(code: string): Promise<GoogleTokenResponse> {
+export async function exchangeCodeForTokens(code: string, redirectUri: string): Promise<GoogleTokenResponse> {
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -37,7 +47,7 @@ export async function exchangeCodeForTokens(code: string): Promise<GoogleTokenRe
       code,
       client_id: process.env.GOOGLE_GMAIL_CLIENT_ID ?? '',
       client_secret: process.env.GOOGLE_GMAIL_CLIENT_SECRET ?? '',
-      redirect_uri: redirectUri(),
+      redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     }),
   });
