@@ -72,7 +72,13 @@ function ProspectingContent() {
   const [fileImporting, setFileImporting] = useState(false);
   const [fileImportError, setFileImportError] = useState('');
   const [fileImportResult, setFileImportResult] = useState('');
-  const [importLanguage, setImportLanguage] = useState<ImportLanguage>('fr');
+  // Volontairement vide au départ (jamais un défaut silencieux comme
+  // 'fr') — un import déjà arrivé où plusieurs lots enchaînés sans
+  // rechanger la langue étaient tous partis dans la langue du lot
+  // précédent. Réinitialisée après chaque import réussi pour forcer un
+  // choix explicite à chaque fois plutôt que de réutiliser silencieusement
+  // la dernière valeur.
+  const [importLanguage, setImportLanguage] = useState<ImportLanguage | ''>('');
 
   const [batchCount, setBatchCount] = useState(8);
   const [sending, setSending] = useState(false);
@@ -274,6 +280,12 @@ function ProspectingContent() {
   async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
+    if (!importLanguage) {
+      setFileImportError('Choisis d\'abord une langue avant d\'importer.');
+      e.target.value = '';
+      return;
+    }
+    const languageLabel = IMPORT_LANGUAGES.find((l) => l.value === importLanguage)?.label ?? importLanguage;
     setFileImporting(true);
     setFileImportError('');
     setFileImportResult('');
@@ -290,8 +302,11 @@ function ProspectingContent() {
       const skippedText = result.skippedDuplicate
         ? ` (${result.skippedDuplicate} déjà dans la file ou déjà contacté${result.skippedDuplicate > 1 ? 's' : ''}, ignoré${result.skippedDuplicate > 1 ? 's' : ''})`
         : '';
-      setFileImportResult(`${result.added} prospect${result.added !== 1 ? 's' : ''} ajouté${result.added !== 1 ? 's' : ''} à la file${skippedText}.`);
+      setFileImportResult(`${result.added} prospect${result.added !== 1 ? 's' : ''} ajouté${result.added !== 1 ? 's' : ''} à la file, rédigé${result.added !== 1 ? 's' : ''} en ${languageLabel}${skippedText}.`);
       await loadQueue(authToken);
+      // Force un nouveau choix explicite avant le prochain import — voir
+      // la note sur importLanguage plus haut.
+      setImportLanguage('');
     } catch (err) {
       setFileImportError(err instanceof Error ? err.message : 'Import échoué.');
     } finally {
@@ -473,14 +488,15 @@ function ProspectingContent() {
                   disabled={fileImporting}
                   className="w-full max-w-[220px] rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white sm:w-auto"
                 >
+                  <option value="" disabled>— Choisir une langue —</option>
                   {IMPORT_LANGUAGES.map((l) => (
                     <option key={l.value} value={l.value}>{l.label}</option>
                   ))}
                 </select>
               </div>
-              <label className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-6 py-8 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-brand-700">
+              <label className={`flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 text-center transition ${importLanguage ? 'cursor-pointer border-slate-200 bg-slate-50/60 hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-brand-700' : 'cursor-not-allowed border-slate-100 bg-slate-50/30 opacity-60 dark:border-slate-800 dark:bg-slate-950/40'}`}>
                 <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
-                  {fileImporting ? 'Extraction et rédaction en cours…' : 'Choisir des fichiers'}
+                  {fileImporting ? 'Extraction et rédaction en cours…' : importLanguage ? 'Choisir des fichiers' : 'Choisis d\'abord une langue ci-dessus'}
                 </span>
                 <span className="text-xs text-slate-400 dark:text-slate-500">.xlsx, .csv, .txt, .md — plusieurs fichiers à la fois possibles</span>
                 <input
@@ -489,7 +505,7 @@ function ProspectingContent() {
                   accept=".xlsx,.xls,.csv,.txt,.md"
                   className="hidden"
                   onChange={handleFileImport}
-                  disabled={fileImporting}
+                  disabled={fileImporting || !importLanguage}
                 />
               </label>
               {fileImporting && (
