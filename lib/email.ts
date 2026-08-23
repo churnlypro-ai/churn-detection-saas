@@ -416,7 +416,7 @@ export async function sendCallBookingAdminNotifyEmail({ to, name, email, company
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
       <h2 style="font-weight: 600;">${subject}</h2>
       <p><strong>${name}</strong>${companyName ? ` (${companyName})` : ''} — ${email}</p>
-      <p style="margin: 16px 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">${availability}</p>
+      <p style="margin: 16px 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; white-space: pre-line;">${availability.replace(/\n/g, '<br>')}</p>
       <p style="margin-top: 24px;">
         <a href="${adminUrl}" style="background: #d97706; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">
           Confirmer un créneau

@@ -10,6 +10,8 @@ interface CallBookingModalProps {
   onClose: () => void;
 }
 
+type ContactMethod = 'phone' | 'whatsapp' | 'video';
+
 export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
   const t = useTranslations('callBooking');
   const { language } = useLanguage();
@@ -17,7 +19,11 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [availability, setAvailability] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [notes, setNotes] = useState('');
+  const [contactMethod, setContactMethod] = useState<ContactMethod>('video');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -30,15 +36,47 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
       setName('');
       setEmail('');
       setCompanyName('');
-      setAvailability('');
+      setDate('');
+      setTime('');
+      setNotes('');
+      setContactMethod('video');
+      setPhoneNumber('');
       setError('');
       setSuccess(false);
     }, 300);
   }
 
+  // La base attend un seul champ "availability" en texte libre (voir
+  // /api/call-bookings) — on le construit ici à partir des inputs date/heure
+  // natifs plutôt que d'ajouter des colonnes structurées pour un besoin qui
+  // reste, côté équipe, une simple lecture humaine avant confirmation.
+  function formatAvailability(): string {
+    const formattedDate = new Date(`${date}T00:00:00`).toLocaleDateString(
+      language === 'en' ? 'en-US' : 'fr-FR',
+      { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+    );
+    const base = language === 'en' ? `${formattedDate} at ${time}` : `${formattedDate} à ${time}`;
+    const withNotes = notes.trim() ? `${base} — ${notes.trim()}` : base;
+
+    const contactLabels: Record<ContactMethod, string> = {
+      phone: t.contactPhone,
+      whatsapp: t.contactWhatsapp,
+      video: t.contactVideo,
+    };
+    const contactLine = contactMethod === 'video'
+      ? (language === 'en' ? `Contact: ${contactLabels.video}` : `Contact : ${contactLabels.video}`)
+      : (language === 'en'
+        ? `Contact: ${contactLabels[contactMethod]} (${phoneNumber.trim()})`
+        : `Contact : ${contactLabels[contactMethod]} (${phoneNumber.trim()})`);
+
+    return `${withNotes}\n${contactLine}`;
+  }
+
+  const requiresPhone = contactMethod === 'phone' || contactMethod === 'whatsapp';
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !availability.trim()) {
+    if (!name.trim() || !email.trim() || !date || !time || (requiresPhone && !phoneNumber.trim())) {
       setError(t.errorMissingFields);
       return;
     }
@@ -48,7 +86,7 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
       const res = await fetch('/api/call-bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, companyName, availability, language }),
+        body: JSON.stringify({ name, email, companyName, availability: formatAvailability(), language }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || t.errorGeneric);
@@ -134,15 +172,60 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
                 />
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">{t.availabilityLabel}</label>
-                  <textarea
-                    placeholder={t.availabilityPlaceholder}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <input
+                      type="date"
+                      required
+                      value={date}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    />
+                    <input
+                      type="time"
+                      required
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+                </div>
+                <textarea
+                  placeholder={t.availabilityPlaceholder}
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">{t.contactMethodLabel}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(['video', 'phone', 'whatsapp'] as ContactMethod[]).map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setContactMethod(method)}
+                        className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                          contactMethod === method
+                            ? 'border-brand-600 bg-brand-600 text-white'
+                            : 'border-slate-200 text-slate-600 hover:border-brand-300 dark:border-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {method === 'phone' ? t.contactPhone : method === 'whatsapp' ? t.contactWhatsapp : t.contactVideo}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {requiresPhone && (
+                  <input
+                    type="tel"
+                    placeholder={t.phoneNumberPlaceholder}
                     required
-                    rows={3}
-                    value={availability}
-                    onChange={(e) => setAvailability(e.target.value)}
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                   />
-                </div>
+                )}
                 {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
                 <button
                   type="submit"

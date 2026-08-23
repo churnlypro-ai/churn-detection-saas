@@ -167,7 +167,7 @@ export default function AdminCallsPage() {
                           <Clock className="h-3 w-3" /> {STATUS_LABELS[b.status]}
                         </span>
                       </div>
-                      <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                      <p className="mt-3 whitespace-pre-line rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
                         {b.availability}
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
