@@ -72,13 +72,14 @@ function ProspectingContent() {
   const [fileImporting, setFileImporting] = useState(false);
   const [fileImportError, setFileImportError] = useState('');
   const [fileImportResult, setFileImportResult] = useState('');
-  // Volontairement vide au départ (jamais un défaut silencieux comme
-  // 'fr') — un import déjà arrivé où plusieurs lots enchaînés sans
-  // rechanger la langue étaient tous partis dans la langue du lot
-  // précédent. Réinitialisée après chaque import réussi pour forcer un
-  // choix explicite à chaque fois plutôt que de réutiliser silencieusement
-  // la dernière valeur.
-  const [importLanguage, setImportLanguage] = useState<ImportLanguage | ''>('');
+
+  // Correction de langue pour des brouillons déjà en file (rédigés dans la
+  // mauvaise langue lors d'un import précédent) — sélection multiple +
+  // une langue cible, voir handleRelanguage.
+  const [relanguageTarget, setRelanguageTarget] = useState<ImportLanguage | ''>('');
+  const [relanguaging, setRelanguaging] = useState(false);
+  const [relanguageResult, setRelanguageResult] = useState('');
+  const [relanguageError, setRelanguageError] = useState('');
 
   const [batchCount, setBatchCount] = useState(8);
   const [sending, setSending] = useState(false);
@@ -280,12 +281,6 @@ function ProspectingContent() {
   async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
-    if (!importLanguage) {
-      setFileImportError('Choisis d\'abord une langue avant d\'importer.');
-      e.target.value = '';
-      return;
-    }
-    const languageLabel = IMPORT_LANGUAGES.find((l) => l.value === importLanguage)?.label ?? importLanguage;
     setFileImporting(true);
     setFileImportError('');
     setFileImportResult('');
@@ -295,23 +290,49 @@ function ProspectingContent() {
       const res = await fetch('/api/admin/prospecting/import-file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ files: encoded, language: importLanguage }),
+        body: JSON.stringify({ files: encoded }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || 'Import échoué.');
       const skippedText = result.skippedDuplicate
         ? ` (${result.skippedDuplicate} déjà dans la file ou déjà contacté${result.skippedDuplicate > 1 ? 's' : ''}, ignoré${result.skippedDuplicate > 1 ? 's' : ''})`
         : '';
-      setFileImportResult(`${result.added} prospect${result.added !== 1 ? 's' : ''} ajouté${result.added !== 1 ? 's' : ''} à la file, rédigé${result.added !== 1 ? 's' : ''} en ${languageLabel}${skippedText}.`);
+      const breakdown: Record<string, number> = result.languageBreakdown ?? {};
+      const breakdownText = Object.keys(breakdown).length
+        ? ` — ${Object.entries(breakdown).map(([lang, count]) => `${IMPORT_LANGUAGES.find((l) => l.value === lang)?.label ?? lang}: ${count}`).join(', ')}`
+        : '';
+      setFileImportResult(`${result.added} prospect${result.added !== 1 ? 's' : ''} ajouté${result.added !== 1 ? 's' : ''} à la file (langue détectée automatiquement par entreprise)${breakdownText}${skippedText}.`);
       await loadQueue(authToken);
-      // Force un nouveau choix explicite avant le prochain import — voir
-      // la note sur importLanguage plus haut.
-      setImportLanguage('');
     } catch (err) {
       setFileImportError(err instanceof Error ? err.message : 'Import échoué.');
     } finally {
       setFileImporting(false);
       e.target.value = '';
+    }
+  }
+
+  async function handleRelanguage() {
+    if (!relanguageTarget || selectedIds.size === 0) return;
+    setRelanguaging(true);
+    setRelanguageError('');
+    setRelanguageResult('');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/prospecting/relanguage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ ids: Array.from(selectedIds), language: relanguageTarget }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Correction échouée.');
+      setRelanguageResult(`${result.fixed} email${result.fixed !== 1 ? 's' : ''} corrigé${result.fixed !== 1 ? 's' : ''}.`);
+      setSelectedIds(new Set());
+      setRelanguageTarget('');
+      await loadQueue(authToken);
+    } catch (err) {
+      setRelanguageError(err instanceof Error ? err.message : 'Correction échouée.');
+    } finally {
+      setRelanguaging(false);
     }
   }
 
@@ -478,25 +499,11 @@ function ProspectingContent() {
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Importer des fichiers (automatique)</h2>
               <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-                Dépose un ou plusieurs fichiers (.xlsx, .csv, .txt, .md) contenant tes prospects — Churnly extrait automatiquement chaque entreprise avec un email exploitable et rédige l&apos;email de prospection à sa place, dans le même style que d&apos;habitude. Aucune entreprise déjà présente dans la file (ou déjà contactée) n&apos;est ajoutée en double.
+                Dépose un ou plusieurs fichiers (.xlsx, .csv, .txt, .md) contenant tes prospects — Churnly extrait automatiquement chaque entreprise avec un email exploitable, déduit la langue à utiliser pour chacune (pays/ville/indices du fichier) et rédige l&apos;email de prospection à sa place, dans la bonne langue et dans le même style que d&apos;habitude. Aucune entreprise déjà présente dans la file (ou déjà contactée) n&apos;est ajoutée en double.
               </p>
-              <div className="mb-3">
-                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Langue des emails générés</label>
-                <select
-                  value={importLanguage}
-                  onChange={(e) => setImportLanguage(e.target.value as ImportLanguage)}
-                  disabled={fileImporting}
-                  className="w-full max-w-[220px] rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white sm:w-auto"
-                >
-                  <option value="" disabled>— Choisir une langue —</option>
-                  {IMPORT_LANGUAGES.map((l) => (
-                    <option key={l.value} value={l.value}>{l.label}</option>
-                  ))}
-                </select>
-              </div>
-              <label className={`flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 text-center transition ${importLanguage ? 'cursor-pointer border-slate-200 bg-slate-50/60 hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-brand-700' : 'cursor-not-allowed border-slate-100 bg-slate-50/30 opacity-60 dark:border-slate-800 dark:bg-slate-950/40'}`}>
+              <label className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-6 py-8 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-brand-700">
                 <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
-                  {fileImporting ? 'Extraction et rédaction en cours…' : importLanguage ? 'Choisir des fichiers' : 'Choisis d\'abord une langue ci-dessus'}
+                  {fileImporting ? 'Extraction et rédaction en cours…' : 'Choisir des fichiers'}
                 </span>
                 <span className="text-xs text-slate-400 dark:text-slate-500">.xlsx, .csv, .txt, .md — plusieurs fichiers à la fois possibles</span>
                 <input
@@ -505,7 +512,7 @@ function ProspectingContent() {
                   accept=".xlsx,.xls,.csv,.txt,.md"
                   className="hidden"
                   onChange={handleFileImport}
-                  disabled={fileImporting || !importLanguage}
+                  disabled={fileImporting}
                 />
               </label>
               {fileImporting && (
@@ -636,6 +643,37 @@ body:
               {sendResult && <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">{sendResult}</p>}
               {sendError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{sendError}</p>}
             </div>
+
+            {selectedIds.size > 0 && (
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Corriger la langue de la sélection</h2>
+                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                  Pour des brouillons déjà en file rédigés dans la mauvaise langue : réécrit l&apos;objet et le corps des {selectedIds.size} email{selectedIds.size > 1 ? 's' : ''} coché{selectedIds.size > 1 ? 's' : ''} ci-dessous dans la langue choisie, en gardant le même message.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={relanguageTarget}
+                    onChange={(e) => setRelanguageTarget(e.target.value as ImportLanguage)}
+                    disabled={relanguaging}
+                    className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  >
+                    <option value="" disabled>— Choisir une langue —</option>
+                    {IMPORT_LANGUAGES.map((l) => (
+                      <option key={l.value} value={l.value}>{l.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleRelanguage}
+                    disabled={relanguaging || !relanguageTarget}
+                    className="rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                  >
+                    {relanguaging ? 'Correction en cours…' : 'Corriger la langue'}
+                  </button>
+                </div>
+                {relanguageResult && <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">{relanguageResult}</p>}
+                {relanguageError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{relanguageError}</p>}
+              </div>
+            )}
 
             <div className="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
