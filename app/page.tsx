@@ -9,9 +9,10 @@ import Calculator from '@/components/Calculator';
 import SectionDivider from '@/components/SectionDivider';
 import SectionToc from '@/components/SectionToc';
 import SignalMarquee from '@/components/SignalMarquee';
+import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -358,6 +359,8 @@ function CTASection() {
   const { scrollYProgress } = useScroll({ target: ctaRef, offset: ['start end', 'end start'] });
   const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 1, 1.02]);
   const t = useTranslations('home').cta;
+  const tCall = useTranslations('callBooking');
+  const [callModalOpen, setCallModalOpen] = useState(false);
 
   return (
     <section ref={ctaRef} className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/40 px-6 py-28 text-center dark:from-slate-950 dark:to-slate-900">
@@ -380,18 +383,31 @@ function CTASection() {
         >
           {t.body}
         </motion.p>
-        <motion.a
-          href="/signup"
+        <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }}
-          whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-          whileTap={{ scale: 0.98 }}
-          className="mt-10 inline-block rounded-full bg-brand-600 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+          className="mt-10 flex flex-wrap items-center justify-center gap-3"
         >
-          {t.button}
-        </motion.a>
+          <motion.a
+            href="/signup"
+            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.98 }}
+            className="inline-block rounded-full bg-brand-600 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+          >
+            {t.button}
+          </motion.a>
+          <motion.button
+            onClick={() => setCallModalOpen(true)}
+            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.98 }}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-8 py-4 text-lg font-bold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700"
+          >
+            <PhoneCall className="h-4 w-4" />
+            {tCall.button}
+          </motion.button>
+        </motion.div>
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -402,6 +418,8 @@ function CTASection() {
           {t.note}
         </motion.p>
       </motion.div>
+
+      <CallBookingModal open={callModalOpen} onClose={() => setCallModalOpen(false)} />
     </section>
   );
 }
