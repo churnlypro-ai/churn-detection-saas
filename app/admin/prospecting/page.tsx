@@ -343,6 +343,26 @@ function ProspectingContent() {
     await loadQueue(authToken);
   }
 
+  const [deletingSelection, setDeletingSelection] = useState(false);
+
+  async function handleDeleteSelected() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Supprimer définitivement ${selectedIds.size} email${selectedIds.size > 1 ? 's' : ''} de la file ?`)) return;
+    setDeletingSelection(true);
+    try {
+      const authToken = await getAuthToken();
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/admin/prospecting/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } })
+        )
+      );
+      setSelectedIds(new Set());
+      await loadQueue(authToken);
+    } finally {
+      setDeletingSelection(false);
+    }
+  }
+
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -646,6 +666,19 @@ body:
 
             {selectedIds.size > 0 && (
               <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {selectedIds.size} email{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
+                  </p>
+                  <button
+                    onClick={handleDeleteSelected}
+                    disabled={deletingSelection}
+                    className="flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {deletingSelection ? 'Suppression…' : `Supprimer la sélection (${selectedIds.size})`}
+                  </button>
+                </div>
                 <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Corriger la langue de la sélection</h2>
                 <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
                   Pour des brouillons déjà en file rédigés dans la mauvaise langue : réécrit l&apos;objet et le corps des {selectedIds.size} email{selectedIds.size > 1 ? 's' : ''} coché{selectedIds.size > 1 ? 's' : ''} ci-dessous dans la langue choisie, en gardant le même message.
