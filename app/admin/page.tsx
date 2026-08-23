@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Users, Euro, AlertTriangle, TrendingUp, XCircle, Clock, ExternalLink } from 'lucide-react';
+import { Users, Euro, AlertTriangle, TrendingUp, XCircle, Clock, ExternalLink, Megaphone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -27,6 +27,10 @@ interface AccountRow {
   trialEnd: string | null;
   lastActivityAt: string | null;
   risk: RiskInfo;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  referredBy: string | null;
 }
 
 interface Summary {
@@ -37,6 +41,7 @@ interface Summary {
   canceled: number;
   mrr: number;
   highRiskCount: number;
+  fromAds: number;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -52,6 +57,18 @@ const RISK_STYLES: Record<RiskInfo['level'], string> = {
   medium: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
   high: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400',
 };
+
+// "Pub" seulement si utm_source est renseigné (capté à l'inscription depuis
+// ?utm_source=... — voir lib/adAttribution.ts) : c'est ce qui permet de
+// répondre à "quel client vient de mes pubs ou pas" sans deviner.
+function accountSource(account: AccountRow): { label: string; detail: string | null } {
+  if (account.utmSource) {
+    const detail = [account.utmMedium, account.utmCampaign].filter(Boolean).join(' · ');
+    return { label: account.utmSource, detail: detail || null };
+  }
+  if (account.referredBy) return { label: 'Parrainage', detail: null };
+  return { label: 'Organique', detail: null };
+}
 
 function relativeDate(iso: string | null): string {
   if (!iso) return 'Jamais';
@@ -115,6 +132,7 @@ export default function AdminOverview() {
     { label: 'En essai', value: summary.trialing, icon: Clock },
     { label: 'Paiement en échec', value: summary.pastDue, icon: AlertTriangle },
     { label: 'Risque élevé', value: summary.highRiskCount, icon: AlertTriangle },
+    { label: 'Venus de pub', value: summary.fromAds, icon: Megaphone },
   ] : [];
 
   return (
@@ -143,7 +161,7 @@ export default function AdminOverview() {
           <p className="text-sm text-slate-400">Chargement…</p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
               {cards.map((card) => (
                 <div key={card.label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                   <card.icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -161,6 +179,7 @@ export default function AdminOverview() {
                     <th className="px-4 py-3 font-medium">Statut</th>
                     <th className="px-4 py-3 font-medium">Prix</th>
                     <th className="px-4 py-3 font-medium">Dernière activité</th>
+                    <th className="px-4 py-3 font-medium">Source</th>
                     <th className="px-4 py-3 font-medium">Risque</th>
                     <th className="px-4 py-3 font-medium"></th>
                   </tr>
@@ -179,6 +198,26 @@ export default function AdminOverview() {
                         {account.monthlyPrice > 0 ? formatEuro(account.monthlyPrice) : '—'}
                       </td>
                       <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{relativeDate(account.lastActivityAt)}</td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const source = accountSource(account);
+                          return (
+                            <>
+                              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                account.utmSource
+                                  ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400'
+                                  : account.referredBy
+                                  ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400'
+                                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                              }`}>
+                                {account.utmSource && <Megaphone className="h-3 w-3" />}
+                                {source.label}
+                              </span>
+                              {source.detail && <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{source.detail}</p>}
+                            </>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${RISK_STYLES[account.risk.level]}`}>
                           {account.risk.score}

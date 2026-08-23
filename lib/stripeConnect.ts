@@ -46,30 +46,56 @@ export function verifyConnectState(state: string): string | null {
   return userId;
 }
 
+export interface SignupUtm {
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+}
+
 // Format distinct de signConnectState (préfixe littéral 'signup', jamais
 // confondu avec un userId UUID) : utilisé quand aucun compte Churnly
 // n'existe encore — inscription en un clic en liant Stripe avant même
 // d'avoir créé le compte, comme "Sign up with GitHub". La langue choisie
 // sur la page d'inscription est embarquée dans l'état signé puisqu'il n'y a
-// pas encore de session ni de profil en base pour la retrouver au retour.
-export function signSignupState(language: 'fr' | 'en'): string {
-  const nonce = crypto.randomBytes(16).toString('hex');
-  const timestamp = Date.now().toString();
-  const signature = crypto
-    .createHmac('sha256', getStateSecret())
-    .update(`signup.${language}.${nonce}.${timestamp}`)
-    .digest('hex');
-  return `signup.${language}.${nonce}.${timestamp}.${signature}`;
+// pas encore de session ni de profil en base pour la retrouver au retour —
+// et depuis l'ajout de l'attribution publicitaire, l'utm_source/medium/
+// campaign capté côté client (voir lib/adAttribution.ts) l'est aussi, pour
+// la même raison : rien ne survit à l'aller-retour OAuth vers Stripe.
+// Encodé en base64url (jamais de point ni de caractère qui casserait le
+// split positionnel de l'état signé) plutôt qu'en clair.
+function encodeUtm(utm?: SignupUtm): string {
+  if (!utm || (!utm.utmSource && !utm.utmMedium && !utm.utmCampaign)) return '-';
+  return Buffer.from(JSON.stringify(utm)).toString('base64url');
 }
 
-export function verifySignupState(state: string): { language: 'fr' | 'en' } | null {
+function decodeUtm(encoded: string): SignupUtm | null {
+  if (encoded === '-') return null;
+  try {
+    return JSON.parse(Buffer.from(encoded, 'base64url').toString('utf-8')) as SignupUtm;
+  } catch {
+    return null;
+  }
+}
+
+export function signSignupState(language: 'fr' | 'en', utm?: SignupUtm): string {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const timestamp = Date.now().toString();
+  const utmToken = encodeUtm(utm);
+  const signature = crypto
+    .createHmac('sha256', getStateSecret())
+    .update(`signup.${language}.${utmToken}.${nonce}.${timestamp}`)
+    .digest('hex');
+  return `signup.${language}.${utmToken}.${nonce}.${timestamp}.${signature}`;
+}
+
+export function verifySignupState(state: string): { language: 'fr' | 'en'; utm: SignupUtm | null } | null {
   const parts = state.split('.');
-  if (parts.length !== 5 || parts[0] !== 'signup') return null;
-  const [prefix, language, nonce, timestamp, signature] = parts;
+  if (parts.length !== 6 || parts[0] !== 'signup') return null;
+  const [prefix, language, utmToken, nonce, timestamp, signature] = parts;
 
   const expected = crypto
     .createHmac('sha256', getStateSecret())
-    .update(`${prefix}.${language}.${nonce}.${timestamp}`)
+    .update(`${prefix}.${language}.${utmToken}.${nonce}.${timestamp}`)
     .digest('hex');
 
   const sigBuffer = Buffer.from(signature);
@@ -78,7 +104,7 @@ export function verifySignupState(state: string): { language: 'fr' | 'en' } | nu
   if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) return null;
 
   if (Date.now() - Number(timestamp) > STATE_TTL_MS) return null;
-  return { language: language === 'en' ? 'en' : 'fr' };
+  return { language: language === 'en' ? 'en' : 'fr', utm: decodeUtm(utmToken) };
 }
 
 export function getConnectAuthUrl(state: string, redirectPath: string): string {

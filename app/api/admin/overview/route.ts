@@ -12,6 +12,10 @@ interface UserRow {
   created_at: string;
   became_paying_at: string | null;
   trial_end: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  referred_by: string | null;
 }
 
 export async function GET(req: NextRequest) {
@@ -28,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const { data: users, error: usersError } = await supabaseAdmin
     .from('users')
-    .select('id, email, company_name, subscription_status, subscription_tier, created_at, became_paying_at, trial_end')
+    .select('id, email, company_name, subscription_status, subscription_tier, created_at, became_paying_at, trial_end, utm_source, utm_medium, utm_campaign, referred_by')
     .order('created_at', { ascending: false });
 
   if (usersError) {
@@ -71,6 +75,10 @@ export async function GET(req: NextRequest) {
       trialEnd: u.trial_end,
       lastActivityAt,
       risk,
+      utmSource: u.utm_source,
+      utmMedium: u.utm_medium,
+      utmCampaign: u.utm_campaign,
+      referredBy: u.referred_by,
     };
   }).sort((a, b) => b.risk.score - a.risk.score);
 
@@ -82,6 +90,7 @@ export async function GET(req: NextRequest) {
     canceled: accounts.filter((a) => a.subscriptionStatus === 'canceled').length,
     mrr: accounts.filter((a) => a.subscriptionStatus === 'active').reduce((sum, a) => sum + a.monthlyPrice, 0),
     highRiskCount: accounts.filter((a) => a.risk.level === 'high' && a.subscriptionStatus !== 'canceled').length,
+    fromAds: accounts.filter((a) => !!a.utmSource).length,
   };
 
   return NextResponse.json({ summary, accounts });

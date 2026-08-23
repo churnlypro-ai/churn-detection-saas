@@ -27,7 +27,7 @@ const MESSAGES = {
 // no account.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language, referredBy } = body ?? {};
+  const { email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language, referredBy, utmSource, utmMedium, utmCampaign } = body ?? {};
   const m = language === 'en' ? MESSAGES.en : MESSAGES.fr;
 
   if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
@@ -80,7 +80,14 @@ export async function POST(req: NextRequest) {
     email,
     password,
     email_confirm: true,
-    user_metadata: { company_name: companyName ?? '', language: language === 'en' ? 'en' : 'fr', referred_by: validatedReferredBy ?? '' },
+    user_metadata: {
+      company_name: companyName ?? '',
+      language: language === 'en' ? 'en' : 'fr',
+      referred_by: validatedReferredBy ?? '',
+      utm_source: typeof utmSource === 'string' ? utmSource : '',
+      utm_medium: typeof utmMedium === 'string' ? utmMedium : '',
+      utm_campaign: typeof utmCampaign === 'string' ? utmCampaign : '',
+    },
   });
 
   if (createError || !created?.user) {

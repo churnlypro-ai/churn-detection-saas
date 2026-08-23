@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import ThemeProviderClient from '@/components/ThemeProviderClient';
+import AdSourceCapture from '@/components/AdSourceCapture';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import './globals.css';
 
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <body className="bg-white font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-50">
+        <AdSourceCapture />
         <ThemeProviderClient>
           <LanguageProvider>{children}</LanguageProvider>
         </ThemeProviderClient>

@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     console.error('[stripe/connect/signup-callback] invalid or expired state');
     return redirectToSignup(req, 'error');
   }
-  const { language } = verified;
+  const { language, utm } = verified;
 
   const supabaseAdmin = getSupabaseAdmin();
 
@@ -68,7 +68,13 @@ export async function GET(req: NextRequest) {
     const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       email_confirm: true,
-      user_metadata: { company_name: companyName, language },
+      user_metadata: {
+        company_name: companyName,
+        language,
+        utm_source: utm?.utmSource ?? '',
+        utm_medium: utm?.utmMedium ?? '',
+        utm_campaign: utm?.utmCampaign ?? '',
+      },
     });
 
     let userId: string;
