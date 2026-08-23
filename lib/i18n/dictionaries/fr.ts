@@ -735,6 +735,23 @@ export const fr = {
       { label: 'Historique de renégociation tarifaire', detail: 'Un client qui a déjà demandé une réduction par le passé reste plus sensible au prix, et donc plus à risque.' },
     ],
   },
+  callBooking: {
+    button: 'Réserver un call',
+    modalTitle: 'Réservez un call',
+    modalSubtitle: 'Indiquez vos disponibilités, on vous confirme le créneau exact par email.',
+    nameLabel: 'Nom',
+    emailLabel: 'Email',
+    companyLabel: 'Entreprise (optionnel)',
+    availabilityLabel: 'Vos disponibilités',
+    availabilityPlaceholder: 'Ex : mardi ou jeudi après-midi, ou une date précise',
+    submit: 'Envoyer ma demande',
+    submitting: 'Envoi…',
+    successTitle: 'Demande envoyée !',
+    successBody: 'Vous recevrez un email dès que le créneau exact est confirmé.',
+    close: 'Fermer',
+    errorMissingFields: 'Merci de remplir tous les champs requis.',
+    errorGeneric: 'Une erreur est survenue — réessayez.',
+  },
 };
 
 export type Dictionary = typeof fr;

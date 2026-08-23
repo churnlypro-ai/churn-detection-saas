@@ -150,12 +150,20 @@ export default function AdminOverview() {
         <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
           Tous les comptes Churnly, leur statut, et leur risque de résiliation — calculé à partir de leur activité réelle sur le produit.
         </p>
-        <Link
-          href="/admin/prospecting"
-          className="mb-10 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
-        >
-          Prospection par email →
-        </Link>
+        <div className="mb-10 flex flex-wrap gap-x-6 gap-y-2">
+          <Link
+            href="/admin/prospecting"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Prospection par email →
+          </Link>
+          <Link
+            href="/admin/calls"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Réservations de call →
+          </Link>
+        </div>
 
         {loading ? (
           <p className="text-sm text-slate-400">Chargement…</p>

@@ -328,6 +328,111 @@ export async function sendReferralRewardEmail({ to, companyName, referralCount, 
   });
 }
 
+interface CallBookingReceivedParams {
+  to: string;
+  name: string;
+  language?: EmailLanguage;
+}
+
+export async function sendCallBookingReceivedEmail({ to, name, language = 'fr' }: CallBookingReceivedParams) {
+  const resend = getResend();
+  const subject = language === 'en' ? 'Your call request — Churnly' : 'Votre demande de call — Churnly';
+
+  const html = language === 'en' ? `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>Hi ${name},</p>
+      <p>We've got your request and your availability. We'll get back to you by email very soon to confirm the exact time slot.</p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">No need to do anything else for now.</p>
+    </div>
+  ` : `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>Bonjour ${name},</p>
+      <p>On a bien reçu votre demande et vos disponibilités. On revient vers vous par email très vite pour confirmer le créneau exact.</p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Rien d'autre à faire pour l'instant.</p>
+    </div>
+  `;
+
+  return resend.emails.send({
+    from: process.env.EMAIL_FROM || 'Churnly <notifications@yourdomain.com>',
+    to,
+    subject,
+    html,
+  });
+}
+
+interface CallBookingConfirmedParams {
+  to: string;
+  name: string;
+  confirmedSlot: string;
+  language?: EmailLanguage;
+}
+
+export async function sendCallBookingConfirmedEmail({ to, name, confirmedSlot, language = 'fr' }: CallBookingConfirmedParams) {
+  const resend = getResend();
+  const subject = language === 'en' ? 'Your call is confirmed — Churnly' : 'Votre call est confirmé — Churnly';
+
+  const html = language === 'en' ? `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>Hi ${name},</p>
+      <p>Your call with Churnly is confirmed for:</p>
+      <p style="margin: 20px 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; font-weight: 600; font-size: 16px;">${confirmedSlot}</p>
+      <p>See you then. If this time no longer works, just reply to this email.</p>
+    </div>
+  ` : `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p>Bonjour ${name},</p>
+      <p>Votre call avec Churnly est confirmé pour :</p>
+      <p style="margin: 20px 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; font-weight: 600; font-size: 16px;">${confirmedSlot}</p>
+      <p>À bientôt. Si ce créneau ne convient plus, répondez simplement à cet email.</p>
+    </div>
+  `;
+
+  return resend.emails.send({
+    from: process.env.EMAIL_FROM || 'Churnly <notifications@yourdomain.com>',
+    to,
+    subject,
+    html,
+  });
+}
+
+interface CallBookingAdminNotifyParams {
+  to: string;
+  name: string;
+  email: string;
+  companyName: string | null;
+  availability: string;
+  adminUrl: string;
+}
+
+export async function sendCallBookingAdminNotifyEmail({ to, name, email, companyName, availability, adminUrl }: CallBookingAdminNotifyParams) {
+  const resend = getResend();
+  const subject = `Nouvelle demande de call — ${name}`;
+
+  const html = `
+    <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
+      <h2 style="font-weight: 600;">${subject}</h2>
+      <p><strong>${name}</strong>${companyName ? ` (${companyName})` : ''} — ${email}</p>
+      <p style="margin: 16px 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px;">${availability}</p>
+      <p style="margin-top: 24px;">
+        <a href="${adminUrl}" style="background: #d97706; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+          Confirmer un créneau
+        </a>
+      </p>
+    </div>
+  `;
+
+  return resend.emails.send({
+    from: process.env.EMAIL_FROM || 'Churnly <notifications@yourdomain.com>',
+    to,
+    subject,
+    html,
+  });
+}
+
 export async function sendTeamInviteEmail({ to, inviterCompanyName, acceptUrl, language = 'fr' }: TeamInviteParams) {
   const resend = getResend();
   const subject = language === 'en'
