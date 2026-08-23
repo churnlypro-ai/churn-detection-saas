@@ -10,6 +10,7 @@ import { EASE_OUT } from '@/lib/animations';
 import { Building2, Users, Euro, Briefcase, Star, ArrowRight, ArrowLeft, Check, Loader2, AlertTriangle, Mail } from 'lucide-react';
 import { calcPricing, calcManagerPrice, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
 import { useLanguage, useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
+import { readStoredAdSource } from '@/lib/adAttribution';
 
 type Industry = 'saas' | 'agency' | 'ecommerce' | 'manager' | 'other';
 
@@ -49,10 +50,11 @@ function SignupContent() {
     setError('');
     setStripeSignupLoading(true);
     try {
+      const adSource = readStoredAdSource();
       const res = await fetch('/api/stripe/connect/signup-start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language }),
+        body: JSON.stringify({ language, ...adSource }),
       });
       if (!res.ok) throw new Error(t.errors.stripeSignupError);
       const { url } = await res.json();
@@ -210,10 +212,11 @@ function SignupContent() {
     // que ce soit — supabase.auth.signUp() n'est jamais appelé directement
     // depuis le navigateur, sinon cette vérification serait purement
     // cosmétique (contournable en appelant l'API Supabase directement).
+    const adSource = readStoredAdSource();
     const completeRes = await fetch('/api/complete-signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language, referredBy: searchParams.get('ref') }),
+      body: JSON.stringify({ email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language, referredBy: searchParams.get('ref'), ...adSource }),
     });
 
     if (!completeRes.ok) {

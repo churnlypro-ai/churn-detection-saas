@@ -7,9 +7,14 @@ import { getConnectAuthUrl, signSignupState } from '@/lib/stripeConnect';
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const language = body?.language === 'en' ? 'en' : 'fr';
+  const utm = {
+    utmSource: typeof body?.utmSource === 'string' ? body.utmSource : null,
+    utmMedium: typeof body?.utmMedium === 'string' ? body.utmMedium : null,
+    utmCampaign: typeof body?.utmCampaign === 'string' ? body.utmCampaign : null,
+  };
 
   try {
-    const state = signSignupState(language);
+    const state = signSignupState(language, utm);
     return NextResponse.json({ url: getConnectAuthUrl(state, '/api/stripe/connect/signup-callback') });
   } catch (err) {
     console.error('[stripe/connect/signup-start] failed', err);
