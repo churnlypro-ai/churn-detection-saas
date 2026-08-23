@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import * as THREE from 'three';
+import { PhoneCall } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/LanguageContext';
+import { CallBookingModal } from '@/components/CallBookingModal';
 
 const FLOATING_BALLS = [
   { x: '18%', y: '22%', delay: 0 },
@@ -19,6 +21,8 @@ export default function AnimatedHero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const t = useTranslations('home').hero;
+  const tCall = useTranslations('callBooking');
+  const [callModalOpen, setCallModalOpen] = useState(false);
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -212,12 +216,21 @@ export default function AnimatedHero() {
           transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="mt-10 flex flex-col items-center gap-3"
         >
-          <Link
-            href="/signup"
-            className="rounded-full bg-brand-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
-          >
-            {t.cta}
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/signup"
+              className="rounded-full bg-brand-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
+            >
+              {t.cta}
+            </Link>
+            <button
+              onClick={() => setCallModalOpen(true)}
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-3.5 text-base font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700"
+            >
+              <PhoneCall className="h-4 w-4" />
+              {tCall.button}
+            </button>
+          </div>
           <Link
             href="/demo"
             className="text-sm font-medium text-slate-500 underline-offset-4 transition hover:text-brand-600 hover:underline dark:text-slate-400 dark:hover:text-brand-400"
@@ -227,6 +240,8 @@ export default function AnimatedHero() {
           <span className="text-xs text-slate-400 dark:text-slate-500">{t.ctaNote}</span>
         </motion.div>
       </motion.div>
+
+      <CallBookingModal open={callModalOpen} onClose={() => setCallModalOpen(false)} />
     </section>
   );
 }
