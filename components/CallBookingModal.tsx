@@ -10,7 +10,7 @@ interface CallBookingModalProps {
   onClose: () => void;
 }
 
-type ContactMethod = 'phone' | 'whatsapp' | 'video';
+type ContactMethod = 'zoom' | 'video' | 'phone' | 'whatsapp' | 'email';
 
 export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
   const t = useTranslations('callBooking');
@@ -22,7 +22,7 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [notes, setNotes] = useState('');
-  const [contactMethod, setContactMethod] = useState<ContactMethod>('video');
+  const [contactMethod, setContactMethod] = useState<ContactMethod>('zoom');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +39,7 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
       setDate('');
       setTime('');
       setNotes('');
-      setContactMethod('video');
+      setContactMethod('zoom');
       setPhoneNumber('');
       setError('');
       setSuccess(false);
@@ -59,15 +59,18 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
     const withNotes = notes.trim() ? `${base} — ${notes.trim()}` : base;
 
     const contactLabels: Record<ContactMethod, string> = {
+      zoom: t.contactZoom,
+      video: t.contactVideo,
       phone: t.contactPhone,
       whatsapp: t.contactWhatsapp,
-      video: t.contactVideo,
+      email: t.contactEmail,
     };
-    const contactLine = contactMethod === 'video'
-      ? (language === 'en' ? `Contact: ${contactLabels.video}` : `Contact : ${contactLabels.video}`)
-      : (language === 'en'
+    const requiresPhone = contactMethod === 'phone' || contactMethod === 'whatsapp';
+    const contactLine = requiresPhone
+      ? (language === 'en'
         ? `Contact: ${contactLabels[contactMethod]} (${phoneNumber.trim()})`
-        : `Contact : ${contactLabels[contactMethod]} (${phoneNumber.trim()})`);
+        : `Contact : ${contactLabels[contactMethod]} (${phoneNumber.trim()})`)
+      : (language === 'en' ? `Contact: ${contactLabels[contactMethod]}` : `Contact : ${contactLabels[contactMethod]}`);
 
     return `${withNotes}\n${contactLine}`;
   }
@@ -200,20 +203,29 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">{t.contactMethodLabel}</label>
                   <div className="flex flex-wrap gap-2">
-                    {(['video', 'phone', 'whatsapp'] as ContactMethod[]).map((method) => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => setContactMethod(method)}
-                        className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
-                          contactMethod === method
-                            ? 'border-brand-600 bg-brand-600 text-white'
-                            : 'border-slate-200 text-slate-600 hover:border-brand-300 dark:border-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {method === 'phone' ? t.contactPhone : method === 'whatsapp' ? t.contactWhatsapp : t.contactVideo}
-                      </button>
-                    ))}
+                    {(['zoom', 'video', 'phone', 'whatsapp', 'email'] as ContactMethod[]).map((method) => {
+                      const labels: Record<ContactMethod, string> = {
+                        zoom: t.contactZoom,
+                        video: t.contactVideo,
+                        phone: t.contactPhone,
+                        whatsapp: t.contactWhatsapp,
+                        email: t.contactEmail,
+                      };
+                      return (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setContactMethod(method)}
+                          className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                            contactMethod === method
+                              ? 'border-brand-600 bg-brand-600 text-white'
+                              : 'border-slate-200 text-slate-600 hover:border-brand-300 dark:border-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {labels[method]}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 {requiresPhone && (
