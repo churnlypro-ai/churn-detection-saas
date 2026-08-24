@@ -6,11 +6,13 @@ const MESSAGES = {
   fr: {
     missingFields: 'Merci de remplir tous les champs requis.',
     invalidEmail: 'Adresse email invalide.',
+    slotTaken: 'Ce créneau vient d\'être pris par quelqu\'un d\'autre — choisissez-en un autre.',
     failed: 'La demande a échoué — réessayez.',
   },
   en: {
     missingFields: 'Please fill in all required fields.',
     invalidEmail: 'Invalid email address.',
+    slotTaken: 'This slot was just taken by someone else — please pick another one.',
     failed: 'The request failed — please try again.',
   },
 } as const;
@@ -21,7 +23,7 @@ const MESSAGES = {
 // cette route, avec le client service-role, qui écrit en base.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { name, email, companyName, availability, language } = body ?? {};
+  const { name, email, companyName, availability, slotStart, language } = body ?? {};
   const m = language === 'en' ? MESSAGES.en : MESSAGES.fr;
 
   if (typeof name !== 'string' || !name.trim() || typeof availability !== 'string' || !availability.trim()) {
@@ -32,11 +34,31 @@ export async function POST(req: NextRequest) {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
+
+  // Re-vérifié côté serveur juste avant l'insertion : le créneau proposé par
+  // /api/available-slots a pu être pris entre-temps par quelqu'un d'autre
+  // (deux visiteurs sur le même créneau en même temps).
+  let slotStartIso: string | null = null;
+  if (typeof slotStart === 'string' && slotStart.trim()) {
+    const parsed = new Date(slotStart);
+    if (!Number.isNaN(parsed.getTime())) {
+      const { data: conflict } = await supabaseAdmin
+        .from('call_bookings')
+        .select('id')
+        .eq('slot_start', parsed.toISOString())
+        .neq('status', 'canceled')
+        .maybeSingle();
+      if (conflict) return NextResponse.json({ error: m.slotTaken }, { status: 409 });
+      slotStartIso = parsed.toISOString();
+    }
+  }
+
   const { error } = await supabaseAdmin.from('call_bookings').insert({
     name: name.trim(),
     email: email.trim(),
     company_name: typeof companyName === 'string' && companyName.trim() ? companyName.trim() : null,
     availability: availability.trim(),
+    slot_start: slotStartIso,
   });
 
   if (error) {
@@ -44,24 +66,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: m.failed }, { status: 500 });
   }
 
-  // Les deux emails (confirmation visiteur + notification admin) ne doivent
-  // jamais faire échouer la demande elle-même si Resend a un problème — la
-  // ligne est déjà en base, l'équipe peut toujours la voir dans /admin/calls.
+  // Les emails (confirmation visiteur + notification admin + notification
+  // closer) ne doivent jamais faire échouer la demande elle-même si Resend a
+  // un problème — la ligne est déjà en base, consultable dans /admin/calls
+  // et /closer.
   const emailLanguage = language === 'en' ? 'en' : 'fr';
+  const notifyEmails = new Set([
+    ...(process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim()).filter(Boolean),
+    ...(process.env.CLOSER_EMAILS || '').split(',').map((e) => e.trim()).filter(Boolean),
+  ]);
   await Promise.allSettled([
     sendCallBookingReceivedEmail({ to: email.trim(), name: name.trim(), language: emailLanguage }),
-    ...(process.env.ADMIN_EMAILS
-      ? process.env.ADMIN_EMAILS.split(',').map((e) => e.trim()).filter(Boolean).map((adminEmail) =>
-          sendCallBookingAdminNotifyEmail({
-            to: adminEmail,
-            name: name.trim(),
-            email: email.trim(),
-            companyName: typeof companyName === 'string' && companyName.trim() ? companyName.trim() : null,
-            availability: availability.trim(),
-            adminUrl: `${process.env.NEXT_PUBLIC_APP_URL || ''}/admin/calls`,
-          })
-        )
-      : []),
+    ...Array.from(notifyEmails).map((notifyEmail) =>
+      sendCallBookingAdminNotifyEmail({
+        to: notifyEmail,
+        name: name.trim(),
+        email: email.trim(),
+        companyName: typeof companyName === 'string' && companyName.trim() ? companyName.trim() : null,
+        availability: availability.trim(),
+        adminUrl: `${process.env.NEXT_PUBLIC_APP_URL || ''}/closer`,
+      })
+    ),
   ]);
 
   return NextResponse.json({ success: true });

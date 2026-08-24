@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, CheckCircle2, PhoneCall } from 'lucide-react';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
@@ -12,6 +12,12 @@ interface CallBookingModalProps {
 
 type ContactMethod = 'zoom' | 'video' | 'phone' | 'whatsapp' | 'email';
 
+const PARIS_TZ = 'Europe/Paris';
+
+function parisDateKey(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone: PARIS_TZ });
+}
+
 export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
   const t = useTranslations('callBooking');
   const { language } = useLanguage();
@@ -19,14 +25,49 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
   const [notes, setNotes] = useState('');
   const [contactMethod, setContactMethod] = useState<ContactMethod>('zoom');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  const [slots, setSlots] = useState<string[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+
+  // Chargé à chaque ouverture plutôt qu'une fois pour toutes — un visiteur
+  // qui a laissé la page ouverte longtemps ne doit pas se voir proposer un
+  // créneau déjà pris entre-temps par quelqu'un d'autre.
+  useEffect(() => {
+    if (!open) return;
+    setSlotsLoading(true);
+    setSlotsError(false);
+    fetch('/api/available-slots')
+      .then((r) => r.json())
+      .then((data) => setSlots(data.slots ?? []))
+      .catch(() => setSlotsError(true))
+      .finally(() => setSlotsLoading(false));
+  }, [open]);
+
+  const slotsByDate = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const iso of slots) {
+      const key = parisDateKey(iso);
+      const arr = map.get(key) ?? [];
+      arr.push(iso);
+      map.set(key, arr);
+    }
+    return map;
+  }, [slots]);
+
+  const availableDates = useMemo(() => Array.from(slotsByDate.keys()), [slotsByDate]);
+
+  useEffect(() => {
+    if (!selectedDate && availableDates.length > 0) setSelectedDate(availableDates[0]);
+  }, [availableDates, selectedDate]);
 
   function handleClose() {
     onClose();
@@ -36,26 +77,27 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
       setName('');
       setEmail('');
       setCompanyName('');
-      setDate('');
-      setTime('');
       setNotes('');
       setContactMethod('zoom');
       setPhoneNumber('');
+      setSelectedDate(null);
+      setSelectedSlot(null);
       setError('');
       setSuccess(false);
     }, 300);
   }
 
-  // La base attend un seul champ "availability" en texte libre (voir
-  // /api/call-bookings) — on le construit ici à partir des inputs date/heure
-  // natifs plutôt que d'ajouter des colonnes structurées pour un besoin qui
-  // reste, côté équipe, une simple lecture humaine avant confirmation.
+  // La base attend un champ "availability" en texte libre en plus du
+  // timestamp exact (slot_start) — voir /api/call-bookings : le texte reste
+  // ce que l'équipe lit d'un coup d'œil, le timestamp sert à bloquer le
+  // créneau pour qu'il ne soit plus proposé à quelqu'un d'autre.
   function formatAvailability(): string {
-    const formattedDate = new Date(`${date}T00:00:00`).toLocaleDateString(
+    if (!selectedSlot) return '';
+    const formattedDate = new Date(selectedSlot).toLocaleString(
       language === 'en' ? 'en-US' : 'fr-FR',
-      { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+      { timeZone: PARIS_TZ, weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' },
     );
-    const base = language === 'en' ? `${formattedDate} at ${time}` : `${formattedDate} à ${time}`;
+    const base = language === 'en' ? `${formattedDate} (Paris time)` : `${formattedDate} (heure de Paris)`;
     const withNotes = notes.trim() ? `${base} — ${notes.trim()}` : base;
 
     const contactLabels: Record<ContactMethod, string> = {
@@ -79,7 +121,7 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !date || !time || (requiresPhone && !phoneNumber.trim())) {
+    if (!name.trim() || !email.trim() || !selectedSlot || (requiresPhone && !phoneNumber.trim())) {
       setError(t.errorMissingFields);
       return;
     }
@@ -89,7 +131,7 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
       const res = await fetch('/api/call-bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, companyName, availability: formatAvailability(), language }),
+        body: JSON.stringify({ name, email, companyName, availability: formatAvailability(), slotStart: selectedSlot, language }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || t.errorGeneric);
@@ -175,23 +217,57 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
                 />
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">{t.availabilityLabel}</label>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <input
-                      type="date"
-                      required
-                      value={date}
-                      min={new Date().toISOString().slice(0, 10)}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                    />
-                    <input
-                      type="time"
-                      required
-                      value={time}
-                      onChange={(e) => setTime(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                    />
-                  </div>
+                  {slotsLoading ? (
+                    <p className="text-sm text-slate-400 dark:text-slate-500">{t.slotsLoading}</p>
+                  ) : slotsError || availableDates.length === 0 ? (
+                    <p className="text-sm text-slate-400 dark:text-slate-500">{t.noSlotsAvailable}</p>
+                  ) : (
+                    <>
+                      <div className="flex gap-1.5 overflow-x-auto pb-1">
+                        {availableDates.map((dateKey) => {
+                          const label = new Date(`${dateKey}T12:00:00`).toLocaleDateString(
+                            language === 'en' ? 'en-US' : 'fr-FR',
+                            { timeZone: PARIS_TZ, weekday: 'short', day: 'numeric', month: 'short' },
+                          );
+                          return (
+                            <button
+                              key={dateKey}
+                              type="button"
+                              onClick={() => { setSelectedDate(dateKey); setSelectedSlot(null); }}
+                              className={`flex-shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
+                                selectedDate === dateKey
+                                  ? 'border-brand-600 bg-brand-600 text-white'
+                                  : 'border-slate-200 text-slate-600 hover:border-brand-300 dark:border-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        {(slotsByDate.get(selectedDate ?? '') ?? []).map((iso) => {
+                          const label = new Date(iso).toLocaleTimeString(language === 'en' ? 'en-US' : 'fr-FR', {
+                            timeZone: PARIS_TZ, hour: '2-digit', minute: '2-digit',
+                          });
+                          return (
+                            <button
+                              key={iso}
+                              type="button"
+                              onClick={() => setSelectedSlot(iso)}
+                              className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                                selectedSlot === iso
+                                  ? 'border-brand-600 bg-brand-600 text-white'
+                                  : 'border-slate-200 text-slate-600 hover:border-brand-300 dark:border-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <textarea
                   placeholder={t.availabilityPlaceholder}
@@ -241,7 +317,7 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
                 {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !selectedSlot}
                   className="w-full rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
                 >
                   {submitting ? t.submitting : t.submit}

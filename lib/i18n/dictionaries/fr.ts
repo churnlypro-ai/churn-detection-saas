@@ -744,6 +744,8 @@ export const fr = {
     companyLabel: 'Entreprise (optionnel)',
     availabilityLabel: 'Date et heure souhaitées',
     availabilityPlaceholder: 'Précisions ou autre créneau possible (optionnel)',
+    slotsLoading: 'Chargement des créneaux disponibles…',
+    noSlotsAvailable: 'Aucun créneau disponible pour le moment — réessayez plus tard.',
     contactMethodLabel: 'Comment vous joindre ?',
     contactZoom: 'Zoom',
     contactVideo: 'Visio (Meet, Teams...)',

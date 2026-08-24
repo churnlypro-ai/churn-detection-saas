@@ -746,6 +746,8 @@ export const en: Dictionary = {
     companyLabel: 'Company (optional)',
     availabilityLabel: 'Preferred date and time',
     availabilityPlaceholder: 'Other options or notes (optional)',
+    slotsLoading: 'Loading available slots…',
+    noSlotsAvailable: 'No slots available right now — please check back later.',
     contactMethodLabel: 'How should we reach you?',
     contactZoom: 'Zoom',
     contactVideo: 'Video call (Meet, Teams...)',
