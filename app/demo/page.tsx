@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
@@ -25,8 +26,16 @@ const LOADING_MESSAGES = [
 // on demande d'abord 3 chiffres sur sa propre situation, on simule
 // l'analyse, puis on affiche le même dashboard qu'un vrai client verrait —
 // mais avec ses propres ordres de grandeur en tête de page.
-export default function Demo() {
-  const [step, setStep] = useState<Step>('intro');
+//
+// Ce parcours guidé est réservé au lien "démo" partagé en prospection
+// externe (LinkedIn, email, ads) — un visiteur déjà sur churnly.fr qui
+// clique "Voir la démo" depuis l'accueil (voir AnimatedHero.tsx) connaît
+// déjà Churnly et n'a pas besoin du hook d'accroche : ce lien-là passe
+// ?direct=1 pour sauter direct au dashboard, comme avant.
+function DemoContent() {
+  const searchParams = useSearchParams();
+  const isDirect = searchParams.get('direct') === '1';
+  const [step, setStep] = useState<Step>(isDirect ? 'result' : 'intro');
   const [clientCount, setClientCount] = useState(100);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
   const [churnRate, setChurnRate] = useState(5);
@@ -268,5 +277,13 @@ export default function Demo() {
         </AnimatePresence>
       </main>
     </>
+  );
+}
+
+export default function Demo() {
+  return (
+    <Suspense fallback={null}>
+      <DemoContent />
+    </Suspense>
   );
 }
