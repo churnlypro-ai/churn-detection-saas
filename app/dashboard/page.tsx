@@ -793,13 +793,21 @@ export default function Dashboard() {
         return;
       }
 
-      // Le compte ambassadeur (ADMIN_EMAILS) n'est pas un vrai client
-      // Churnly — il n'a pas d'abonnement, donc jamais le dashboard client
-      // (bannières d'essai/paiement compris) : direction /admin.
+      // Le compte ambassadeur (ADMIN_EMAILS) et le closer (CLOSER_EMAILS) ne
+      // sont pas de vrais clients Churnly — ils n'ont pas d'abonnement, donc
+      // jamais le dashboard client (bannières d'essai/paiement compris) :
+      // direction /admin ou /closer. Vérifié ici (et pas seulement sur
+      // /post-login juste après la connexion) car un lien direct, un vieux
+      // lien magique déjà en boîte mail, ou le logo Churnly ("/dashboard" si
+      // connecté, voir Navigation.tsx) peuvent amener ici sans jamais passer
+      // par /post-login.
       const { data: sessionData } = await supabase.auth.getSession();
-      const adminCheck = await fetch('/api/admin/check', {
-        headers: { Authorization: `Bearer ${sessionData?.session?.access_token}` },
-      }).then((r) => r.json()).catch(() => ({ isAdmin: false }));
+      const authHeader = { Authorization: `Bearer ${sessionData?.session?.access_token}` };
+      const [closerCheck, adminCheck] = await Promise.all([
+        fetch('/api/closer/check', { headers: authHeader }).then((r) => r.json()).catch(() => ({ isCloser: false })),
+        fetch('/api/admin/check', { headers: authHeader }).then((r) => r.json()).catch(() => ({ isAdmin: false })),
+      ]);
+      if (closerCheck.isCloser) { router.replace('/closer'); return; }
       if (adminCheck.isAdmin) { router.replace('/admin'); return; }
 
       setUser(data.user);
