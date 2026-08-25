@@ -1,13 +1,34 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { ChangeEvent, useMemo, useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { EASE_OUT } from '@/lib/animations';
 import { calcPricing, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
 import { ArrowRight } from 'lucide-react';
 import { useLanguage, useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 
-function SliderField({ label, value, min, max, step, onChange, display, inputSuffix }: {
+// Résolution interne du curseur en échelle log : le curseur ne manipule
+// jamais la valeur réelle directement, mais une position 0-LOG_STEPS dont
+// chaque incrément représente le même facteur multiplicatif (et non le même
+// écart absolu). Résultat : les petites valeurs, les plus courantes,
+// occupent une grande partie de la piste, qui se resserre ensuite au fur et
+// à mesure que la valeur grandit.
+const LOG_STEPS = 1000;
+
+function valueToLogPosition(value: number, min: number, max: number): number {
+  const clamped = Math.min(Math.max(value, min), max);
+  const minLog = Math.log(min);
+  const maxLog = Math.log(max);
+  return ((Math.log(clamped) - minLog) / (maxLog - minLog)) * LOG_STEPS;
+}
+
+function logPositionToValue(position: number, min: number, max: number): number {
+  const minLog = Math.log(min);
+  const maxLog = Math.log(max);
+  return Math.exp(minLog + (position / LOG_STEPS) * (maxLog - minLog));
+}
+
+function SliderField({ label, value, min, max, step, onChange, display, inputSuffix, logScale, roundTo }: {
   label: string;
   value: number;
   min: number;
@@ -16,7 +37,29 @@ function SliderField({ label, value, min, max, step, onChange, display, inputSuf
   onChange: (v: number) => void;
   display: string;
   inputSuffix?: string;
+  logScale?: boolean;
+  roundTo?: number;
 }) {
+  const sliderProps = logScale
+    ? {
+        min: 0,
+        max: LOG_STEPS,
+        step: 1,
+        value: Math.round(valueToLogPosition(value, min, max)),
+        onChange: (e: ChangeEvent<HTMLInputElement>) => {
+          const raw = logPositionToValue(Number(e.target.value), min, max);
+          const rounded = roundTo ? Math.round(raw / roundTo) * roundTo : Math.round(raw);
+          onChange(Math.max(min, Math.min(max, rounded)));
+        },
+      }
+    : {
+        min,
+        max,
+        step,
+        value,
+        onChange: (e: ChangeEvent<HTMLInputElement>) => onChange(Number(e.target.value)),
+      };
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-sm">
@@ -43,11 +86,7 @@ function SliderField({ label, value, min, max, step, onChange, display, inputSuf
       </div>
       <input
         type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        {...sliderProps}
         className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700"
       />
       <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">{display}</p>
@@ -67,6 +106,7 @@ function Row({ label, value, bold, valueClassName = '' }: { label: string; value
 export default function Calculator() {
   const [clientCount, setClientCount] = useState(100);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
+  const [churnRate, setChurnRate] = useState(ASSUMED_CHURN_RATE);
   const t = useTranslations('calculator');
   const { localeTag } = useLanguage();
   const tierName = useTierName();
@@ -76,10 +116,10 @@ export default function Calculator() {
 
   const stats = useMemo(() => {
     const pricing = calcPricing(monthlyRevenue);
-    // Le prix ne dépend que du CA — le taux de churn n'est jamais demandé
-    // (personne ne le connaît avant sa première analyse). Ces pertes sont
-    // une illustration basée sur une moyenne sectorielle assumée.
-    const clientsLostPerMonth = (clientCount * ASSUMED_CHURN_RATE) / 100;
+    // Le prix ne dépend que du CA — le taux de churn n'affecte jamais
+    // pricing.monthly, il ne sert qu'à moduler ces pertes illustratives
+    // (curseur réglable par le visiteur, sans lien avec le tarif affiché).
+    const clientsLostPerMonth = (clientCount * churnRate) / 100;
     const arpu = clientCount > 0 ? monthlyRevenue / clientCount : 0;
     const revenueLostPerMonth = arpu * clientsLostPerMonth;
     const annualLoss = revenueLostPerMonth * 12;
@@ -101,7 +141,7 @@ export default function Calculator() {
       monthlySavings,
       roi,
     };
-  }, [clientCount, monthlyRevenue]);
+  }, [clientCount, monthlyRevenue, churnRate]);
 
   return (
     <section className="mx-auto max-w-5xl px-6 py-24">
@@ -134,6 +174,8 @@ export default function Calculator() {
             step={1}
             onChange={setClientCount}
             display={`${t.clientsWord}: ${clientCount.toLocaleString(localeTag)}`}
+            logScale
+            roundTo={1}
           />
           <SliderField
             label={t.revenueLabel}
@@ -144,6 +186,18 @@ export default function Calculator() {
             onChange={setMonthlyRevenue}
             display={`${t.revenueWord}: ${formatEuro(monthlyRevenue)}${t.perMonth}`}
             inputSuffix="€"
+            logScale
+            roundTo={100}
+          />
+          <SliderField
+            label={t.churnRateLabel}
+            value={churnRate}
+            min={1}
+            max={30}
+            step={0.5}
+            onChange={setChurnRate}
+            display={`${t.churnRateWord}: ${churnRate}%`}
+            inputSuffix="%"
           />
           <p className="text-xs text-slate-400 dark:text-slate-500">
             {t.helper}
