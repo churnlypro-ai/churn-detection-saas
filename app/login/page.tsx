@@ -62,7 +62,7 @@ function LoginContent() {
     setSliding(true);
 
     setTimeout(() => {
-      router.push('/dashboard');
+      router.push('/post-login?next=' + encodeURIComponent('/dashboard'));
     }, 700);
   }
 
@@ -71,7 +71,7 @@ function LoginContent() {
     setMagicLinkStatus('sending');
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      options: { emailRedirectTo: `${window.location.origin}/post-login?next=${encodeURIComponent('/dashboard')}` },
     });
     setMagicLinkStatus(otpError ? 'error' : 'sent');
   }
@@ -84,7 +84,7 @@ function LoginContent() {
   async function handleGoogleSignIn() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/settings?onboarding=1` },
+      options: { redirectTo: `${window.location.origin}/post-login?next=${encodeURIComponent('/settings?onboarding=1')}` },
     });
   }
 
