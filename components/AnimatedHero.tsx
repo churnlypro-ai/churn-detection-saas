@@ -232,7 +232,7 @@ export default function AnimatedHero() {
             </button>
           </div>
           <Link
-            href="/demo"
+            href="/demo?direct=1"
             className="text-sm font-medium text-slate-500 underline-offset-4 transition hover:text-brand-600 hover:underline dark:text-slate-400 dark:hover:text-brand-400"
           >
             {t.demoLink}
