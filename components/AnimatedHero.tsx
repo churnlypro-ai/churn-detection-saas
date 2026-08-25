@@ -156,6 +156,7 @@ export default function AnimatedHero() {
   }, []);
 
   return (
+    <>
     <section ref={sectionRef} className="relative overflow-hidden bg-gradient-to-b from-white via-white to-slate-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
       <motion.div style={{ y: orbsY }} className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-10%] top-[10%] h-[400px] w-[400px] rounded-full bg-brand-200/20 blur-[120px]" />
@@ -240,8 +241,13 @@ export default function AnimatedHero() {
           <span className="text-xs text-slate-400 dark:text-slate-500">{t.ctaNote}</span>
         </motion.div>
       </motion.div>
-
-      <CallBookingModal open={callModalOpen} onClose={() => setCallModalOpen(false)} />
     </section>
+
+    {/* Hors de la section ci-dessus : celle-ci a overflow-hidden, ce qui
+        clippait la modale (position: fixed) à sa hauteur — les clics sur
+        le bas du formulaire tombaient alors sur le contenu de la page en
+        dessous au lieu d'atteindre les boutons de la modale. */}
+    <CallBookingModal open={callModalOpen} onClose={() => setCallModalOpen(false)} />
+    </>
   );
 }
