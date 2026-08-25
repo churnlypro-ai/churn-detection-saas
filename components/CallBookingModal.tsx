@@ -45,7 +45,7 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
     if (!open) return;
     setSlotsLoading(true);
     setSlotsError(false);
-    fetch('/api/available-slots')
+    fetch('/api/available-slots', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data) => setSlots(data.slots ?? []))
       .catch(() => setSlotsError(true))

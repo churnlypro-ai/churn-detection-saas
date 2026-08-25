@@ -22,13 +22,22 @@ function timeStrToMinutes(t: string): number {
   return h * 60 + m;
 }
 
+// En-têtes explicites de non-mise-en-cache : en plus de `force-dynamic`
+// (qui empêche Next.js de figer la réponse au build), on s'assure qu'aucun
+// CDN/proxy intermédiaire (Vercel Edge, navigateur) ne garde non plus une
+// ancienne réponse en cache entre deux ouvertures du formulaire.
+const NO_STORE_HEADERS = { 'Cache-Control': 'no-store, must-revalidate' };
+
 export async function GET() {
   const supabaseAdmin = getSupabaseAdmin();
 
-  const [{ data: availability }, { data: booked }] = await Promise.all([
+  const [{ data: availability, error: availabilityError }, { data: booked, error: bookedError }] = await Promise.all([
     supabaseAdmin.from('closer_availability').select('day_of_week, start_time, end_time'),
     supabaseAdmin.from('call_bookings').select('slot_start').not('slot_start', 'is', null).neq('status', 'canceled'),
   ]);
+
+  if (availabilityError) console.error('[available-slots] closer_availability query failed', availabilityError);
+  if (bookedError) console.error('[available-slots] call_bookings query failed', bookedError);
 
   const bookedTimestamps = new Set((booked ?? []).map((b) => new Date(b.slot_start as string).getTime()));
   const now = Date.now();
@@ -56,5 +65,5 @@ export async function GET() {
     cursor = addDaysToDateString(cursor, 1);
   }
 
-  return NextResponse.json({ slots, timezone: 'Europe/Paris' });
+  return NextResponse.json({ slots, timezone: 'Europe/Paris' }, { headers: NO_STORE_HEADERS });
 }
