@@ -40,10 +40,6 @@ export default function AdminCallsPage() {
   const [forbidden, setForbidden] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
-  const [slotDrafts, setSlotDrafts] = useState<Record<string, string>>({});
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
-  const [confirmError, setConfirmError] = useState<Record<string, string>>({});
-
   const getAuthToken = useCallback(async (): Promise<string> => {
     const { data } = await supabase.auth.getSession();
     return data?.session?.access_token ?? '';
@@ -72,31 +68,6 @@ export default function AdminCallsPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
-
-  async function handleConfirm(id: string) {
-    const slot = (slotDrafts[id] ?? '').trim();
-    if (!slot) {
-      setConfirmError((prev) => ({ ...prev, [id]: 'Indique un créneau avant de confirmer.' }));
-      return;
-    }
-    setConfirmingId(id);
-    setConfirmError((prev) => ({ ...prev, [id]: '' }));
-    try {
-      const authToken = await getAuthToken();
-      const res = await fetch(`/api/admin/call-bookings/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ confirmedSlot: slot }),
-      });
-      const result = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(result.error || 'Confirmation échouée.');
-      await loadBookings(authToken);
-    } catch (err) {
-      setConfirmError((prev) => ({ ...prev, [id]: err instanceof Error ? err.message : 'Confirmation échouée.' }));
-    } finally {
-      setConfirmingId(null);
-    }
-  }
 
   async function handleDelete(id: string) {
     const authToken = await getAuthToken();
@@ -137,7 +108,7 @@ export default function AdminCallsPage() {
           Réservations de call
         </motion.h1>
         <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">
-          Demandes envoyées depuis le bouton &quot;Réserver un call&quot; de l&apos;accueil. Indique un créneau puis confirme pour que le visiteur reçoive l&apos;email avec la date exacte.
+          Demandes envoyées depuis le bouton &quot;Réserver un call&quot; de l&apos;accueil. C&apos;est le closer qui valide chaque demande depuis son espace <Link href="/closer" className="underline hover:text-slate-700 dark:hover:text-slate-200">/closer</Link> — cette page est une vue d&apos;ensemble en lecture seule.
         </p>
 
         {loading ? (
@@ -170,22 +141,7 @@ export default function AdminCallsPage() {
                       <p className="mt-3 whitespace-pre-line rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
                         {b.availability}
                       </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <input
-                          type="text"
-                          placeholder="Créneau confirmé (ex: Mardi 26 août à 14h00)"
-                          value={slotDrafts[b.id] ?? ''}
-                          onChange={(e) => setSlotDrafts((prev) => ({ ...prev, [b.id]: e.target.value }))}
-                          className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                        />
-                        <button
-                          onClick={() => handleConfirm(b.id)}
-                          disabled={confirmingId === b.id}
-                          className="flex items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          {confirmingId === b.id ? 'Confirmation…' : 'Confirmer et envoyer'}
-                        </button>
+                      <div className="mt-3 flex justify-end">
                         <button
                           onClick={() => handleDelete(b.id)}
                           className="text-slate-300 transition hover:text-red-500 dark:text-slate-600"
@@ -194,7 +150,6 @@ export default function AdminCallsPage() {
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
-                      {confirmError[b.id] && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{confirmError[b.id]}</p>}
                     </div>
                   ))}
                 </div>

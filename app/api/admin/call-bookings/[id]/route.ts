@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
-import { sendCallBookingConfirmedEmail } from '@/lib/email';
 
 async function requireAdmin(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -12,43 +11,9 @@ async function requireAdmin(req: NextRequest) {
   return supabaseAdmin;
 }
 
-// Fixe le créneau confirmé pour cette demande et prévient le visiteur par
-// email — le seul moment où l'email de confirmation part, jamais à la
-// simple création de la demande (voir /api/call-bookings).
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabaseAdmin = await requireAdmin(req);
-  if (!supabaseAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
-  const body = await req.json().catch(() => ({}));
-  const { confirmedSlot } = body ?? {};
-  if (typeof confirmedSlot !== 'string' || !confirmedSlot.trim()) {
-    return NextResponse.json({ error: 'Créneau requis.' }, { status: 400 });
-  }
-
-  const { data: booking, error: fetchError } = await supabaseAdmin
-    .from('call_bookings')
-    .select('name, email')
-    .eq('id', params.id)
-    .maybeSingle();
-
-  if (fetchError || !booking) return NextResponse.json({ error: 'Demande introuvable.' }, { status: 404 });
-
-  const { error: updateError } = await supabaseAdmin
-    .from('call_bookings')
-    .update({ status: 'confirmed', confirmed_slot: confirmedSlot.trim(), confirmed_at: new Date().toISOString() })
-    .eq('id', params.id);
-
-  if (updateError) return NextResponse.json({ error: 'Confirmation échouée.' }, { status: 500 });
-
-  try {
-    await sendCallBookingConfirmedEmail({ to: booking.email, name: booking.name, confirmedSlot: confirmedSlot.trim() });
-  } catch (err) {
-    console.error('[admin/call-bookings] confirmation email failed', err);
-  }
-
-  return NextResponse.json({ success: true });
-}
-
+// La validation d'une demande (fixer le créneau, prévenir le visiteur) est
+// réservée au closer, voir /api/closer/bookings/[id] — l'admin ne garde que
+// la suppression, pour le nettoyage des demandes indésirables.
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const supabaseAdmin = await requireAdmin(req);
   if (!supabaseAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
