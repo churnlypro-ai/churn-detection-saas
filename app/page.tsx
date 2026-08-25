@@ -363,6 +363,7 @@ function CTASection() {
   const [callModalOpen, setCallModalOpen] = useState(false);
 
   return (
+    <>
     <section ref={ctaRef} className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/40 px-6 py-28 text-center dark:from-slate-950 dark:to-slate-900">
       <motion.div style={{ scale }} className="relative mx-auto max-w-2xl">
         <motion.h2
@@ -418,9 +419,12 @@ function CTASection() {
           {t.note}
         </motion.p>
       </motion.div>
-
-      <CallBookingModal open={callModalOpen} onClose={() => setCallModalOpen(false)} />
     </section>
+
+    {/* Hors de la section ci-dessus (overflow-hidden) : voir la même
+        correction et son explication dans AnimatedHero.tsx. */}
+    <CallBookingModal open={callModalOpen} onClose={() => setCallModalOpen(false)} />
+    </>
   );
 }
 
