@@ -5,6 +5,15 @@ import { addDaysToDateString, dayOfWeekOfDateString, parisWallTimeToUtc, todayPa
 // Route publique — le formulaire de réservation de call de l'accueil ne
 // propose plus de date/heure libre, seulement les créneaux réellement
 // ouverts chez le closer (voir /closer/availability), moins ceux déjà pris.
+//
+// Sans paramètre de requête ni accès à `cookies()`/`headers()`, ce handler
+// n'a aucun signal qui indique à Next.js qu'il dépend d'une donnée par
+// requête — il était donc rendu une seule fois au build et mis en cache
+// statique (0 B, marqué ○ au build), figé sur l'état de la base au moment
+// du déploiement. Toute dispo ajoutée par le closer après coup n'apparaissait
+// jamais. `force-dynamic` force un recalcul à chaque appel.
+export const dynamic = 'force-dynamic';
+
 const SLOT_MINUTES = 30;
 const DAYS_AHEAD = 14;
 
