@@ -32,6 +32,7 @@ export default function SignalMarquee() {
   const posRef = useRef(0);
   const directionRef = useRef(-1); // -1 = défile vers la gauche (défaut), 1 = vers la droite
   const pausedRef = useRef(false);
+  const visibleRef = useRef(true);
   const lastScrollYRef = useRef(0);
 
   // Le sens du défilement libre s'inverse selon le sens du scroll de page —
@@ -59,11 +60,21 @@ export default function SignalMarquee() {
     let last = performance.now();
     let raf = 0;
 
+    // Bande défilante continue (translateX à chaque frame) : sans ce garde,
+    // elle continue de tourner même scrollée loin hors champ plus bas sur
+    // la page — du travail JS inutile en continu, une des sources du
+    // ralentissement général du site.
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => { visibleRef.current = entries[0]?.isIntersecting ?? true; },
+      { threshold: 0.01 },
+    );
+    intersectionObserver.observe(track);
+
     function frame(now: number) {
       const dt = Math.min((now - last) / 1000, 0.1);
       last = now;
 
-      if (!pausedRef.current && track) {
+      if (!pausedRef.current && visibleRef.current && track) {
         const halfWidth = track.scrollWidth / 2;
         posRef.current += directionRef.current * AUTOPLAY_SPEED * dt;
         // La liste est dupliquée (2x SIGNALS) : à mi-parcours dans un sens
@@ -78,7 +89,10 @@ export default function SignalMarquee() {
     }
 
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      intersectionObserver.disconnect();
+    };
   }, []);
 
   return (
