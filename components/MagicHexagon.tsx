@@ -169,7 +169,9 @@ export default function MagicHexagon({
     const spinner = new THREE.LineLoop(spinnerGeom, spinnerMat);
     group.add(spinner);
 
-    let frameId: number;
+    let frameId: number | null = null;
+    let isVisible = true;
+    let isTabVisible = document.visibilityState === 'visible';
     const clock = new THREE.Clock();
     let morphT = 0;
     let currentRotSpeed = getRotationSpeed(churnRate);
@@ -270,7 +272,39 @@ export default function MagicHexagon({
       renderer.render(scene, camera);
       frameId = requestAnimationFrame(animate);
     }
-    animate();
+
+    // Cette animation WebGL tournait en continu du montage au démontage,
+    // même quand le canvas était scrollé hors champ (ex: la version
+    // "success" en arrière-plan décoratif de /pricing étape 2) ou l'onglet
+    // en arrière-plan — un vrai foyer de ralentissement du site, comme
+    // détecté et corrigé pour AnimatedHero. Même parade ici : on ne rend
+    // que quand le canvas est visible à l'écran ET l'onglet actif.
+    function updateLoop() {
+      const shouldRun = isVisible && isTabVisible;
+      if (shouldRun && frameId === null) {
+        frameId = requestAnimationFrame(animate);
+      } else if (!shouldRun && frameId !== null) {
+        cancelAnimationFrame(frameId);
+        frameId = null;
+      }
+    }
+
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        isVisible = entries[0]?.isIntersecting ?? true;
+        updateLoop();
+      },
+      { threshold: 0.01 },
+    );
+    intersectionObserver.observe(canvas);
+
+    function handleVisibilityChange() {
+      isTabVisible = document.visibilityState === 'visible';
+      updateLoop();
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    updateLoop();
 
     function handleResize() {
       if (!canvasRef.current) return;
@@ -283,7 +317,9 @@ export default function MagicHexagon({
     window.addEventListener('resize', handleResize);
 
     return () => {
-      cancelAnimationFrame(frameId);
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      intersectionObserver.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('resize', handleResize);
       scene.traverse((obj) => {
         if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments || obj instanceof THREE.LineLoop || obj instanceof THREE.Points) {
