@@ -38,6 +38,24 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
+  // La page défilait encore derrière la modale (scroll du fond visible à
+  // travers le fond assombri) — bloquer overflow sur <body> ne suffit pas,
+  // l'élément qui défile réellement la page est <html> (document.scrollingElement),
+  // pas <body> ; on bloque donc les deux tant que la modale est ouverte,
+  // restauré proprement à la fermeture/démontage.
+  useEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    html.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [open]);
+
   // Chargé à chaque ouverture plutôt qu'une fois pour toutes — un visiteur
   // qui a laissé la page ouverte longtemps ne doit pas se voir proposer un
   // créneau déjà pris entre-temps par quelqu'un d'autre.
