@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, CheckCircle2, PhoneCall } from 'lucide-react';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
@@ -37,6 +38,17 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
   const [slotsError, setSlotsError] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+
+  // La modale est appelée depuis plusieurs endroits de la page (hero, CTA de
+  // fin de page), chacun dans un ancêtre différent — un simple overflow ou
+  // un contexte d'empilement CSS (transform, filter…) sur n'importe lequel
+  // de ces ancêtres peut cliper ou re-router les clics/positions d'une
+  // position: fixed classique, comme observé en prod. On monte donc la
+  // modale directement en enfant de <body> via un portail React, hors de
+  // tout ancêtre problématique, quel qu'il soit. `mounted` évite d'appeler
+  // document.body côté serveur (non disponible pendant le rendu SSR).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // La page défilait encore derrière la modale (scroll du fond visible à
   // travers le fond assombri) — bloquer overflow sur <body> ne suffit pas,
@@ -161,7 +173,9 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
     }
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -345,6 +359,7 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
