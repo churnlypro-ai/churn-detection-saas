@@ -561,7 +561,7 @@ export const en: Dictionary = {
     },
     step0: {
       title: 'Create your account',
-      subtitle: 'Get started for free.',
+      subtitle: "Get started for free — no Stripe? Just import a CSV, it works just as well.",
       stripeSignupButton: 'Create my account with Stripe',
       stripeSignupLoading: 'Connecting to Stripe…',
       stripeSignupNote: 'Your revenue and customer count are calculated automatically from your real Stripe data — no form to fill in.',
