@@ -292,31 +292,28 @@ interface TeamInviteParams {
 interface ReferralRewardParams {
   to: string;
   companyName: string;
-  referralCount: number;
-  percentOff: number;
   language?: EmailLanguage;
 }
 
-export async function sendReferralRewardEmail({ to, companyName, referralCount, percentOff, language = 'fr' }: ReferralRewardParams) {
+export async function sendReferralRewardEmail({ to, companyName, language = 'fr' }: ReferralRewardParams) {
   const resend = getResend();
-  const isFree = percentOff >= 100;
   const subject = language === 'en'
-    ? isFree ? 'Your next month of Churnly is free 🎉' : 'Your next month is 50% off 🎉'
-    : isFree ? 'Votre prochain mois Churnly est gratuit 🎉' : 'Votre prochain mois est à moitié prix 🎉';
+    ? 'Your next month of Churnly is free 🎉'
+    : 'Votre prochain mois Churnly est gratuit 🎉';
 
   const html = language === 'en' ? `
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
       <h2 style="font-weight: 600;">${subject}</h2>
-      <p>Hi ${companyName}, ${referralCount} people signed up through your referral link and became paying customers last month.</p>
-      <p>As a thank you, ${isFree ? 'your next invoice is fully covered' : 'your next invoice gets 50% off'} — it's applied automatically, nothing to do on your end.</p>
-      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Keep sharing your link from Settings to keep this going every month.</p>
+      <p>Hi ${companyName}, someone just signed up through your referral link and became a paying customer.</p>
+      <p>As a thank you, your next invoice is fully covered — it's applied automatically, nothing to do on your end.</p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Keep sharing your link from Settings to earn another free month.</p>
     </div>
   ` : `
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
       <h2 style="font-weight: 600;">${subject}</h2>
-      <p>Bonjour ${companyName}, ${referralCount} personnes se sont inscrites via votre lien de parrainage et sont devenues clientes payantes le mois dernier.</p>
-      <p>Pour vous remercier, ${isFree ? 'votre prochaine facture est entièrement offerte' : 'votre prochaine facture bénéficie de 50% de réduction'} — c'est appliqué automatiquement, rien à faire de votre côté.</p>
-      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Continuez à partager votre lien depuis les Réglages pour que ça se reproduise chaque mois.</p>
+      <p>Bonjour ${companyName}, une personne vient de s'inscrire via votre lien de parrainage et est devenue cliente payante.</p>
+      <p>Pour vous remercier, votre prochaine facture est entièrement offerte — c'est appliqué automatiquement, rien à faire de votre côté.</p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Continuez à partager votre lien depuis les Réglages pour gagner un autre mois offert.</p>
     </div>
   `;
 

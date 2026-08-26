@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
+import { rewardReferrerForConversion } from '@/lib/referralRewards';
 
 function mapStripeStatus(status: string): 'trialing' | 'active' | 'canceled' | 'past_due' {
   if (status === 'trialing') return 'trialing';
@@ -72,13 +73,18 @@ export async function POST(req: NextRequest) {
               ...(becamePayingNow ? { became_paying_at: new Date().toISOString() } : {}),
             })
             .eq('id', userId)
-            .select('id');
+            .select('id, referred_by');
           if (error) {
             console.error('[stripe-webhook] checkout.session.completed: supabase update failed', JSON.stringify({ userId, error }));
           } else if (!data || data.length === 0) {
             console.error('[stripe-webhook] checkout.session.completed: no user row matched', JSON.stringify({ userId }));
           } else {
             console.log('[stripe-webhook] checkout.session.completed: subscription activated', JSON.stringify({ userId, status: mapStripeStatus(subscription.status) }));
+            // Un mois offert au parrain, immédiatement à la première
+            // conversion du filleul — pas d'attente d'un lot mensuel.
+            if (becamePayingNow && data[0].referred_by) {
+              await rewardReferrerForConversion(supabaseAdmin, data[0].referred_by);
+            }
           }
         } else {
           console.error(

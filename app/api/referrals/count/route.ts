@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { percentOffForCount } from '@/lib/referralRewards';
 
 // Chaque compte a son propre code (généré à la création, voir
 // handle_new_user dans la migration correspondante) — pas de restriction
@@ -20,7 +19,7 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (!profile?.referral_code) {
-    return NextResponse.json({ code: null, count: 0, currentMonthPayingCount: 0, nextRewardPercent: 0 });
+    return NextResponse.json({ code: null, count: 0, payingCount: 0 });
   }
 
   const { count } = await supabaseAdmin
@@ -28,22 +27,18 @@ export async function GET(req: NextRequest) {
     .select('id', { count: 'exact', head: true })
     .eq('referred_by', profile.referral_code);
 
-  // Filleuls devenus clients payants depuis le début du mois en cours — ce
-  // qui compte pour la récompense appliquée le 1er du mois suivant (voir
-  // lib/referralRewards.ts). Affiché dans /settings comme une progression
-  // "X/3 ce mois-ci", séparée du compteur lifetime ci-dessus.
-  const now = new Date();
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0)).toISOString();
-  const { count: currentMonthPayingCount } = await supabaseAdmin
+  // Chaque filleul devenu payant a déjà déclenché son mois offert au moment
+  // de sa conversion (voir le webhook Stripe) — ce compteur est juste
+  // informatif, pas une progression vers un seuil.
+  const { count: payingCount } = await supabaseAdmin
     .from('users')
     .select('id', { count: 'exact', head: true })
     .eq('referred_by', profile.referral_code)
-    .gte('became_paying_at', monthStart);
+    .not('became_paying_at', 'is', null);
 
   return NextResponse.json({
     code: profile.referral_code,
     count: count ?? 0,
-    currentMonthPayingCount: currentMonthPayingCount ?? 0,
-    nextRewardPercent: percentOffForCount(currentMonthPayingCount ?? 0),
+    payingCount: payingCount ?? 0,
   });
 }

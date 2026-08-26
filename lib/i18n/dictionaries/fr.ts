@@ -275,7 +275,7 @@ export const fr = {
         stripeConnected: 'Compte Stripe connecté',
         stripeDisconnected: 'Compte Stripe déconnecté',
         subscriptionTierChanged: (fromTier: string, toTier: string) => `Palier d'abonnement changé de ${fromTier}€ à ${toTier}€`,
-        referralRewardApplied: (referralCount: number, percentOff: number) => `Récompense parrainage appliquée : ${referralCount} filleul${referralCount > 1 ? 's' : ''} payant${referralCount > 1 ? 's' : ''} → ${percentOff}% sur la prochaine facture`,
+        referralRewardApplied: () => 'Mois offert appliqué (parrainage)',
       },
     },
     team: {
@@ -318,12 +318,10 @@ export const fr = {
     },
     referral: {
       title: 'Parrainage',
-      description: 'Partagez ce lien : 2 filleuls devenus clients payants dans le mois = -50% sur votre prochaine facture, 3 ou plus = mois prochain gratuit.',
+      description: "Partagez ce lien : dès qu'un filleul devient client payant, vous recevez un mois offert, et lui bénéficie de -50% sur son premier mois.",
       copyButton: 'Copier',
       countLabel: (count: number) => `${count} inscription${count > 1 ? 's' : ''} via votre lien.`,
-      monthProgress: (count: number) => `${count}/3 filleuls payants ce mois-ci`,
-      rewardFree: '🎉 Votre prochain mois est gratuit !',
-      rewardHalf: '🎉 Votre prochain mois est à -50% !',
+      payingLabel: (count: number) => `🎉 ${count} filleul${count > 1 ? 's' : ''} payant${count > 1 ? 's' : ''} → ${count} mois offert${count > 1 ? 's' : ''} au total`,
     },
   },
   dashboard: {
