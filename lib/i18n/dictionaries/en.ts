@@ -755,7 +755,6 @@ export const en: Dictionary = {
     contactVideo: 'Video call (Meet, Teams...)',
     contactPhone: 'Phone',
     contactWhatsapp: 'WhatsApp',
-    contactEmail: 'Email',
     phoneNumberPlaceholder: 'Your number (with country code)',
     submit: 'Send my request',
     submitting: 'Sending…',
