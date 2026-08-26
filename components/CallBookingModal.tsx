@@ -11,7 +11,7 @@ interface CallBookingModalProps {
   onClose: () => void;
 }
 
-type ContactMethod = 'zoom' | 'video' | 'phone' | 'whatsapp' | 'email';
+type ContactMethod = 'zoom' | 'video' | 'phone' | 'whatsapp';
 
 const PARIS_TZ = 'Europe/Paris';
 
@@ -135,7 +135,6 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
       video: t.contactVideo,
       phone: t.contactPhone,
       whatsapp: t.contactWhatsapp,
-      email: t.contactEmail,
     };
     const requiresPhone = contactMethod === 'phone' || contactMethod === 'whatsapp';
     const contactLine = requiresPhone
@@ -311,13 +310,12 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">{t.contactMethodLabel}</label>
                   <div className="flex flex-wrap gap-2">
-                    {(['zoom', 'video', 'phone', 'whatsapp', 'email'] as ContactMethod[]).map((method) => {
+                    {(['zoom', 'video', 'phone', 'whatsapp'] as ContactMethod[]).map((method) => {
                       const labels: Record<ContactMethod, string> = {
                         zoom: t.contactZoom,
                         video: t.contactVideo,
                         phone: t.contactPhone,
                         whatsapp: t.contactWhatsapp,
-                        email: t.contactEmail,
                       };
                       return (
                         <button

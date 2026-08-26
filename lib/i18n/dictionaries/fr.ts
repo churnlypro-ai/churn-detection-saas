@@ -753,7 +753,6 @@ export const fr = {
     contactVideo: 'Visio (Meet, Teams...)',
     contactPhone: 'Téléphone',
     contactWhatsapp: 'WhatsApp',
-    contactEmail: 'Email',
     phoneNumberPlaceholder: 'Votre numéro (avec indicatif)',
     submit: 'Envoyer ma demande',
     submitting: 'Envoi…',
