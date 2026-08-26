@@ -559,7 +559,7 @@ export const fr = {
     },
     step0: {
       title: 'Créez votre compte',
-      subtitle: 'Commencez gratuitement.',
+      subtitle: 'Commencez gratuitement — pas de Stripe ? Importez simplement un CSV, ça marche aussi bien.',
       stripeSignupButton: 'Créer mon compte avec Stripe',
       stripeSignupLoading: 'Connexion à Stripe…',
       stripeSignupNote: 'Votre CA et votre nombre de clients sont calculés automatiquement à partir de vos vraies données Stripe — pas de formulaire à remplir.',
