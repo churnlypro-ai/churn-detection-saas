@@ -277,6 +277,7 @@ export const fr = {
       monthly: 'Tous les mois',
       manual: 'Je lance moi-même (depuis Importer mes données)',
       error: 'Impossible d\'enregistrer ce réglage.',
+      csvNote: 'Sans compte Stripe connecté, vos résultats viennent du dernier fichier importé — remontez un nouveau CSV depuis « Importer mes données » quand vous voulez des résultats à jour.',
     },
     auditLog: {
       title: 'Journal d\'activité',

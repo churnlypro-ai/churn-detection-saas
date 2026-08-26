@@ -279,6 +279,7 @@ export const en: Dictionary = {
       monthly: 'Every month',
       manual: 'I\'ll trigger it myself (from Upload data)',
       error: 'Could not save this setting.',
+      csvNote: 'Without a connected Stripe account, your results come from your last uploaded file — upload a new CSV from "Upload data" whenever you want fresh results.',
     },
     auditLog: {
       title: 'Activity log',
