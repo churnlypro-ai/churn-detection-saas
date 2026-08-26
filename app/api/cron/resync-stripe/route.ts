@@ -9,14 +9,28 @@ import { runWeeklyReports } from '@/lib/weeklyReports';
 // webhook. Résultat : le churn_score affiché vieillissait dès que le client
 // ne recliquait pas manuellement "importer", alors que le produit se vend
 // justement sur "on sait qui va partir maintenant". Ce cron ferme cette
-// boucle : il relance l'analyse chaque jour pour tout compte Stripe
-// connecté et payant/en essai (voir vercel.json pour la planification).
+// boucle : il tourne tous les jours (voir vercel.json) mais ne relance
+// l'analyse que pour les comptes dont analysis_frequency le justifie ce
+// jour-là (voir shouldRunToday) — "manual" n'est jamais touché ici.
 export const maxDuration = 300;
 
 interface StripeConnectedUser {
   id: string;
   stripe_connect_account_id: string;
   language: string | null;
+  analysis_frequency: string;
+}
+
+// 'daily' tourne tous les jours (comportement historique, toujours le
+// défaut) ; 'weekly'/'monthly' réutilisent les mêmes ancres que les bilans
+// hebdo et l'ancien système de parrainage (lundi / 1er du mois) plutôt que
+// d'ajouter un 3e cron — le plan Vercel Hobby n'en autorise que 2 ; 'manual'
+// ne tourne jamais ici, le client relance lui-même depuis /upload.
+function shouldRunToday(frequency: string, now: Date): boolean {
+  if (frequency === 'weekly') return now.getUTCDay() === 1;
+  if (frequency === 'monthly') return now.getUTCDate() === 1;
+  if (frequency === 'manual') return false;
+  return true;
 }
 
 async function handleCron(req: NextRequest) {
@@ -33,7 +47,7 @@ async function handleCron(req: NextRequest) {
 
   const { data: users, error: usersError } = await supabaseAdmin
     .from('users')
-    .select('id, stripe_connect_account_id, language')
+    .select('id, stripe_connect_account_id, language, analysis_frequency')
     .not('stripe_connect_account_id', 'is', null)
     .in('subscription_status', ['active', 'trialing']);
 
@@ -43,6 +57,7 @@ async function handleCron(req: NextRequest) {
   }
 
   const results: { userId: string; clientCount: number; error?: string }[] = [];
+  const now = new Date();
 
   // Séquentiel plutôt qu'en parallèle : chaque analyse utilisateur lance
   // déjà plusieurs batchs Claude en parallèle en interne (voir
@@ -50,6 +65,7 @@ async function handleCron(req: NextRequest) {
   // comptes en même temps ferait exactement le problème de rate limit que
   // cette borne existe pour éviter.
   for (const user of (users ?? []) as StripeConnectedUser[]) {
+    if (!shouldRunToday(user.analysis_frequency, now)) continue;
     try {
       const clients = await fetchClientsFromConnectedAccount(user.stripe_connect_account_id);
       if (clients.length === 0) {
