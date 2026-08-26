@@ -269,6 +269,15 @@ export const fr = {
     stripeDisconnected: 'Compte Stripe déconnecté.',
     stripeConnectError: 'Impossible de se connecter à Stripe.',
     stripeDisconnectError: 'Impossible de déconnecter le compte Stripe.',
+    analysisFrequency: {
+      label: 'Fréquence de ré-analyse',
+      description: 'À quelle fréquence vos clients Stripe sont ré-analysés automatiquement.',
+      daily: 'Tous les jours',
+      weekly: 'Toutes les semaines',
+      monthly: 'Tous les mois',
+      manual: 'Je lance moi-même (depuis Importer mes données)',
+      error: 'Impossible d\'enregistrer ce réglage.',
+    },
     auditLog: {
       title: 'Journal d\'activité',
       actions: {

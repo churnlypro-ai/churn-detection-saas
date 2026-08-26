@@ -24,6 +24,7 @@ interface Profile {
   stripe_connected: boolean;
   intercom_connected: boolean;
   stripe_connect_account_id: string | null;
+  analysis_frequency: string;
 }
 
 interface AuditLogEntry {
@@ -133,6 +134,8 @@ export default function Settings() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'disconnecting'>('idle');
   const [stripeMessage, setStripeMessage] = useState('');
+  const [analysisFrequency, setAnalysisFrequency] = useState('daily');
+  const [analysisFrequencyStatus, setAnalysisFrequencyStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const [planMessage, setPlanMessage] = useState('');
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
@@ -211,6 +214,7 @@ export default function Settings() {
       setEditIndustry(p?.industry ?? '');
       setEditBusinessDescription(p?.business_description ?? '');
       setStripeConnected(!!p?.stripe_connect_account_id);
+      setAnalysisFrequency(p?.analysis_frequency ?? 'daily');
       setLoading(false);
 
       const { data: logRows } = await supabase
@@ -530,6 +534,20 @@ export default function Settings() {
     }
   }
 
+  async function handleAnalysisFrequencyChange(value: string) {
+    if (!user) return;
+    const previous = analysisFrequency;
+    setAnalysisFrequency(value);
+    setAnalysisFrequencyStatus('saving');
+    const { error } = await supabase.from('users').update({ analysis_frequency: value }).eq('id', user.id);
+    if (error) {
+      setAnalysisFrequency(previous);
+      setAnalysisFrequencyStatus('error');
+      return;
+    }
+    setAnalysisFrequencyStatus('idle');
+  }
+
   if (loading || !user) {
     return (
       <>
@@ -713,6 +731,28 @@ export default function Settings() {
                   )}
                 </div>
                 {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
+                {stripeConnected && (
+                  <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      {t.analysisFrequency.label}
+                    </label>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t.analysisFrequency.description}</p>
+                    <select
+                      value={analysisFrequency}
+                      onChange={(e) => handleAnalysisFrequencyChange(e.target.value)}
+                      disabled={analysisFrequencyStatus === 'saving'}
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
+                    >
+                      <option value="daily">{t.analysisFrequency.daily}</option>
+                      <option value="weekly">{t.analysisFrequency.weekly}</option>
+                      <option value="monthly">{t.analysisFrequency.monthly}</option>
+                      <option value="manual">{t.analysisFrequency.manual}</option>
+                    </select>
+                    {analysisFrequencyStatus === 'error' && (
+                      <p className="mt-2 text-xs text-red-600 dark:text-red-400">{t.analysisFrequency.error}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

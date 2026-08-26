@@ -271,6 +271,15 @@ export const en: Dictionary = {
     stripeDisconnected: 'Stripe account disconnected.',
     stripeConnectError: 'Could not connect to Stripe.',
     stripeDisconnectError: 'Could not disconnect the Stripe account.',
+    analysisFrequency: {
+      label: 'Re-analysis frequency',
+      description: 'How often your Stripe customers are automatically re-analyzed.',
+      daily: 'Every day',
+      weekly: 'Every week',
+      monthly: 'Every month',
+      manual: 'I\'ll trigger it myself (from Upload data)',
+      error: 'Could not save this setting.',
+    },
     auditLog: {
       title: 'Activity log',
       actions: {
