@@ -753,6 +753,11 @@ export default function Settings() {
                     )}
                   </div>
                 )}
+                {!stripeConnected && (
+                  <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.analysisFrequency.csvNote}</p>
+                  </div>
+                )}
               </div>
             </div>
 
