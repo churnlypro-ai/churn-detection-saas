@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const user = userData.user;
   const { data: profile } = await supabaseAdmin
     .from('users')
-    .select('stripe_customer_id, industry, client_count, monthly_revenue')
+    .select('stripe_customer_id, industry, client_count, monthly_revenue, referred_by')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     industry?: string;
     client_count?: number | null;
     monthly_revenue?: number | null;
+    referred_by?: string | null;
   } | null;
   const isManagerProfile = p?.industry === 'manager';
   const tier = isManagerProfile
@@ -62,6 +63,21 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from('users').update({ stripe_customer_id: customerId }).eq('id', user.id);
     }
 
+    // Un utilisateur inscrit via un lien de parrainage (referred_by posé au
+    // signup, voir handle_new_user) reçoit -50% sur sa première facture —
+    // coupon à usage unique, appliqué une seule fois au checkout, jamais
+    // reconduit sur les factures suivantes.
+    let discounts: { coupon: string }[] | undefined;
+    if (p?.referred_by) {
+      const coupon = await stripe.coupons.create({
+        percent_off: 50,
+        duration: 'once',
+        max_redemptions: 1,
+        name: 'Bienvenue — parrainage (-50% premier mois)',
+      });
+      discounts = [{ coupon: coupon.id }];
+    }
+
     // Chaque compte reçoit une seule analyse gratuite à l'inscription (voir
     // le garde-fou dans app/api/analyze et app/api/stripe/connect/import) —
     // il n'y a donc plus de période d'essai Stripe à accorder ici, l'abonnement
@@ -70,6 +86,7 @@ export async function POST(req: NextRequest) {
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
+      ...(discounts ? { discounts } : {}),
       subscription_data: {
         metadata: { supabase_user_id: user.id, tier: String(tier) },
       },

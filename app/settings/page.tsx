@@ -66,7 +66,7 @@ function auditActionLabel(
     stripeConnected: string;
     stripeDisconnected: string;
     subscriptionTierChanged: (fromTier: string, toTier: string) => string;
-    referralRewardApplied: (referralCount: number, percentOff: number) => string;
+    referralRewardApplied: () => string;
   },
 ): string {
   if (entry.action === 'stripe_connected') return labels.stripeConnected;
@@ -76,8 +76,7 @@ function auditActionLabel(
     return labels.subscriptionTierChanged(String(meta.fromTier ?? '—'), String(meta.toTier ?? '—'));
   }
   if (entry.action === 'referral_reward_applied') {
-    const meta = entry.metadata ?? {};
-    return labels.referralRewardApplied(Number(meta.referralCount ?? 0), Number(meta.percentOff ?? 0));
+    return labels.referralRewardApplied();
   }
   return entry.action;
 }
@@ -151,8 +150,7 @@ export default function Settings() {
   const [webhookMessage, setWebhookMessage] = useState('');
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [referralCount, setReferralCount] = useState(0);
-  const [currentMonthPayingCount, setCurrentMonthPayingCount] = useState(0);
-  const [nextRewardPercent, setNextRewardPercent] = useState(0);
+  const [referralPayingCount, setReferralPayingCount] = useState(0);
   const { language } = useLanguage();
   const t = useTranslations('settings');
 
@@ -251,8 +249,7 @@ export default function Settings() {
         const referralResult = await referralRes.json();
         setReferralCode(referralResult.code ?? null);
         setReferralCount(referralResult.count ?? 0);
-        setCurrentMonthPayingCount(referralResult.currentMonthPayingCount ?? 0);
-        setNextRewardPercent(referralResult.nextRewardPercent ?? 0);
+        setReferralPayingCount(referralResult.payingCount ?? 0);
       }
     });
   }, [router]);
@@ -920,14 +917,11 @@ export default function Settings() {
                     </button>
                   </div>
                   <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.referral.countLabel(referralCount)}</p>
-                  <div className="mt-3 rounded-xl bg-slate-50 px-3.5 py-2.5 dark:bg-slate-800/60">
-                    <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t.referral.monthProgress(currentMonthPayingCount)}</p>
-                    {nextRewardPercent > 0 && (
-                      <p className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        {nextRewardPercent >= 100 ? t.referral.rewardFree : t.referral.rewardHalf}
-                      </p>
-                    )}
-                  </div>
+                  {referralPayingCount > 0 && (
+                    <div className="mt-3 rounded-xl bg-slate-50 px-3.5 py-2.5 dark:bg-slate-800/60">
+                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{t.referral.payingLabel(referralPayingCount)}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

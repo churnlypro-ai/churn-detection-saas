@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { sendRiskAlertEmail } from '@/lib/email';
-import { applyMonthlyReferralRewards } from '@/lib/referralRewards';
 
 // Score au-dessus duquel un client mérite une interruption (email) plutôt
 // que d'attendre que le badge "Risque" du dashboard soit remarqué.
@@ -139,20 +138,7 @@ async function handleCron(req: NextRequest) {
     }
   }
 
-  // Le plan Vercel Hobby limite à 2 cron jobs — pas de créneau dédié pour
-  // les récompenses de parrainage. On profite de ce cron déjà quotidien : il
-  // se déclenche tous les jours mais applyMonthlyReferralRewards() ne fait
-  // rien tant qu'on n'est pas le 1er du mois (voir lib/referralRewards.ts).
-  let referralRewards: Awaited<ReturnType<typeof applyMonthlyReferralRewards>> = [];
-  if (new Date().getUTCDate() === 1) {
-    try {
-      referralRewards = await applyMonthlyReferralRewards(supabaseAdmin);
-    } catch (err) {
-      console.error('[cron/risk-alerts] referral rewards failed', err instanceof Error ? err.message : err);
-    }
-  }
-
-  return NextResponse.json({ results, referralRewards });
+  return NextResponse.json({ results });
 }
 
 export async function GET(req: NextRequest) {
