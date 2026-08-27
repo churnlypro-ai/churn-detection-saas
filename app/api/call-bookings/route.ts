@@ -62,6 +62,15 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
+    // Le contrôle de conflit ci-dessus (lire-puis-écrire) laisse une petite
+    // fenêtre de course entre deux requêtes concurrentes sur le même
+    // créneau — l'index unique partiel posé en base (voir la migration
+    // call_bookings_slot_start_active_unique) est le vrai garde-fou : code
+    // 23505 = violation de contrainte unique, donc quelqu'un d'autre vient
+    // de prendre ce créneau entre notre vérification et notre insertion.
+    if (error.code === '23505') {
+      return NextResponse.json({ error: m.slotTaken }, { status: 409 });
+    }
     console.error('[call-bookings] insert failed', error);
     return NextResponse.json({ error: m.failed }, { status: 500 });
   }

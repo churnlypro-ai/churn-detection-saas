@@ -10,23 +10,55 @@ function mapStripeStatus(status: string): 'trialing' | 'active' | 'canceled' | '
   return 'past_due';
 }
 
+interface ActivationResult {
+  becamePayingNow: boolean;
+  data: { id: string; referred_by: string | null }[] | null;
+  error: unknown;
+}
+
 // became_paying_at doit être posé une seule fois, à la toute première
 // activation — jamais réécrit sur un renouvellement ou une réactivation
-// ultérieure (voir /api/cron/referral-rewards, qui compte les filleuls
-// devenus payants pendant UN mois donné, pas leur statut actuel).
-async function isFirstTimeActive(
+// ultérieure (voir lib/referralRewards.ts, qui récompense le parrain
+// exactement à ce moment-là).
+//
+// Stripe garantit une livraison "at-least-once" de ses webhooks — le même
+// événement peut arriver deux fois, ou deux événements différents peuvent
+// être traités en parallèle par deux invocations concurrentes de cette
+// route. Un enchaînement lire-puis-écrire (lire became_paying_at, décider,
+// puis écrire) laisse une fenêtre où les deux invocations lisent "pas
+// encore payant" avant qu'aucune n'ait écrit — les deux récompenseraient
+// alors le parrain. La condition `.is('became_paying_at', null)` posée
+// directement dans le WHERE de l'UPDATE ferme cette fenêtre : Postgres
+// sérialise les UPDATE concurrents sur la même ligne, donc une seule des
+// deux requêtes peut matcher et gagner la course, l'autre matche 0 ligne.
+async function applyActivation(
   supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  matchColumn: 'id' | 'stripe_subscription_id',
   matchValue: string,
+  fields: Record<string, unknown>,
   newStatus: string,
-  matchColumn: 'id' | 'stripe_subscription_id' = 'id',
-): Promise<boolean> {
-  if (newStatus !== 'active') return false;
-  const { data } = await supabaseAdmin
+): Promise<ActivationResult> {
+  if (newStatus === 'active') {
+    const { data: wonRows, error: wonError } = await supabaseAdmin
+      .from('users')
+      .update({ ...fields, became_paying_at: new Date().toISOString() })
+      .eq(matchColumn, matchValue)
+      .is('became_paying_at', null)
+      .select('id, referred_by');
+    if (wonError) return { becamePayingNow: false, data: null, error: wonError };
+    if (wonRows && wonRows.length > 0) {
+      return { becamePayingNow: true, data: wonRows, error: null };
+    }
+  }
+
+  // Pas de première activation à détecter ici (déjà payant auparavant, ou
+  // statut qui n'est pas "active") — mise à jour normale des autres champs.
+  const { data, error } = await supabaseAdmin
     .from('users')
-    .select('became_paying_at')
+    .update(fields)
     .eq(matchColumn, matchValue)
-    .maybeSingle();
-  return !data?.became_paying_at;
+    .select('id, referred_by');
+  return { becamePayingNow: false, data, error };
 }
 
 export async function POST(req: NextRequest) {
@@ -61,19 +93,19 @@ export async function POST(req: NextRequest) {
         if (userId && tier && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
           const newStatus = mapStripeStatus(subscription.status);
-          const becamePayingNow = await isFirstTimeActive(supabaseAdmin, userId, newStatus);
-          const { error, data } = await supabaseAdmin
-            .from('users')
-            .update({
+          const { error, data, becamePayingNow } = await applyActivation(
+            supabaseAdmin,
+            'id',
+            userId,
+            {
               subscription_tier: tier,
               subscription_status: newStatus,
               stripe_subscription_id: subscription.id,
               trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
               ...(subscription.trial_end ? { trial_used: true } : {}),
-              ...(becamePayingNow ? { became_paying_at: new Date().toISOString() } : {}),
-            })
-            .eq('id', userId)
-            .select('id, referred_by');
+            },
+            newStatus,
+          );
           if (error) {
             console.error('[stripe-webhook] checkout.session.completed: supabase update failed', JSON.stringify({ userId, error }));
           } else if (!data || data.length === 0) {
@@ -98,21 +130,23 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         const newStatus = mapStripeStatus(subscription.status);
-        const becamePayingNow = await isFirstTimeActive(supabaseAdmin, subscription.id, newStatus, 'stripe_subscription_id');
-        const { error, data } = await supabaseAdmin
-          .from('users')
-          .update({
+        const { error, data, becamePayingNow } = await applyActivation(
+          supabaseAdmin,
+          'stripe_subscription_id',
+          subscription.id,
+          {
             subscription_status: newStatus,
             trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
             ...(subscription.trial_end ? { trial_used: true } : {}),
-            ...(becamePayingNow ? { became_paying_at: new Date().toISOString() } : {}),
-          })
-          .eq('stripe_subscription_id', subscription.id)
-          .select('id');
+          },
+          newStatus,
+        );
         if (error) {
           console.error('[stripe-webhook] customer.subscription.updated: supabase update failed', JSON.stringify({ subscriptionId: subscription.id, error }));
         } else if (!data || data.length === 0) {
           console.error('[stripe-webhook] customer.subscription.updated: no user row matched', JSON.stringify({ subscriptionId: subscription.id }));
+        } else if (becamePayingNow && data[0].referred_by) {
+          await rewardReferrerForConversion(supabaseAdmin, data[0].referred_by);
         }
         break;
       }
