@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -136,6 +136,7 @@ export default function Settings() {
   const [stripeMessage, setStripeMessage] = useState('');
   const [analysisFrequency, setAnalysisFrequency] = useState('daily');
   const [analysisFrequencyStatus, setAnalysisFrequencyStatus] = useState<'idle' | 'saving' | 'error'>('idle');
+  const analysisFrequencyRequestId = useRef(0);
   const [planMessage, setPlanMessage] = useState('');
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
@@ -537,9 +538,16 @@ export default function Settings() {
   async function handleAnalysisFrequencyChange(value: string) {
     if (!user) return;
     const previous = analysisFrequency;
+    // Un id de requête plutôt qu'un simple booléen "en cours" : si
+    // l'utilisateur change deux fois rapidement (ex: quotidien -> hebdo ->
+    // mensuel) et que la 1ère requête échoue après que la 2ème ait déjà
+    // réussi, sa réponse (en retard) ne doit pas écraser l'état déjà à jour
+    // avec la valeur "previous" qu'elle avait capturée avant d'être envoyée.
+    const requestId = ++analysisFrequencyRequestId.current;
     setAnalysisFrequency(value);
     setAnalysisFrequencyStatus('saving');
     const { error } = await supabase.from('users').update({ analysis_frequency: value }).eq('id', user.id);
+    if (analysisFrequencyRequestId.current !== requestId) return;
     if (error) {
       setAnalysisFrequency(previous);
       setAnalysisFrequencyStatus('error');

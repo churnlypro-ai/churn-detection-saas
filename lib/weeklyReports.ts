@@ -60,18 +60,30 @@ export async function runWeeklyReports(
 
       const language = user.language === 'en' ? 'en' : 'fr';
 
-      await sendWeeklyReportEmail({
-        to: user.email,
-        companyName: user.company_name || (language === 'en' ? 'there' : 'là'),
-        clientsSaved,
-        revenueSaved,
-        roiPercent,
-        churnRateNow: Number(churnRateNow.toFixed(1)),
-        churnRateBefore: Number(churnRateNow.toFixed(1)),
-        dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
-        language,
-      });
-      results.push({ userId: user.id, sent: true, type: 'weekly' });
+      // Depuis l'ajout d'analysis_frequency, un compte en 'weekly'/'monthly'/
+      // 'manual' peut très bien n'avoir aucune analyse fraîche cette
+      // semaine — avant, le resync tournait pour tout le monde chaque jour,
+      // donc rows était (presque) toujours non-vide. Sans donnée, churnRateNow
+      // et revenueSaved tombent à 0 par construction (voir plus haut), ce qui
+      // enverrait un rapport annonçant faussement "0% de risque" plutôt que
+      // de refléter l'absence de nouvelle donnée — on saute l'envoi cette
+      // semaine-là au lieu de mentir par omission.
+      if (rows.length === 0) {
+        results.push({ userId: user.id, sent: false, type: 'weekly_skipped_no_data' });
+      } else {
+        await sendWeeklyReportEmail({
+          to: user.email,
+          companyName: user.company_name || (language === 'en' ? 'there' : 'là'),
+          clientsSaved,
+          revenueSaved,
+          roiPercent,
+          churnRateNow: Number(churnRateNow.toFixed(1)),
+          churnRateBefore: Number(churnRateNow.toFixed(1)),
+          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+          language,
+        });
+        results.push({ userId: user.id, sent: true, type: 'weekly' });
+      }
 
       if (user.created_at && user.created_at <= fourteenDaysAgo && user.created_at > twentyOneDaysAgo) {
         const monthlyPrice = Number(user.subscription_tier) || 300;
