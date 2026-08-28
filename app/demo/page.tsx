@@ -14,8 +14,11 @@ import { formatEuro } from '@/lib/pricing';
 
 type Step = 'intro' | 'form' | 'loading' | 'result';
 
-const DEMO_EMAIL_DRAFTS = Object.fromEntries(
-  DEMO_CLIENTS.map((client) => [client.client_name, client.emailDraft])
+const DEMO_ACTION_PREVIEWS = Object.fromEntries(
+  DEMO_CLIENTS.map((client) => [
+    client.client_name,
+    { email: client.emailDraft, call: client.callScript, offer: client.specialOffer },
+  ])
 );
 
 const LOADING_MESSAGES = [
@@ -262,7 +265,7 @@ function DemoContent() {
                   clients={DEMO_CLIENTS}
                   actionState={actionState}
                   onToggleAction={() => {}}
-                  emailDrafts={DEMO_EMAIL_DRAFTS}
+                  actionPreviews={DEMO_ACTION_PREVIEWS}
                 />
               </motion.div>
 
