@@ -23,6 +23,43 @@ export interface ExtractedLinkedInLead {
 // relatif sur churnly.fr au lieu d'ouvrir LinkedIn.
 const LINKEDIN_URL_PATTERN = /^https?:\/\/([a-z0-9-]+\.)?linkedin\.com\/(in|company)\//i;
 
+// Parseur déterministe du même format "name:/url:/message:" séparé par ---
+// que le collage en masse côté front (voir parseLinkedInBulkBlocks dans
+// app/admin/prospecting/page.tsx). Utilisé en priorité sur les fichiers
+// importés : un lot de contacts déjà écrits dans ce format n'a aucune
+// raison de passer par un appel IA — en plus d'être inutile, ça a un vrai
+// coût de fiabilité. Avec des messages personnalisés longs (~700 mots),
+// faire recopier chaque message mot pour mot par le modèle dans sa sortie
+// JSON peut dépasser max_tokens avant que le tableau ne se referme,
+// produisant un JSON tronqué et donc 0 contact extrait — silencieusement,
+// sans erreur visible. Le parseur déterministe n'a pas cette limite.
+export function parseStructuredLinkedInBlocks(rawText: string): ExtractedLinkedInLead[] {
+  const blocks = rawText.split(/^---$/m).map((b) => b.trim()).filter(Boolean);
+  const leads: ExtractedLinkedInLead[] = [];
+  for (const block of blocks) {
+    const lines = block.split('\n');
+    let contactName = '';
+    let linkedinUrl = '';
+    const messageLines: string[] = [];
+    let inMessage = false;
+    for (const line of lines) {
+      if (inMessage) { messageLines.push(line); continue; }
+      if (line.toLowerCase().startsWith('name:')) contactName = line.slice(line.indexOf(':') + 1).trim();
+      else if (line.toLowerCase().startsWith('url:') || line.toLowerCase().startsWith('linkedin:')) linkedinUrl = line.slice(line.indexOf(':') + 1).trim();
+      else if (line.toLowerCase().startsWith('message:')) {
+        inMessage = true;
+        const rest = line.slice(line.indexOf(':') + 1);
+        if (rest.trim()) messageLines.push(rest.trim());
+      }
+    }
+    const message = messageLines.join('\n').trim();
+    if (contactName && message && LINKEDIN_URL_PATTERN.test(linkedinUrl)) {
+      leads.push({ contactName, linkedinUrl, message });
+    }
+  }
+  return leads;
+}
+
 // Contrairement à la prospection email, le message est déjà rédigé par
 // l'admin dans le fichier source — on l'extrait tel quel, sans jamais le
 // réécrire, le raccourcir ou le compléter, pour ne jamais envoyer un
@@ -46,7 +83,12 @@ export async function extractLinkedInLeadsFromRawText(rawText: string): Promise<
   const client = getClient();
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 8192,
+    // Relevé au-dessus du défaut : ce chemin ne sert plus qu'aux fichiers
+    // non structurés (voir parseStructuredLinkedInBlocks, essayé en
+    // premier), mais un lot de leads avec des messages déjà longs peut
+    // quand même dépasser 8192 tokens en sortie et tronquer le JSON avant
+    // sa fermeture.
+    max_tokens: 16000,
     system: EXTRACT_SYSTEM_PROMPT,
     messages: [
       {
