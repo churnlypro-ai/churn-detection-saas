@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, XCircle, Mail, CheckCircle2, Clock, AlertTriangle, Send, Trash2, Plug, Pencil } from 'lucide-react';
+import { ArrowLeft, XCircle, Mail, CheckCircle2, Clock, AlertTriangle, Send, Trash2, Plug, Pencil, Linkedin, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -43,12 +43,34 @@ const STATUS_LABELS: Record<QueueEntry['status'], string> = {
   failed: 'Échoué',
 };
 
+interface LinkedInEntry {
+  id: string;
+  contact_name: string;
+  linkedin_url: string;
+  message: string;
+  status: 'queued' | 'sent';
+  created_at: string;
+  sent_at: string | null;
+}
+
+const LI_STATUS_STYLES: Record<LinkedInEntry['status'], string> = {
+  queued: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+  sent: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
+};
+
+const LI_STATUS_LABELS: Record<LinkedInEntry['status'], string> = {
+  queued: 'À envoyer',
+  sent: 'Envoyé',
+};
+
 function ProspectingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<{ id?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
+
+  const [mode, setMode] = useState<'email' | 'linkedin'>('email');
 
   const [gmailConnected, setGmailConnected] = useState(false);
   const [gmailEmail, setGmailEmail] = useState<string | null>(null);
@@ -96,6 +118,34 @@ function ProspectingContent() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
+  const [liQueue, setLiQueue] = useState<LinkedInEntry[]>([]);
+
+  const [liContactName, setLiContactName] = useState('');
+  const [liLinkedinUrl, setLiLinkedinUrl] = useState('');
+  const [liMessage, setLiMessage] = useState('');
+  const [liAdding, setLiAdding] = useState(false);
+  const [liAddError, setLiAddError] = useState('');
+
+  const [liBulkText, setLiBulkText] = useState('');
+  const [liBulkAdding, setLiBulkAdding] = useState(false);
+  const [liBulkError, setLiBulkError] = useState('');
+  const [liBulkResult, setLiBulkResult] = useState('');
+
+  const [liFileImporting, setLiFileImporting] = useState(false);
+  const [liFileImportError, setLiFileImportError] = useState('');
+  const [liFileImportResult, setLiFileImportResult] = useState('');
+
+  const [liSelectedIds, setLiSelectedIds] = useState<Set<string>>(new Set());
+  const [liDeletingSelection, setLiDeletingSelection] = useState(false);
+  const [liSendingId, setLiSendingId] = useState<string | null>(null);
+
+  const [liEditingId, setLiEditingId] = useState<string | null>(null);
+  const [liEditName, setLiEditName] = useState('');
+  const [liEditUrl, setLiEditUrl] = useState('');
+  const [liEditMessage, setLiEditMessage] = useState('');
+  const [liEditSaving, setLiEditSaving] = useState(false);
+  const [liEditError, setLiEditError] = useState('');
+
   // Toujours relire la session au moment de l'appel plutôt que de garder un
   // token capté une seule fois au chargement de la page : sur une page
   // laissée ouverte longtemps, ce token capté expire alors que la session
@@ -123,6 +173,14 @@ function ProspectingContent() {
     }
   }, []);
 
+  const loadLinkedInQueue = useCallback(async (authToken: string) => {
+    const res = await fetch('/api/admin/prospecting/linkedin', { headers: { Authorization: `Bearer ${authToken}` } });
+    if (res.ok) {
+      const data = await res.json();
+      setLiQueue(data.contacts ?? []);
+    }
+  }, []);
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) { router.replace('/login'); return; }
@@ -134,7 +192,7 @@ function ProspectingContent() {
         .then((r) => r.json()).catch(() => ({ isAdmin: false }));
       if (!check.isAdmin) { setForbidden(true); setLoading(false); return; }
 
-      await Promise.all([loadStatus(authToken), loadQueue(authToken)]);
+      await Promise.all([loadStatus(authToken), loadQueue(authToken), loadLinkedInQueue(authToken)]);
       setLoading(false);
 
       const gmailParam = searchParams.get('gmail');
@@ -436,6 +494,222 @@ function ProspectingContent() {
     }
   }
 
+  async function handleAddLinkedIn(e: React.FormEvent) {
+    e.preventDefault();
+    setLiAdding(true);
+    setLiAddError('');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/prospecting/linkedin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ contactName: liContactName, linkedinUrl: liLinkedinUrl, message: liMessage }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Ajout échoué.');
+      setLiContactName('');
+      setLiLinkedinUrl('');
+      setLiMessage('');
+      await loadLinkedInQueue(authToken);
+    } catch (err) {
+      setLiAddError(err instanceof Error ? err.message : 'Ajout échoué.');
+    } finally {
+      setLiAdding(false);
+    }
+  }
+
+  // Même format que le collage en masse email (name:/url:/message: séparés
+  // par ---) — le message est déjà rédigé par l'admin, jamais généré.
+  function parseLinkedInBulkBlocks(text: string): { contactName: string; linkedinUrl: string; message: string }[] {
+    const blocks = text.split(/^---$/m).map((b) => b.trim()).filter(Boolean);
+    return blocks.map((block) => {
+      const lines = block.split('\n');
+      let contactName = '';
+      let linkedinUrl = '';
+      const messageLines: string[] = [];
+      let inMessage = false;
+      for (const line of lines) {
+        if (inMessage) { messageLines.push(line); continue; }
+        if (line.toLowerCase().startsWith('name:')) contactName = line.slice(line.indexOf(':') + 1).trim();
+        else if (line.toLowerCase().startsWith('url:') || line.toLowerCase().startsWith('linkedin:')) linkedinUrl = line.slice(line.indexOf(':') + 1).trim();
+        else if (line.toLowerCase().startsWith('message:')) {
+          inMessage = true;
+          const rest = line.slice(line.indexOf(':') + 1);
+          if (rest.trim()) messageLines.push(rest.trim());
+        }
+      }
+      return { contactName, linkedinUrl, message: messageLines.join('\n').trim() };
+    });
+  }
+
+  async function handleBulkAddLinkedIn() {
+    setLiBulkAdding(true);
+    setLiBulkError('');
+    setLiBulkResult('');
+    try {
+      const parsed = parseLinkedInBulkBlocks(liBulkText);
+      if (parsed.length === 0) {
+        setLiBulkError('Aucun bloc reconnu — vérifie le format (name: / url: / message: séparés par ---).');
+        return;
+      }
+      const invalid = parsed.filter((p) => !p.contactName || !p.linkedinUrl || !p.message);
+      if (invalid.length > 0) {
+        setLiBulkError(`${invalid.length} bloc(s) incomplet(s) (nom/lien/message manquant) — rien n'a été importé, corrige et réessaie.`);
+        return;
+      }
+
+      const authToken = await getAuthToken();
+      let added = 0;
+      let failed = 0;
+      for (const entry of parsed) {
+        const res = await fetch('/api/admin/prospecting/linkedin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ contactName: entry.contactName, linkedinUrl: entry.linkedinUrl, message: entry.message }),
+        });
+        if (res.ok) added += 1; else failed += 1;
+      }
+      setLiBulkResult(`${added} ajouté${added > 1 ? 's' : ''} à la file${failed ? `, ${failed} échoué${failed > 1 ? 's' : ''}` : ''}.`);
+      if (added > 0) setLiBulkText('');
+      await loadLinkedInQueue(authToken);
+    } catch {
+      setLiBulkError('Import échoué.');
+    } finally {
+      setLiBulkAdding(false);
+    }
+  }
+
+  async function handleLinkedInFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    setLiFileImporting(true);
+    setLiFileImportError('');
+    setLiFileImportResult('');
+    try {
+      const encoded = await Promise.all(Array.from(fileList).map(readFileAsBase64));
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/prospecting/linkedin/import-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ files: encoded }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Import échoué.');
+      const skippedText = result.skippedDuplicate
+        ? ` (${result.skippedDuplicate} déjà dans la file ou déjà contacté${result.skippedDuplicate > 1 ? 's' : ''}, ignoré${result.skippedDuplicate > 1 ? 's' : ''})`
+        : '';
+      setLiFileImportResult(`${result.added} contact${result.added !== 1 ? 's' : ''} ajouté${result.added !== 1 ? 's' : ''} à la file${skippedText}.`);
+      await loadLinkedInQueue(authToken);
+    } catch (err) {
+      setLiFileImportError(err instanceof Error ? err.message : 'Import échoué.');
+    } finally {
+      setLiFileImporting(false);
+      e.target.value = '';
+    }
+  }
+
+  async function handleRemoveLinkedIn(id: string) {
+    const authToken = await getAuthToken();
+    await fetch(`/api/admin/prospecting/linkedin/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
+    setLiSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    await loadLinkedInQueue(authToken);
+  }
+
+  async function handleDeleteSelectedLinkedIn() {
+    if (liSelectedIds.size === 0) return;
+    if (!window.confirm(`Supprimer définitivement ${liSelectedIds.size} contact${liSelectedIds.size > 1 ? 's' : ''} de la file ?`)) return;
+    setLiDeletingSelection(true);
+    try {
+      const authToken = await getAuthToken();
+      await Promise.all(
+        Array.from(liSelectedIds).map((id) =>
+          fetch(`/api/admin/prospecting/linkedin/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } })
+        )
+      );
+      setLiSelectedIds(new Set());
+      await loadLinkedInQueue(authToken);
+    } finally {
+      setLiDeletingSelection(false);
+    }
+  }
+
+  function toggleSelectLinkedIn(id: string) {
+    setLiSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllLinkedIn() {
+    const queuedIds = liQueue.filter((q) => q.status === 'queued').map((q) => q.id);
+    const allSelected = queuedIds.length > 0 && queuedIds.every((id) => liSelectedIds.has(id));
+    setLiSelectedIds(allSelected ? new Set() : new Set(queuedIds));
+  }
+
+  function startEditLinkedIn(entry: LinkedInEntry) {
+    setLiEditingId(entry.id);
+    setLiEditName(entry.contact_name);
+    setLiEditUrl(entry.linkedin_url);
+    setLiEditMessage(entry.message);
+    setLiEditError('');
+  }
+
+  function cancelEditLinkedIn() {
+    setLiEditingId(null);
+    setLiEditError('');
+  }
+
+  async function handleSaveEditLinkedIn(id: string) {
+    setLiEditSaving(true);
+    setLiEditError('');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch(`/api/admin/prospecting/linkedin/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ contactName: liEditName, linkedinUrl: liEditUrl, message: liEditMessage }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Modification échouée.');
+      setLiEditingId(null);
+      await loadLinkedInQueue(authToken);
+    } catch (err) {
+      setLiEditError(err instanceof Error ? err.message : 'Modification échouée.');
+    } finally {
+      setLiEditSaving(false);
+    }
+  }
+
+  // Pas d'API LinkedIn pour envoyer à sa place (voir migration) : on ouvre
+  // le profil dans un nouvel onglet et on copie le message dans le
+  // presse-papiers pour qu'il ne reste plus qu'à coller et cliquer envoyer
+  // sur LinkedIn, puis on marque le contact "envoyé" côté Churnly.
+  async function handleSendLinkedIn(entry: LinkedInEntry) {
+    setLiSendingId(entry.id);
+    try {
+      try {
+        await navigator.clipboard.writeText(entry.message);
+      } catch {
+        // Presse-papiers indisponible — pas bloquant, le message reste
+        // affiché dans la file pour un copier-coller manuel.
+      }
+      window.open(entry.linkedin_url, '_blank', 'noopener,noreferrer');
+      const authToken = await getAuthToken();
+      const res = await fetch(`/api/admin/prospecting/linkedin/${entry.id}/send`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) await loadLinkedInQueue(authToken);
+    } finally {
+      setLiSendingId(null);
+    }
+  }
+
+  const liQueuedCount = liQueue.filter((q) => q.status === 'queued').length;
+  const liQueuedIds = liQueue.filter((q) => q.status === 'queued').map((q) => q.id);
+  const liAllQueuedSelected = liQueuedIds.length > 0 && liQueuedIds.every((id) => liSelectedIds.has(id));
+
   const queuedCount = queue.filter((q) => q.status === 'queued').length;
   const queuedIds = queue.filter((q) => q.status === 'queued').map((q) => q.id);
   const allQueuedSelected = queuedIds.length > 0 && queuedIds.every((id) => selectedIds.has(id));
@@ -467,11 +741,28 @@ function ProspectingContent() {
           transition={{ duration: 0.6, ease: EASE_OUT }}
           className="mb-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
         >
-          Prospection par email
+          Prospection
         </motion.h1>
-        <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">
-          Ajoute un email à la file, puis envoie-les par lots depuis churnly.pro@gmail.com — avec une pause entre chaque envoi pour rester crédible.
+        <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
+          {mode === 'email'
+            ? 'Ajoute un email à la file, puis envoie-les par lots depuis churnly.pro@gmail.com — avec une pause entre chaque envoi pour rester crédible.'
+            : 'Ajoute des profils LinkedIn avec leur message déjà rédigé. LinkedIn n\'a pas d\'API d\'envoi comme Gmail : cliquer sur un contact ouvre son profil et copie le message pour toi — il ne reste qu\'à coller et cliquer envoyer sur LinkedIn.'}
         </p>
+
+        <div className="mb-8 inline-flex rounded-full border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-900">
+          <button
+            onClick={() => setMode('email')}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${mode === 'email' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          >
+            <Mail className="h-4 w-4" /> Email
+          </button>
+          <button
+            onClick={() => setMode('linkedin')}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${mode === 'linkedin' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          >
+            <Linkedin className="h-4 w-4" /> LinkedIn
+          </button>
+        </div>
 
         {loading ? (
           <p className="text-sm text-slate-400">Chargement…</p>
@@ -484,6 +775,8 @@ function ProspectingContent() {
               </div>
             )}
 
+            {mode === 'email' && (
+            <>
             <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -834,6 +1127,256 @@ body:
                 </div>
               )}
             </div>
+            </>
+            )}
+
+            {mode === 'linkedin' && (
+            <>
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Importer des fichiers (extraction automatique)</h2>
+              <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+                Dépose un ou plusieurs fichiers (.xlsx, .csv, .txt, .md) contenant tes prospects LinkedIn — Churnly extrait automatiquement le nom, le lien de profil et le message déjà rédigé pour chacun (le message n&apos;est jamais généré ni modifié, recopié tel quel). Aucun profil déjà présent dans la file (ou déjà contacté) n&apos;est ajouté en double.
+              </p>
+              <label className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-6 py-8 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-brand-700">
+                <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
+                  {liFileImporting ? 'Extraction en cours…' : 'Choisir des fichiers'}
+                </span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">.xlsx, .csv, .txt, .md — plusieurs fichiers à la fois possibles</span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".xlsx,.xls,.csv,.txt,.md"
+                  className="hidden"
+                  onChange={handleLinkedInFileImport}
+                  disabled={liFileImporting}
+                />
+              </label>
+              {liFileImporting && (
+                <p className="mt-3 animate-pulse text-xs text-slate-400 dark:text-slate-500">
+                  Peut prendre quelques minutes pour beaucoup de contacts — ne quitte pas la page.
+                </p>
+              )}
+              {liFileImportError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{liFileImportError}</p>}
+              {liFileImportResult && <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">{liFileImportResult}</p>}
+            </div>
+
+            <form onSubmit={handleAddLinkedIn} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-4 text-sm font-semibold text-slate-900 dark:text-white">Ajouter un contact à la file (manuel)</h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <input
+                  type="text"
+                  placeholder="Nom du contact"
+                  required
+                  value={liContactName}
+                  onChange={(e) => setLiContactName(e.target.value)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+                <input
+                  type="url"
+                  placeholder="Lien du profil LinkedIn"
+                  required
+                  value={liLinkedinUrl}
+                  onChange={(e) => setLiLinkedinUrl(e.target.value)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+              </div>
+              <textarea
+                placeholder="Message déjà rédigé"
+                required
+                rows={6}
+                value={liMessage}
+                onChange={(e) => setLiMessage(e.target.value)}
+                className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+              {liAddError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{liAddError}</p>}
+              <button
+                type="submit"
+                disabled={liAdding}
+                className="mt-4 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+              >
+                {liAdding ? 'Ajout…' : 'Ajouter à la file'}
+              </button>
+            </form>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Import en masse (texte déjà rédigé)</h2>
+              <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                Colle plusieurs contacts d&apos;un coup, un bloc par contact séparé par une ligne <code className="rounded bg-slate-100 px-1 py-0.5 dark:bg-slate-800">---</code> :
+              </p>
+              <pre className="mb-3 overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400">{`name: Pierre Dupont
+url: https://www.linkedin.com/in/pierre-dupont
+message:
+Bonjour Pierre,
+...
+L'équipe Churnly
+---
+name: ...
+url: ...
+message:
+...`}</pre>
+              <textarea
+                placeholder="Colle ici tes blocs de contacts…"
+                rows={8}
+                value={liBulkText}
+                onChange={(e) => setLiBulkText(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-mono text-xs text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+              {liBulkError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{liBulkError}</p>}
+              {liBulkResult && <p className="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">{liBulkResult}</p>}
+              <button
+                onClick={handleBulkAddLinkedIn}
+                disabled={liBulkAdding || !liBulkText.trim()}
+                className="mt-3 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+              >
+                {liBulkAdding ? 'Import…' : 'Importer en masse'}
+              </button>
+            </div>
+
+            {liSelectedIds.size > 0 && (
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {liSelectedIds.size} contact{liSelectedIds.size > 1 ? 's' : ''} sélectionné{liSelectedIds.size > 1 ? 's' : ''}
+                  </p>
+                  <button
+                    onClick={handleDeleteSelectedLinkedIn}
+                    disabled={liDeletingSelection}
+                    className="flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {liDeletingSelection ? 'Suppression…' : `Supprimer la sélection (${liSelectedIds.size})`}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  File d&apos;attente <span className="text-slate-400 dark:text-slate-500">({liQueuedCount} à envoyer)</span>
+                </h2>
+                {liQueuedIds.length > 0 && (
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={liAllQueuedSelected}
+                      onChange={toggleSelectAllLinkedIn}
+                      className="h-3.5 w-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-400 dark:border-slate-600"
+                    />
+                    Tout sélectionner
+                  </label>
+                )}
+              </div>
+              {liQueue.length === 0 ? (
+                <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">Aucun contact pour l&apos;instant.</p>
+              ) : (
+                <div className="divide-y divide-slate-50 dark:divide-slate-800">
+                  {liQueue.map((entry) => {
+                    const isEditing = liEditingId === entry.id;
+                    return (
+                      <div key={entry.id} className="px-6 py-3.5">
+                        {isEditing ? (
+                          <div className="space-y-2.5">
+                            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                              <input
+                                type="text"
+                                placeholder="Nom du contact"
+                                value={liEditName}
+                                onChange={(e) => setLiEditName(e.target.value)}
+                                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                              />
+                              <input
+                                type="url"
+                                placeholder="Lien du profil LinkedIn"
+                                value={liEditUrl}
+                                onChange={(e) => setLiEditUrl(e.target.value)}
+                                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                              />
+                            </div>
+                            <textarea
+                              rows={5}
+                              placeholder="Message"
+                              value={liEditMessage}
+                              onChange={(e) => setLiEditMessage(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            />
+                            {liEditError && <p className="text-sm text-red-600 dark:text-red-400">{liEditError}</p>}
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleSaveEditLinkedIn(entry.id)}
+                                disabled={liEditSaving}
+                                className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                              >
+                                {liEditSaving ? 'Enregistrement…' : 'Enregistrer'}
+                              </button>
+                              <button
+                                onClick={cancelEditLinkedIn}
+                                disabled={liEditSaving}
+                                className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-4">
+                            {entry.status === 'queued' && (
+                              <input
+                                type="checkbox"
+                                checked={liSelectedIds.has(entry.id)}
+                                onChange={() => toggleSelectLinkedIn(entry.id)}
+                                className="h-3.5 w-3.5 flex-shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-400 dark:border-slate-600"
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
+                                {entry.contact_name}
+                              </p>
+                              <p className="truncate text-xs text-slate-400 dark:text-slate-500">
+                                {entry.linkedin_url}
+                              </p>
+                            </div>
+                            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${LI_STATUS_STYLES[entry.status]}`}>
+                              {entry.status === 'sent' && <CheckCircle2 className="h-3 w-3" />}
+                              {entry.status === 'queued' && <Clock className="h-3 w-3" />}
+                              {LI_STATUS_LABELS[entry.status]}
+                            </span>
+                            {entry.status === 'queued' && (
+                              <div className="flex flex-shrink-0 items-center gap-3">
+                                <button
+                                  onClick={() => handleSendLinkedIn(entry)}
+                                  disabled={liSendingId === entry.id}
+                                  className="flex items-center gap-1.5 rounded-full bg-brand-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  {liSendingId === entry.id ? 'Ouverture…' : 'Ouvrir & copier'}
+                                </button>
+                                <button
+                                  onClick={() => startEditLinkedIn(entry)}
+                                  className="text-slate-300 transition hover:text-brand-500 dark:text-slate-600"
+                                  aria-label="Modifier"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleRemoveLinkedIn(entry.id)}
+                                  className="text-slate-300 transition hover:text-red-500 dark:text-slate-600"
+                                  aria-label="Retirer"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            </>
+            )}
           </div>
         )}
       </main>
