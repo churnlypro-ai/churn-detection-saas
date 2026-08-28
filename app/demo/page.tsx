@@ -14,6 +14,10 @@ import { formatEuro } from '@/lib/pricing';
 
 type Step = 'intro' | 'form' | 'loading' | 'result';
 
+const DEMO_EMAIL_DRAFTS = Object.fromEntries(
+  DEMO_CLIENTS.map((client) => [client.client_name, client.emailDraft])
+);
+
 const LOADING_MESSAGES = [
   'Connexion à vos données…',
   'Analyse des signaux de risque…',
@@ -254,7 +258,12 @@ function DemoContent() {
                 transition={{ duration: 0.5, delay: 0.3 }}
                 className="mt-6"
               >
-                <ClientTable clients={DEMO_CLIENTS} actionState={actionState} onToggleAction={() => {}} />
+                <ClientTable
+                  clients={DEMO_CLIENTS}
+                  actionState={actionState}
+                  onToggleAction={() => {}}
+                  emailDrafts={DEMO_EMAIL_DRAFTS}
+                />
               </motion.div>
 
               <motion.div
