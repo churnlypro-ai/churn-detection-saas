@@ -15,7 +15,13 @@ export interface ExtractedLinkedInLead {
   message: string;
 }
 
-const LINKEDIN_URL_PATTERN = /linkedin\.com\/(in|company)\//i;
+// Ancré sur le protocole + le nom d'hôte (pas juste "contient la
+// sous-chaîne") — sans ça, un domaine comme "notlinkedin.com/in/x" passe la
+// vérification puisqu'il contient "linkedin.com/in/" comme sous-chaîne.
+// Le protocole est aussi obligatoire : window.open() sur une URL sans
+// schéma (ex: "linkedin.com/in/x") l'interpréterait comme un chemin
+// relatif sur churnly.fr au lieu d'ouvrir LinkedIn.
+const LINKEDIN_URL_PATTERN = /^https?:\/\/([a-z0-9-]+\.)?linkedin\.com\/(in|company)\//i;
 
 // Contrairement à la prospection email, le message est déjà rédigé par
 // l'admin dans le fichier source — on l'extrait tel quel, sans jamais le

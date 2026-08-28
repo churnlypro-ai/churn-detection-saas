@@ -42,8 +42,12 @@ function fileToRawText(file: IncomingFile): string | null {
   return buffer.toString('utf-8');
 }
 
+// Enlève aussi la query string et le fragment (ex: "?miniProfileUrn=..."
+// que LinkedIn ajoute souvent aux liens partagés) — sans ça, deux liens
+// vers le même profil avec des paramètres de tracking différents ne
+// seraient pas reconnus comme doublons.
 function normalizeLinkedinUrl(url: string): string {
-  return url.trim().toLowerCase().replace(/\/+$/, '');
+  return url.trim().toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
 }
 
 export async function POST(req: NextRequest) {

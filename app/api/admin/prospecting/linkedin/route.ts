@@ -11,7 +11,10 @@ async function requireAdmin(req: NextRequest) {
   return { supabaseAdmin, userId: userData!.user!.id };
 }
 
-const LINKEDIN_URL_PATTERN = /linkedin\.com\/(in|company)\//i;
+// Ancré sur le protocole + le nom d'hôte, pas juste "contient la
+// sous-chaîne" — voir lib/linkedinProspectingDraft.ts pour le détail du
+// raisonnement (sinon "notlinkedin.com/in/x" passerait la vérification).
+const LINKEDIN_URL_PATTERN = /^https?:\/\/([a-z0-9-]+\.)?linkedin\.com\/(in|company)\//i;
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req);
