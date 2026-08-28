@@ -155,7 +155,7 @@ export default function AdminOverview() {
             href="/admin/prospecting"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
           >
-            Prospection par email →
+            Prospection →
           </Link>
           <Link
             href="/admin/calls"
