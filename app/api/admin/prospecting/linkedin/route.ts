@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
+import { isMissingTableError, missingTableMessage } from '@/lib/supabaseErrors';
+
+const MIGRATION_FILE = '20260828000000_add_linkedin_prospecting.sql';
 
 async function requireAdmin(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -30,7 +33,13 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(1000);
 
-  if (error) return NextResponse.json({ error: 'Chargement échoué.' }, { status: 500 });
+  if (error) {
+    console.error('[prospecting/linkedin] list failed', error);
+    return NextResponse.json(
+      { error: isMissingTableError(error) ? missingTableMessage(MIGRATION_FILE) : 'Chargement échoué.' },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ contacts: data });
 }
 
@@ -58,6 +67,12 @@ export async function POST(req: NextRequest) {
     created_by: auth.userId,
   });
 
-  if (error) return NextResponse.json({ error: 'Ajout échoué.' }, { status: 500 });
+  if (error) {
+    console.error('[prospecting/linkedin] insert failed', error);
+    return NextResponse.json(
+      { error: isMissingTableError(error) ? missingTableMessage(MIGRATION_FILE) : 'Ajout échoué.' },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ success: true });
 }

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
 import { logAuditEvent } from '@/lib/auditLog';
+import { isMissingTableError, missingTableMessage } from '@/lib/supabaseErrors';
+
+const MIGRATION_FILE = '20260828000000_add_linkedin_prospecting.sql';
 
 // Contrairement à Gmail, il n'existe pas d'API publique pour envoyer un
 // message LinkedIn à la place de l'admin — automatiser ce geste exposerait
@@ -25,7 +28,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .eq('status', 'queued')
     .select('id');
 
-  if (error) return NextResponse.json({ error: 'Marquage échoué.' }, { status: 500 });
+  if (error) {
+    console.error('[prospecting/linkedin/id/send] update failed', error);
+    return NextResponse.json(
+      { error: isMissingTableError(error) ? missingTableMessage(MIGRATION_FILE) : 'Marquage échoué.' },
+      { status: 500 },
+    );
+  }
   if (!data || data.length === 0) {
     return NextResponse.json({ error: 'Contact introuvable ou déjà marqué envoyé.' }, { status: 409 });
   }

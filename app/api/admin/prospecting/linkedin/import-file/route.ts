@@ -3,6 +3,9 @@ import * as XLSX from 'xlsx';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
 import { extractLinkedInLeadsFromRawText, type ExtractedLinkedInLead } from '@/lib/linkedinProspectingDraft';
+import { isMissingTableError, missingTableMessage } from '@/lib/supabaseErrors';
+
+const MIGRATION_FILE = '20260828000000_add_linkedin_prospecting.sql';
 
 // Extraction par fichier, potentiellement plusieurs fichiers — même raison
 // que /api/admin/prospecting/import-file : largement au-delà des 15s par
@@ -51,6 +54,18 @@ function normalizeLinkedinUrl(url: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handleImport(req);
+  } catch (err) {
+    // Filet de sécurité : sans ça, une exception inattendue fait renvoyer
+    // à Next.js une page d'erreur non-JSON, que le front interprète comme
+    // le message générique "Import échoué." sans aucune piste de cause.
+    console.error('[prospecting/linkedin/import-file] unexpected error', err);
+    return NextResponse.json({ error: 'Erreur inattendue pendant l\'import — réessaie. Si ça persiste, vérifie que la migration Supabase a bien été appliquée.' }, { status: 500 });
+  }
+}
+
+async function handleImport(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -92,9 +107,16 @@ export async function POST(req: NextRequest) {
 
   // Ne jamais recontacter une personne déjà dans la file (en attente ou déjà
   // marquée envoyée) — même principe que la prospection email.
-  const { data: existing } = await auth.supabaseAdmin
+  const { data: existing, error: existingError } = await auth.supabaseAdmin
     .from('linkedin_prospecting')
     .select('linkedin_url');
+  if (existingError) {
+    console.error('[prospecting/linkedin/import-file] existing lookup failed', existingError);
+    return NextResponse.json(
+      { error: isMissingTableError(existingError) ? missingTableMessage(MIGRATION_FILE) : 'Lecture de la file existante échouée.' },
+      { status: 500 },
+    );
+  }
   const existingUrls = new Set((existing ?? []).map((e) => normalizeLinkedinUrl(e.linkedin_url)));
 
   const newLeads = deduped.filter((lead) => !existingUrls.has(normalizeLinkedinUrl(lead.linkedinUrl)));
@@ -112,7 +134,13 @@ export async function POST(req: NextRequest) {
   }));
 
   const { error: insertError } = await auth.supabaseAdmin.from('linkedin_prospecting').insert(toInsert);
-  if (insertError) return NextResponse.json({ error: 'Ajout à la file échoué.' }, { status: 500 });
+  if (insertError) {
+    console.error('[prospecting/linkedin/import-file] insert failed', insertError);
+    return NextResponse.json(
+      { error: isMissingTableError(insertError) ? missingTableMessage(MIGRATION_FILE) : 'Ajout à la file échoué.' },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({ added: toInsert.length, skippedDuplicate });
 }

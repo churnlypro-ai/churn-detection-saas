@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
+import { isMissingTableError, missingTableMessage } from '@/lib/supabaseErrors';
+
+const MIGRATION_FILE = '20260828000000_add_linkedin_prospecting.sql';
 
 async function requireAdmin(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -46,7 +49,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .eq('status', 'queued')
     .select('id');
 
-  if (error) return NextResponse.json({ error: 'Modification échouée.' }, { status: 500 });
+  if (error) {
+    console.error('[prospecting/linkedin/id] update failed', error);
+    return NextResponse.json(
+      { error: isMissingTableError(error) ? missingTableMessage(MIGRATION_FILE) : 'Modification échouée.' },
+      { status: 500 },
+    );
+  }
   if (!data || data.length === 0) {
     return NextResponse.json({ error: 'Ce contact n\'est plus modifiable (déjà marqué envoyé).' }, { status: 409 });
   }
@@ -72,6 +81,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     .eq('id', params.id)
     .eq('status', 'queued');
 
-  if (error) return NextResponse.json({ error: 'Suppression échouée.' }, { status: 500 });
+  if (error) {
+    console.error('[prospecting/linkedin/id] delete failed', error);
+    return NextResponse.json(
+      { error: isMissingTableError(error) ? missingTableMessage(MIGRATION_FILE) : 'Suppression échouée.' },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ success: true });
 }
