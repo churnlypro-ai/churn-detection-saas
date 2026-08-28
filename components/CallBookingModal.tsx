@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, CheckCircle2, PhoneCall } from 'lucide-react';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
+import { trackEvent } from '@/lib/analytics';
 
 interface CallBookingModalProps {
   open: boolean;
@@ -164,6 +165,9 @@ export function CallBookingModal({ open, onClose }: CallBookingModalProps) {
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || t.errorGeneric);
+      // Événement GA4 marqué comme "événement clé" côté Analytics, puis
+      // importé comme conversion dans Google Ads — voir components/GoogleAnalytics.tsx.
+      trackEvent('reservation_call', { contact_method: contactMethod });
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.errorGeneric);
