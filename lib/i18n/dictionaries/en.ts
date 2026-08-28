@@ -37,7 +37,7 @@ export const en: Dictionary = {
     reality: {
       eyebrow: 'The reality',
       title: 'The operational reality',
-      body: '90% of founders discover their churn problem after the customer has already cancelled. Meanwhile, revenue quietly evaporates — a lost customer doesn\'t send a warning, it just disappears. Result: an average of $60k/year in lost revenue, with no alarm ever going off.',
+      body: '90% of founders discover their churn problem after the customer has already cancelled. A lost customer doesn\'t send a warning — it just disappears, and revenue quietly evaporates.',
       statLabels: [
         'discover their churn problem too late',
         'average revenue lost to churn',
@@ -47,7 +47,7 @@ export const en: Dictionary = {
     strategy: {
       eyebrow: 'The lever',
       title: 'Your business strategy',
-      body: 'You invest in acquisition. Your teams optimize campaigns, funnels, cost per lead. But every customer you acquire walks out the back door without anyone seeing them leave — and retention gets a fraction of the attention acquisition does.',
+      body: 'You invest in acquisition — campaigns, funnels, cost per lead. But every customer you acquire walks out the back door without anyone seeing them leave.',
       acquisitionLabel: 'Acquisition',
       acquisitionSub: 'High cost · Slow ROI',
       retentionLabel: 'Retention',
@@ -67,7 +67,7 @@ export const en: Dictionary = {
     },
     churnDefinition: {
       title: 'What is churn?',
-      body1: 'Churn is the percentage of customers who stop using your product every month. A 5% churn rate can seem low — but over a year, that\'s nearly 50% of your customer base gone.',
+      body1: 'Churn is the % of customers who stop using your product every month. 5% a month can seem low — but over a year, that\'s nearly half your customer base gone.',
       body2Before: 'Churnly identifies warning signals ',
       body2Em: 'before',
       body2After: ' the cancellation, while there\'s still time to act — not after.',
