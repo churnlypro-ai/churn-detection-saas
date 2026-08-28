@@ -687,14 +687,19 @@ function ProspectingContent() {
   // sur LinkedIn, puis on marque le contact "envoyé" côté Churnly.
   async function handleSendLinkedIn(entry: LinkedInEntry) {
     setLiSendingId(entry.id);
+    // Presse-papiers non-awaité puis window.open() appelé tout de suite
+    // après, encore dans le même tick que le clic — awaiter le
+    // presse-papiers d'abord ferait perdre l'activation utilisateur avant
+    // window.open() et le ferait bloquer comme un popup sur certains
+    // navigateurs (Safari notamment). L'écriture presse-papiers doit aussi
+    // se faire avant que le nouvel onglet ne prenne le focus, sans quoi le
+    // document d'origine n'est plus "focused" et l'écriture échoue.
+    navigator.clipboard.writeText(entry.message).catch(() => {
+      // Presse-papiers indisponible — pas bloquant, le message reste
+      // affiché dans la file pour un copier-coller manuel.
+    });
+    window.open(entry.linkedin_url, '_blank', 'noopener,noreferrer');
     try {
-      try {
-        await navigator.clipboard.writeText(entry.message);
-      } catch {
-        // Presse-papiers indisponible — pas bloquant, le message reste
-        // affiché dans la file pour un copier-coller manuel.
-      }
-      window.open(entry.linkedin_url, '_blank', 'noopener,noreferrer');
       const authToken = await getAuthToken();
       const res = await fetch(`/api/admin/prospecting/linkedin/${entry.id}/send`, {
         method: 'POST',

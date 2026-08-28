@@ -11,7 +11,10 @@ async function requireAdmin(req: NextRequest) {
   return supabaseAdmin;
 }
 
-const LINKEDIN_URL_PATTERN = /linkedin\.com\/(in|company)\//i;
+// Ancré sur le protocole + le nom d'hôte, pas juste "contient la
+// sous-chaîne" — voir lib/linkedinProspectingDraft.ts pour le détail du
+// raisonnement (sinon "notlinkedin.com/in/x" passerait la vérification).
+const LINKEDIN_URL_PATTERN = /^https?:\/\/([a-z0-9-]+\.)?linkedin\.com\/(in|company)\//i;
 
 // Modifier un contact de la file — seulement tant qu'il est encore en
 // attente, pour ne jamais réécrire un contact déjà marqué envoyé.
