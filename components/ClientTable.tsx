@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { ChevronDown, Copy, Check } from 'lucide-react';
 
 function formatEuro(value: number): string {
@@ -11,11 +12,11 @@ function formatEuro(value: number): string {
   }).format(value || 0);
 }
 
-function riskBadge(score: number): { label: string; className: string } {
-  if (score > 80) return { label: `${score}% 🔴`, className: 'bg-red-50 text-red-700' };
-  if (score >= 60) return { label: `${score}% 🟠`, className: 'bg-orange-50 text-orange-700' };
-  if (score >= 40) return { label: `${score}% 🟡`, className: 'bg-yellow-50 text-yellow-700' };
-  return { label: `${score}% 🟢`, className: 'bg-emerald-50 text-emerald-700' };
+function riskBadge(score: number): { label: string; className: string; dotClassName: string } {
+  if (score > 80) return { label: `${score}%`, className: 'bg-red-50 text-red-700', dotClassName: 'bg-red-500' };
+  if (score >= 60) return { label: `${score}%`, className: 'bg-orange-50 text-orange-700', dotClassName: 'bg-orange-500' };
+  if (score >= 40) return { label: `${score}%`, className: 'bg-yellow-50 text-yellow-700', dotClassName: 'bg-yellow-500' };
+  return { label: `${score}%`, className: 'bg-emerald-50 text-emerald-700', dotClassName: 'bg-emerald-500' };
 }
 
 const ACTIONS = [
@@ -92,7 +93,8 @@ export default function ClientTable({ clients, actionState, onToggleAction, emai
                 <td className="px-5 py-4 font-medium text-slate-900">{client.client_name}</td>
                 <td className="px-5 py-4 text-slate-700">{formatEuro(client.revenue_monthly)}</td>
                 <td className="px-5 py-4">
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}>
+                    <span className={`h-2 w-2 rounded-sm ${badge.dotClassName}`} />
                     {badge.label}
                   </span>
                 </td>
@@ -151,6 +153,15 @@ export default function ClientTable({ clients, actionState, onToggleAction, emai
                       </div>
                       <p className="whitespace-pre-line text-xs leading-relaxed text-slate-700 dark:text-slate-300">
                         {draft}
+                      </p>
+                      <p className="mt-3 border-t border-slate-200 pt-2.5 text-[11px] leading-relaxed text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                        Avec l&apos;abonnement, cet email est envoyé automatiquement.{' '}
+                        <Link
+                          href="/pricing"
+                          className="font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                          Découvrir l&apos;abonnement →
+                        </Link>
                       </p>
                     </div>
                   )}
