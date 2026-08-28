@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
-import { extractLinkedInLeadsFromRawText, type ExtractedLinkedInLead } from '@/lib/linkedinProspectingDraft';
+import { extractLinkedInLeadsFromRawText, parseStructuredLinkedInBlocks, type ExtractedLinkedInLead } from '@/lib/linkedinProspectingDraft';
 import { isMissingTableError, missingTableMessage } from '@/lib/supabaseErrors';
 
 const MIGRATION_FILE = '20260828000000_add_linkedin_prospecting.sql';
@@ -83,10 +83,23 @@ async function handleImport(req: NextRequest) {
     return NextResponse.json({ error: 'Aucun contenu exploitable dans les fichiers envoyés.' }, { status: 400 });
   }
 
-  // Extraction bornée en parallèle — un appel Claude par fichier/feuille.
+  // Essai déterministe d'abord (format name:/url:/message: déjà structuré,
+  // voir parseStructuredLinkedInBlocks) : fiable, gratuit, et sans le
+  // risque de troncature d'un appel IA sur un gros lot de messages longs.
+  // Seuls les fichiers où ça ne trouve rien passent par l'extraction IA
+  // (texte brut non structuré).
+  const needsAiExtraction: string[] = [];
   const allLeads: ExtractedLinkedInLead[] = [];
-  for (let i = 0; i < rawTexts.length; i += EXTRACT_CONCURRENCY) {
-    const chunk = rawTexts.slice(i, i + EXTRACT_CONCURRENCY);
+  for (const rawText of rawTexts) {
+    const structured = parseStructuredLinkedInBlocks(rawText);
+    if (structured.length > 0) allLeads.push(...structured);
+    else needsAiExtraction.push(rawText);
+  }
+
+  // Extraction IA bornée en parallèle — un appel Claude par fichier/feuille
+  // restant, uniquement pour ceux qui n'étaient pas dans le format structuré.
+  for (let i = 0; i < needsAiExtraction.length; i += EXTRACT_CONCURRENCY) {
+    const chunk = needsAiExtraction.slice(i, i + EXTRACT_CONCURRENCY);
     const results = await Promise.all(chunk.map((t) => extractLinkedInLeadsFromRawText(t).catch(() => [] as ExtractedLinkedInLead[])));
     for (const r of results) allLeads.push(...r);
   }
