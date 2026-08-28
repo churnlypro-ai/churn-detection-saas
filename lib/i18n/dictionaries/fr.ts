@@ -35,7 +35,7 @@ export const fr = {
     reality: {
       eyebrow: 'Le constat',
       title: 'La réalité opérationnelle',
-      body: '90% des dirigeants découvrent leur problème de churn quand le client a déjà annulé. Pendant ce temps, le revenu s\'évapore silencieusement — un client perdu n\'envoie pas d\'alerte, il disparaît. Résultat : €60k/an de revenu perdu en moyenne, sans qu\'aucun signal d\'alarme n\'ait retenti.',
+      body: '90% des dirigeants découvrent leur churn quand le client a déjà annulé. Un client perdu ne prévient pas — il disparaît, et le revenu s\'évapore en silence.',
       statLabels: [
         'découvrent leur problème de churn trop tard',
         'revenus moyens perdus au churn',
@@ -45,7 +45,7 @@ export const fr = {
     strategy: {
       eyebrow: 'Le levier',
       title: 'Votre stratégie commerciale',
-      body: 'Vous investissez en acquisition. Vos équipes optimisent les campagnes, les funnels, les coûts par lead. Mais chaque client acquis repart par la porte de sortie sans que personne ne l\'ait vu partir — et la rétention reçoit une fraction de l\'attention que reçoit l\'acquisition.',
+      body: 'Vous investissez en acquisition — campagnes, funnels, coûts par lead. Mais chaque client acquis repart sans que personne ne l\'ait vu partir.',
       acquisitionLabel: 'Acquisition',
       acquisitionSub: 'Coût élevé · ROI lent',
       retentionLabel: 'Rétention',
@@ -65,7 +65,7 @@ export const fr = {
     },
     churnDefinition: {
       title: 'Qu\'est-ce que le churn ?',
-      body1: 'Le churn, c\'est le pourcentage de clients qui arrêtent d\'utiliser votre produit chaque mois. Un churn de 5% peut sembler faible — mais sur un an, c\'est près de 50% de votre base clients qui disparaît.',
+      body1: 'Le churn, c\'est le % de clients qui arrêtent d\'utiliser votre produit chaque mois. 5% par mois peut sembler faible — mais sur un an, c\'est près de la moitié de votre base qui disparaît.',
       body2Before: 'Churnly identifie les signaux d\'alerte ',
       body2Em: 'avant',
       body2After: ' l\'annulation, pendant qu\'il est encore temps d\'agir — pas après.',

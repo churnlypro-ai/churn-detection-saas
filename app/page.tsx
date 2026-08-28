@@ -438,10 +438,10 @@ export default function Home() {
 
   const TOC_ITEMS = [
     { id: 'constat', label: tToc.reality },
+    { id: 'churn', label: tToc.churn },
     { id: 'strategie', label: tToc.strategy },
     { id: 'tarif', label: tToc.pricing },
     { id: 'comment-ca-marche', label: tToc.howItWorks },
-    { id: 'churn', label: tToc.churn },
     { id: 'cas-reels', label: tToc.caseStudies },
   ];
 
@@ -458,6 +458,8 @@ export default function Home() {
 
         <RealitySection />
         <SectionDivider />
+        <ChurnDefinitionSection />
+        <SectionDivider />
         <StrategySection />
         <SectionDivider />
 
@@ -467,8 +469,6 @@ export default function Home() {
         <SectionDivider />
 
         <HowItWorksSection />
-        <SectionDivider />
-        <ChurnDefinitionSection />
         <SectionDivider />
         <CaseStudiesSection />
         <SectionDivider />
