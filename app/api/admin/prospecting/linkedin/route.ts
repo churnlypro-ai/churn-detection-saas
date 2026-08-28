@@ -20,11 +20,15 @@ export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  // Plafond largement au-dessus du volume attendu (des lots de plusieurs
+  // centaines de contacts, préparés à l'avance pour tenir un mois) — un
+  // plafond trop bas ici masquerait silencieusement les plus anciens de la
+  // file sans erreur visible.
   const { data, error } = await auth.supabaseAdmin
     .from('linkedin_prospecting')
     .select('id, contact_name, linkedin_url, message, status, created_at, sent_at')
     .order('created_at', { ascending: false })
-    .limit(200);
+    .limit(1000);
 
   if (error) return NextResponse.json({ error: 'Chargement échoué.' }, { status: 500 });
   return NextResponse.json({ contacts: data });
