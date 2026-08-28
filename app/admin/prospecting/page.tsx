@@ -712,6 +712,11 @@ function ProspectingContent() {
   }
 
   const liQueuedCount = liQueue.filter((q) => q.status === 'queued').length;
+  // Aucune limite technique n'est imposée (l'envoi reste un geste manuel de
+  // ta part sur LinkedIn, jamais automatisé) — ce compteur est juste un
+  // repère pour t'aider à garder un rythme raisonnable et rester dans les
+  // usages normaux d'un compte LinkedIn.
+  const liSentTodayCount = liQueue.filter((q) => q.sent_at && new Date(q.sent_at).toDateString() === new Date().toDateString()).length;
   const liQueuedIds = liQueue.filter((q) => q.status === 'queued').map((q) => q.id);
   const liAllQueuedSelected = liQueuedIds.length > 0 && liQueuedIds.every((id) => liSelectedIds.has(id));
 
@@ -1235,6 +1240,18 @@ message:
               >
                 {liBulkAdding ? 'Import…' : 'Importer en masse'}
               </button>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/40 dark:bg-amber-500/10">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">Garde un rythme raisonnable</h2>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-slate-900 dark:text-amber-300">
+                  {liSentTodayCount} envoyé{liSentTodayCount > 1 ? 's' : ''} aujourd&apos;hui
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-amber-800 dark:text-amber-300/90">
+                Chaque envoi reste un geste manuel de ta part sur LinkedIn — Churnly n&apos;automatise rien, ce n&apos;est donc pas un outil que LinkedIn peut détecter comme un bot. Le seul vrai risque, c&apos;est ton propre rythme : espace tes envois dans la journée plutôt que d&apos;enchaîner des dizaines de contacts d&apos;un coup, et reste dans un volume proche de ce que tu ferais normalement à la main.
+              </p>
             </div>
 
             {liSelectedIds.size > 0 && (

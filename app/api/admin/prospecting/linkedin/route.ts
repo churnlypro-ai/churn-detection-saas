@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Nom requis.' }, { status: 400 });
   }
   if (typeof linkedinUrl !== 'string' || !LINKEDIN_URL_PATTERN.test(linkedinUrl.trim())) {
-    return NextResponse.json({ error: 'Lien LinkedIn invalide (doit contenir linkedin.com/in/ ou /company/).' }, { status: 400 });
+    return NextResponse.json({ error: 'Lien LinkedIn invalide (doit commencer par https://linkedin.com/in/... ou https://linkedin.com/company/...).' }, { status: 400 });
   }
   if (typeof message !== 'string' || !message.trim()) {
     return NextResponse.json({ error: 'Message requis.' }, { status: 400 });
