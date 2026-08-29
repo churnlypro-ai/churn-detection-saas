@@ -21,11 +21,17 @@ const DEMO_ACTION_PREVIEWS = Object.fromEntries(
   ])
 );
 
+// Volontairement aucun message n'implique une vraie connexion aux données
+// de l'utilisateur — rien n'est réellement connecté ici, c'est une
+// simulation à partir des 3 chiffres saisis. Un retour client nous a fait
+// remarquer que "Connexion à vos données…" sur une démo publique sans
+// aucune connexion réelle sape justement ce que le produit vend : la
+// fiabilité d'un calcul.
 const LOADING_MESSAGES = [
-  'Connexion à vos données…',
-  'Analyse des signaux de risque…',
-  'Calcul des recommandations…',
-  'Génération du rapport…',
+  'Traduction de vos chiffres…',
+  'Simulation des signaux de risque…',
+  'Préparation de l\'exemple concret…',
+  'Génération de l\'aperçu…',
 ];
 
 // Page publique, sans authentification : au lieu de balancer directement un
@@ -67,7 +73,13 @@ function DemoContent() {
 
   const atRiskCount = Math.max(1, Math.min(clientCount, Math.round((clientCount * churnRate) / 100)));
   const revenueAtRisk = (monthlyRevenue * churnRate) / 100;
-  const ltv = clientCount > 0 ? (monthlyRevenue / clientCount) * 12 : 0;
+  // LTV standard SaaS : ARPU / taux de churn, pas ARPU × 12 — un retour
+  // client a remarqué (à raison) que l'ancienne formule ne bougeait jamais
+  // quand on changeait le taux de churn saisi, alors qu'un LTV doit
+  // justement intégrer la durée de vie réelle du client. Plafonné à 5 ans
+  // quand le churn saisi est nul, pour éviter une valeur infinie.
+  const arpu = clientCount > 0 ? monthlyRevenue / clientCount : 0;
+  const ltv = churnRate > 0 ? arpu / (churnRate / 100) : arpu * 60;
 
   return (
     <>
@@ -212,7 +224,7 @@ function DemoContent() {
                   <div>
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">Votre analyse — illustration</p>
                     <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
-                      Basée sur vos chiffres ({clientCount} clients, {formatEuro(monthlyRevenue)}/mois, {churnRate}% de churn). Voici ce que Churnly détecterait sur vos vraies données.
+                      Basé sur vos chiffres ({clientCount} clients, {formatEuro(monthlyRevenue)}/mois, {churnRate}% de churn), voici simplement ce que représente votre taux en valeur absolue. La vraie valeur de Churnly commence plus bas : un exemple concret de clients, avec la raison précise de leur risque et l&apos;action à faire — pas juste un pourcentage.
                     </p>
                   </div>
                 </div>
@@ -251,7 +263,7 @@ function DemoContent() {
                   <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Vos insights</h2>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Sur vos {clientCount} clients, environ {atRiskCount} sont à risque ce mois-ci — soit {formatEuro(revenueAtRisk)} de revenu mensuel menacé. Traiter ces comptes en priorité peut neutraliser l&apos;essentiel du risque avant leur date de renouvellement.
+                  Avec {churnRate}% de churn sur {clientCount} clients, ça représente environ {atRiskCount} clients et {formatEuro(revenueAtRisk)} de revenu mensuel menacé — mais connaître ce nombre ne sert à rien sans savoir lesquels. C&apos;est exactement ce que Churnly identifie sur vos vraies données : voici un exemple concret juste en dessous.
                 </p>
               </motion.div>
 
@@ -261,6 +273,10 @@ function DemoContent() {
                 transition={{ duration: 0.5, delay: 0.3 }}
                 className="mt-6"
               >
+                <h2 className="mb-1.5 text-sm font-semibold text-slate-900 dark:text-white">Exemple concret de détection</h2>
+                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                  Ces 8 clients sont fictifs (pas calculés à partir de vos 3 chiffres ci-dessus) — ils montrent le niveau de détail que Churnly produit sur de vraies données : la raison précise, l&apos;action recommandée, et l&apos;email/le script d&apos;appel/l&apos;offre déjà prêts à utiliser. À noter : des raisons comme l&apos;usage ou les tickets support supposent un CSV enrichi en plus de Stripe — connecté uniquement à Stripe, Churnly détecte surtout les signaux de paiement et de renouvellement.
+                </p>
                 <ClientTable
                   clients={DEMO_CLIENTS}
                   actionState={actionState}
