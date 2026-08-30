@@ -509,7 +509,8 @@ export default function Settings() {
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || t.performanceBilling.switchError);
       setProfile((prev) => (prev ? { ...prev, billing_mode: 'performance', subscription_tier: null } : prev));
-      setPerformanceStats({ recoveredSinceLastInvoice: 0, estimatedFee: 0, feeRate: 0.2 });
+      const statsRes = await fetch('/api/settings/billing-mode', { headers: { Authorization: `Bearer ${token}` } });
+      if (statsRes.ok) setPerformanceStats(await statsRes.json());
     } catch (err) {
       setBillingModeMessage(err instanceof Error ? err.message : t.performanceBilling.switchError);
     } finally {

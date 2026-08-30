@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
 import { logAuditEvent } from '@/lib/auditLog';
-import { PERFORMANCE_FEE_RATE } from '@/lib/pricing';
+import { PERFORMANCE_BASE_FEE, PERFORMANCE_FEE_RATE } from '@/lib/pricing';
 
 async function requireUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -32,7 +32,10 @@ export async function GET(req: NextRequest) {
   const recoveredSinceLastInvoice = (unbilled ?? []).reduce((sum, e) => sum + Number(e.amount), 0);
   return NextResponse.json({
     recoveredSinceLastInvoice,
-    estimatedFee: Math.round(recoveredSinceLastInvoice * PERFORMANCE_FEE_RATE * 100) / 100,
+    // Le socle mensuel est toujours dû, contrairement au % de revenu
+    // récupéré — voir lib/performanceBilling.ts.
+    estimatedFee: PERFORMANCE_BASE_FEE + Math.round(recoveredSinceLastInvoice * PERFORMANCE_FEE_RATE * 100) / 100,
+    baseFee: PERFORMANCE_BASE_FEE,
     feeRate: PERFORMANCE_FEE_RATE,
   });
 }
