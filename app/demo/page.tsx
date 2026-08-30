@@ -224,7 +224,7 @@ function DemoContent() {
                   <div>
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">Votre analyse — illustration</p>
                     <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
-                      Basé sur vos chiffres ({clientCount} clients, {formatEuro(monthlyRevenue)}/mois, {churnRate}% de churn), voici simplement ce que représente votre taux en valeur absolue. La vraie valeur de Churnly commence plus bas : un exemple concret de clients, avec la raison précise de leur risque et l&apos;action à faire — pas juste un pourcentage.
+                      Basé sur vos chiffres ({clientCount} clients, {formatEuro(monthlyRevenue)}/mois, {churnRate}% de churn) — juste une conversion en valeur absolue. La vraie valeur est plus bas : un exemple concret, avec raison et action pour chaque client.
                     </p>
                   </div>
                 </div>
@@ -263,7 +263,7 @@ function DemoContent() {
                   <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Vos insights</h2>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Avec {churnRate}% de churn sur {clientCount} clients, ça représente environ {atRiskCount} clients et {formatEuro(revenueAtRisk)} de revenu mensuel menacé — mais connaître ce nombre ne sert à rien sans savoir lesquels. C&apos;est exactement ce que Churnly identifie sur vos vraies données : voici un exemple concret juste en dessous.
+                  {atRiskCount} clients et {formatEuro(revenueAtRisk)} de revenu mensuel seraient menacés à ce rythme — mais savoir combien ne sert à rien sans savoir lesquels. Exemple concret juste en dessous.
                 </p>
               </motion.div>
 
@@ -275,7 +275,7 @@ function DemoContent() {
               >
                 <h2 className="mb-1.5 text-sm font-semibold text-slate-900 dark:text-white">Exemple concret de détection</h2>
                 <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-                  Ces 8 clients sont fictifs (pas calculés à partir de vos 3 chiffres ci-dessus) — ils montrent le niveau de détail que Churnly produit sur de vraies données : la raison précise, l&apos;action recommandée, et l&apos;email/le script d&apos;appel/l&apos;offre déjà prêts à utiliser. À noter : des raisons comme l&apos;usage ou les tickets support supposent un CSV enrichi en plus de Stripe — connecté uniquement à Stripe, Churnly détecte surtout les signaux de paiement et de renouvellement.
+                  Ces 8 clients sont fictifs, pas calculés depuis vos 3 chiffres — ils montrent le niveau de détail réel : raison précise, action recommandée, email/script/offre déjà prêts. Certaines raisons (usage, tickets) demandent un CSV enrichi ; Stripe seul détecte surtout paiement et renouvellement.
                 </p>
                 <ClientTable
                   clients={DEMO_CLIENTS}
