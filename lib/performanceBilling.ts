@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
-import { PERFORMANCE_FEE_RATE, formatEuro } from '@/lib/pricing';
+import { PERFORMANCE_BASE_FEE, PERFORMANCE_FEE_RATE, formatEuro } from '@/lib/pricing';
 import { logAuditEvent } from '@/lib/auditLog';
 
 interface PerformanceUser {
@@ -14,17 +14,18 @@ interface PerformanceBillingResult {
   recoveredTotal: number;
   fee: number;
   invoiceId?: string;
-  skipped?: 'no_recovery' | 'no_customer';
+  skipped?: 'no_customer';
   error?: string;
 }
 
 // Facture une fois par mois (voir l'appel depuis /api/cron/resync-stripe, le
 // 1er du mois — pas de créneau cron dédié, le plan Vercel Hobby limite à 2
-// jobs) le pourcentage du revenu concrètement récupéré par Churnly pour
-// chaque compte en mode "performance" — voir la migration
-// 20260829000000_add_performance_billing.sql pour le contexte. Un compte
-// sans aucun revenu récupéré ce mois-ci ne reçoit aucune facture : c'est le
-// principe même de ce mode ("il ne paie que si ça marche").
+// jobs) chaque compte en mode "performance" — voir la migration
+// 20260829000000_add_performance_billing.sql pour le contexte. Deux lignes
+// possibles sur la même facture : un socle fixe (PERFORMANCE_BASE_FEE,
+// toujours facturé — sans lui, un mois sans rien à récupérer rendrait
+// Churnly gratuit) et un % du revenu concrètement récupéré (seulement s'il y
+// en a eu).
 export async function runPerformanceBilling(
   supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
 ): Promise<PerformanceBillingResult[]> {
@@ -42,6 +43,14 @@ export async function runPerformanceBilling(
   const results: PerformanceBillingResult[] = [];
 
   for (const user of (users ?? []) as PerformanceUser[]) {
+    if (!user.stripe_customer_id) {
+      // Ne devrait pas arriver (le mode performance suppose un client déjà
+      // passé par le checkout), mais on ne facture jamais à l'aveugle sans
+      // customer Stripe — repris au prochain cycle une fois corrigé.
+      results.push({ userId: user.id, recoveredTotal: 0, fee: 0, skipped: 'no_customer' });
+      continue;
+    }
+
     const { data: events, error: eventsError } = await supabaseAdmin
       .from('recovered_revenue_events')
       .select('id, amount')
@@ -54,30 +63,26 @@ export async function runPerformanceBilling(
     }
 
     const recoveredTotal = (events ?? []).reduce((sum, e) => sum + Number(e.amount), 0);
-    if (recoveredTotal <= 0) {
-      results.push({ userId: user.id, recoveredTotal: 0, fee: 0, skipped: 'no_recovery' });
-      continue;
-    }
-
-    if (!user.stripe_customer_id) {
-      // Ne devrait pas arriver (le mode performance suppose un client déjà
-      // passé par le checkout), mais on ne perd jamais silencieusement un
-      // revenu récupéré détecté — il reste non facturé et sera repris au
-      // prochain cycle une fois le customer_id renseigné.
-      results.push({ userId: user.id, recoveredTotal, fee: 0, skipped: 'no_customer' });
-      continue;
-    }
-
-    const fee = Math.round(recoveredTotal * PERFORMANCE_FEE_RATE * 100) / 100;
+    const performanceFee = recoveredTotal > 0 ? Math.round(recoveredTotal * PERFORMANCE_FEE_RATE * 100) / 100 : 0;
+    const fee = PERFORMANCE_BASE_FEE + performanceFee;
     const eventIds = (events ?? []).map((e) => e.id);
 
     try {
       await stripe.invoiceItems.create({
         customer: user.stripe_customer_id,
-        amount: Math.round(fee * 100),
+        amount: Math.round(PERFORMANCE_BASE_FEE * 100),
         currency: 'eur',
-        description: `Churnly — ${PERFORMANCE_FEE_RATE * 100}% du revenu récupéré (${formatEuro(recoveredTotal)})`,
+        description: 'Churnly — socle mensuel',
       });
+
+      if (performanceFee > 0) {
+        await stripe.invoiceItems.create({
+          customer: user.stripe_customer_id,
+          amount: Math.round(performanceFee * 100),
+          currency: 'eur',
+          description: `Churnly — ${PERFORMANCE_FEE_RATE * 100}% du revenu récupéré (${formatEuro(recoveredTotal)})`,
+        });
+      }
 
       const invoice = await stripe.invoices.create({
         customer: user.stripe_customer_id,
@@ -87,12 +92,14 @@ export async function runPerformanceBilling(
 
       const finalized = await stripe.invoices.finalizeInvoice(invoice.id!);
 
-      const { error: markError } = await supabaseAdmin
-        .from('recovered_revenue_events')
-        .update({ billed: true, billed_at: new Date().toISOString(), stripe_invoice_id: finalized.id })
-        .in('id', eventIds);
-      if (markError) {
-        console.error('[performanceBilling] failed to mark events billed', JSON.stringify({ userId: user.id, markError }));
+      if (eventIds.length > 0) {
+        const { error: markError } = await supabaseAdmin
+          .from('recovered_revenue_events')
+          .update({ billed: true, billed_at: new Date().toISOString(), stripe_invoice_id: finalized.id })
+          .in('id', eventIds);
+        if (markError) {
+          console.error('[performanceBilling] failed to mark events billed', JSON.stringify({ userId: user.id, markError }));
+        }
       }
 
       await logAuditEvent(supabaseAdmin, user.id, 'performance_revenue_billed', {
