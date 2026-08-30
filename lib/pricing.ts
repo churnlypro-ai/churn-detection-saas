@@ -33,11 +33,16 @@ export function calcPrice(revenue: number): number {
 // du visiteur, qui n'est calculé qu'après sa première analyse réelle.
 export const ASSUMED_CHURN_RATE = 5;
 
+// Un nom distinct par palier de prix — "Enterprise" collait auparavant aux
+// trois derniers paliers (800€/1200€/2500€) malgré des prix très différents,
+// donnant l'impression que rien ne change en montant de palier.
 export function tierName(price: number): string {
-  if (price <= 150) return 'Petit';
-  if (price <= 250) return 'Petit-Moyen';
-  if (price <= 400) return 'Moyen';
-  if (price <= 600) return 'Gros';
+  if (price <= 150) return 'Starter';
+  if (price <= 250) return 'Croissance';
+  if (price <= 400) return 'Scale';
+  if (price <= 600) return 'Avancé';
+  if (price <= 800) return 'Business';
+  if (price <= 1200) return 'Grand compte';
   return 'Enterprise';
 }
 
