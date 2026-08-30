@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { fetchClientsFromConnectedAccount } from '@/lib/stripeConnect';
 import { runChurnAnalysis } from '@/lib/analysis';
 import { runWeeklyReports } from '@/lib/weeklyReports';
+import { runPerformanceBilling } from '@/lib/performanceBilling';
 
 // Un compte qui connecte Stripe n'obtenait une analyse qu'une seule fois, au
 // moment de la connexion — rien ne la remettait à jour ensuite, ni cron ni
@@ -94,7 +95,20 @@ async function handleCron(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ results, weeklyReports });
+  // Même contrainte de créneau cron que les bilans hebdo ci-dessus (2 jobs
+  // max sur le plan Vercel Hobby) : la facturation à la performance
+  // (lib/performanceBilling.ts) tourne le 1er de chaque mois, juste après
+  // le resync du jour — données de recouvrement fraîches avant de facturer.
+  let performanceBilling: Awaited<ReturnType<typeof runPerformanceBilling>> = [];
+  if (new Date().getUTCDate() === 1) {
+    try {
+      performanceBilling = await runPerformanceBilling(supabaseAdmin);
+    } catch (err) {
+      console.error('[cron/resync-stripe] performance billing failed', err instanceof Error ? err.message : err);
+    }
+  }
+
+  return NextResponse.json({ results, weeklyReports, performanceBilling });
 }
 
 export async function GET(req: NextRequest) {

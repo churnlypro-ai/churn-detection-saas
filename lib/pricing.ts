@@ -27,6 +27,12 @@ export function calcPrice(revenue: number): number {
   return 2500;
 }
 
+// Facturation à la performance : % du revenu concrètement récupéré par
+// Churnly (ex: paiement en échec relancé avec succès), facturé une fois par
+// mois — voir lib/performanceBilling.ts. Alternative optionnelle au palier
+// basé sur le CA (calcPrice ci-dessus), jamais le défaut.
+export const PERFORMANCE_FEE_RATE = 0.2;
+
 // Taux de churn moyen utilisé uniquement à titre d'illustration sur les
 // pages publiques (calculateur pré-inscription) pour donner un ordre de
 // grandeur de perte potentielle — jamais présenté comme le vrai chiffre
