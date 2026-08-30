@@ -85,6 +85,7 @@ export default function AdminOverview() {
   const [forbidden, setForbidden] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  const [sourceFilter, setSourceFilter] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -124,6 +125,15 @@ export default function AdminOverview() {
       </>
     );
   }
+
+  const normalizedFilter = sourceFilter.trim().toLowerCase();
+  const filteredAccounts = normalizedFilter
+    ? accounts.filter((account) =>
+        [account.utmSource, account.utmMedium, account.utmCampaign, account.companyName, account.email]
+          .filter(Boolean)
+          .some((field) => field!.toLowerCase().includes(normalizedFilter)),
+      )
+    : accounts;
 
   const cards = summary ? [
     { label: 'Comptes total', value: summary.totalAccounts, icon: Users },
@@ -165,6 +175,14 @@ export default function AdminOverview() {
           </Link>
         </div>
 
+        <input
+          type="text"
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value)}
+          placeholder="Filtrer par source (ex: djibril), entreprise ou email…"
+          className="mb-6 w-full max-w-md rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:placeholder:text-slate-500"
+        />
+
         {loading ? (
           <p className="text-sm text-slate-400">Chargement…</p>
         ) : (
@@ -193,7 +211,7 @@ export default function AdminOverview() {
                   </tr>
                 </thead>
                 <tbody>
-                  {accounts.map((account) => (
+                  {filteredAccounts.map((account) => (
                     <tr key={account.id} className="border-b border-slate-50 last:border-0 dark:border-slate-800">
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-900 dark:text-white">{account.companyName || '—'}</p>
