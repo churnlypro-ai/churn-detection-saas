@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import MagicHexagon from '@/components/MagicHexagon';
 import { EASE_OUT } from '@/lib/animations';
-import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText, X, Key, Webhook, Gift, RefreshCw, Copy } from 'lucide-react';
+import { Building2, Users, Euro, TrendingDown, Lock, Check, AlertCircle, Link2, ScrollText, X, Key, Webhook, Gift, RefreshCw, Copy, Percent } from 'lucide-react';
 import type { HexagonStatus } from '@/components/MagicHexagon';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
 import { resolveAccountIdClient } from '@/lib/team';
@@ -25,6 +25,8 @@ interface Profile {
   intercom_connected: boolean;
   stripe_connect_account_id: string | null;
   analysis_frequency: string;
+  billing_mode: 'revenue_tier' | 'performance';
+  performance_billing_started_at: string | null;
 }
 
 interface AuditLogEntry {
@@ -138,6 +140,9 @@ export default function Settings() {
   const [analysisFrequencyStatus, setAnalysisFrequencyStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const analysisFrequencyRequestId = useRef(0);
   const [planMessage, setPlanMessage] = useState('');
+  const [performanceStats, setPerformanceStats] = useState<{ recoveredSinceLastInvoice: number; estimatedFee: number; feeRate: number } | null>(null);
+  const [switchingBillingMode, setSwitchingBillingMode] = useState(false);
+  const [billingModeMessage, setBillingModeMessage] = useState('');
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -217,6 +222,13 @@ export default function Settings() {
       setStripeConnected(!!p?.stripe_connect_account_id);
       setAnalysisFrequency(p?.analysis_frequency ?? 'daily');
       setLoading(false);
+
+      if (p?.billing_mode === 'performance') {
+        const { data: sessionDataForBilling } = await supabase.auth.getSession();
+        const billingToken = sessionDataForBilling?.session?.access_token;
+        const statsRes = await fetch('/api/settings/billing-mode', { headers: { Authorization: `Bearer ${billingToken}` } });
+        if (statsRes.ok) setPerformanceStats(await statsRes.json());
+      }
 
       const { data: logRows } = await supabase
         .from('audit_log')
@@ -456,7 +468,7 @@ export default function Settings() {
     // nouvelles valeurs — sinon les modifier ici ne change rien à ce qu'il
     // paie réellement. Best-effort : ses infos sont déjà enregistrées même
     // si cet ajustement échoue.
-    if (profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing') {
+    if (profile?.billing_mode !== 'performance' && (profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing')) {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData?.session?.access_token;
@@ -481,7 +493,29 @@ export default function Settings() {
     setHexStatus('success');
     setTimeout(() => setSavedToast(false), 3000);
     setTimeout(() => setHexStatus('idle'), 2500);
-  }, [user, editCompany, editClients, editRevenue, editIndustry, editBusinessDescription, profile?.subscription_status, t]);
+  }, [user, editCompany, editClients, editRevenue, editIndustry, editBusinessDescription, profile?.subscription_status, profile?.billing_mode, t]);
+
+  async function handleSwitchBillingMode() {
+    if (!window.confirm(t.performanceBilling.confirmSwitch)) return;
+    setSwitchingBillingMode(true);
+    setBillingModeMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch('/api/settings/billing-mode', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || t.performanceBilling.switchError);
+      setProfile((prev) => (prev ? { ...prev, billing_mode: 'performance', subscription_tier: null } : prev));
+      setPerformanceStats({ recoveredSinceLastInvoice: 0, estimatedFee: 0, feeRate: 0.2 });
+    } catch (err) {
+      setBillingModeMessage(err instanceof Error ? err.message : t.performanceBilling.switchError);
+    } finally {
+      setSwitchingBillingMode(false);
+    }
+  }
 
   async function handlePasswordChange(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1040,6 +1074,46 @@ export default function Settings() {
                 {isLocked ? t.priceNote : t.priceNoteSubscribed}
               </p>
             </div>
+
+            {!isLocked && profile?.billing_mode === 'performance' && (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-6 shadow-sm dark:border-emerald-800/40 dark:bg-emerald-500/5">
+                <div className="mb-2 flex items-center gap-2">
+                  <Percent className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{t.performanceBilling.title}</h3>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.active}</p>
+                {performanceStats && (
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.recoveredLabel}</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(performanceStats.recoveredSinceLastInvoice)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.nextInvoiceLabel}</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(performanceStats.estimatedFee)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!isLocked && profile?.billing_mode !== 'performance' && (
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="mb-2 flex items-center gap-2">
+                  <Percent className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t.performanceBilling.title}</h3>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.pitch}</p>
+                <button
+                  onClick={handleSwitchBillingMode}
+                  disabled={switchingBillingMode}
+                  className="mt-3 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  {switchingBillingMode ? t.performanceBilling.switching : t.performanceBilling.switchButton}
+                </button>
+                {billingModeMessage && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{billingModeMessage}</p>}
+              </div>
+            )}
 
             <div className="relative flex flex-col items-center justify-center">
               <div className="relative h-[320px] w-full overflow-hidden rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">

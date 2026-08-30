@@ -9,6 +9,16 @@ function parseDateOrNull(value: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
+// Heuristique volontairement simple pour repérer un risque "paiement" dans
+// un texte déjà rédigé par Claude (reason + preuves des risk_factors) —
+// seul ce type de signal a une attribution nette (voir
+// lib/performanceBilling.ts) : soit le paiement est repassé, soit non.
+const PAYMENT_KEYWORD_PATTERN = /paiement|payment|échec|failed|carte|card|impayé/i;
+
+function mentionsPaymentRisk(reason: string | null | undefined): boolean {
+  return !!reason && PAYMENT_KEYWORD_PATTERN.test(reason);
+}
+
 // Partagée entre l'import CSV (app/api/analyze) et l'import Stripe Connect
 // (app/api/stripe/connect/import) — les deux se ramènent au même tableau de
 // clients normalisés en entrée, donc à la même analyse et au même stockage
@@ -26,7 +36,7 @@ export async function runChurnAnalysis(
   // fonction et ne devraient pas avoir à redupliquer cette lecture.
   const { data: businessProfile } = await supabaseAdmin
     .from('users')
-    .select('company_name, industry, business_description, subscription_status, trial_used')
+    .select('company_name, industry, business_description, subscription_status, trial_used, billing_mode')
     .eq('id', userId)
     .maybeSingle();
 
@@ -47,7 +57,7 @@ export async function runChurnAnalysis(
   // clients disparus (voir plus bas, après l'insert).
   const { data: previousResults } = await supabaseAdmin
     .from('analysis_results')
-    .select('client_name, churn_score, analyzed_at')
+    .select('client_name, churn_score, reason, analyzed_at')
     .eq('user_id', userId)
     .order('analyzed_at', { ascending: false });
 
@@ -129,6 +139,44 @@ export async function runChurnAnalysis(
       .upsert(outcomeRows, { onConflict: 'user_id,client_name', ignoreDuplicates: true });
     if (outcomeError) {
       console.error('[analysis] auto outcome detection failed', JSON.stringify({ userId, outcomeError }));
+    }
+  }
+
+  // Facturation à la performance (voir lib/performanceBilling.ts) : un
+  // client marqué à risque pour une raison de paiement, dont le paiement
+  // est revenu "ok" à ce ré-import, compte comme un revenu récupéré grâce à
+  // Churnly — attribution nette, contrairement à un signal usage/support.
+  // Seulement pour les comptes qui ont explicitement choisi ce mode de
+  // facturation (jamais le défaut), et seulement quand les données brutes
+  // viennent de Stripe (payment_status n'existe pas sur un import CSV).
+  if (businessProfile?.billing_mode === 'performance') {
+    const previousByClient = new Map<string, { churn_score: number; reason: string | null }>();
+    for (const r of previousResults ?? []) {
+      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, { churn_score: r.churn_score, reason: r.reason });
+    }
+    const paymentStatusByName = new Map<string, string>();
+    for (const c of clients) {
+      const status = c.payment_status;
+      if (typeof status === 'string') paymentStatusByName.set(c.name as string, status);
+    }
+
+    const recoveredRows = rows
+      .filter((row) => {
+        const previous = previousByClient.get(row.client_name);
+        if (!previous || previous.churn_score < 60 || !mentionsPaymentRisk(previous.reason)) return false;
+        return paymentStatusByName.get(row.client_name) === 'ok';
+      })
+      .map((row) => ({
+        user_id: userId,
+        client_name: row.client_name,
+        amount: row.revenue_monthly,
+      }));
+
+    if (recoveredRows.length > 0) {
+      const { error: recoveredError } = await supabaseAdmin.from('recovered_revenue_events').insert(recoveredRows);
+      if (recoveredError) {
+        console.error('[analysis] recovered revenue insert failed', JSON.stringify({ userId, recoveredError }));
+      }
     }
   }
 
