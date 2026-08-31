@@ -9,26 +9,6 @@ function parseDateOrNull(value: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
-// Heuristique volontairement simple pour repérer un risque "paiement" dans
-// un texte déjà rédigé par Claude (reason + preuves des risk_factors) —
-// seul ce type de signal a une attribution nette (voir
-// lib/performanceBilling.ts) : soit le paiement est repassé, soit non.
-const PAYMENT_KEYWORD_PATTERN = /paiement|payment|échec|failed|carte|card|impayé/i;
-
-function mentionsPaymentRisk(reason: string | null | undefined): boolean {
-  return !!reason && PAYMENT_KEYWORD_PATTERN.test(reason);
-}
-
-// Le programme "Smart Retries" de Stripe relance déjà, tout seul et
-// gratuitement, un paiement en échec pendant environ 3 semaines après le
-// premier échec — voir la doc Stripe Billing. Un paiement qui repasse "ok"
-// pendant cette fenêtre a de bonnes chances d'être ce retry natif, pas une
-// conséquence de notre alerte : on ne peut pas prétendre l'avoir "récupéré"
-// et le facturer en mode performance (voir lib/performanceBilling.ts) sans
-// mentir sur l'attribution. Volontairement conservateur (arrondi au-dessus
-// du calendrier Stripe habituel) : en cas de doute, on ne facture pas.
-const STRIPE_SMART_RETRY_WINDOW_DAYS = 21;
-
 // Partagée entre l'import CSV (app/api/analyze) et l'import Stripe Connect
 // (app/api/stripe/connect/import) — les deux se ramènent au même tableau de
 // clients normalisés en entrée, donc à la même analyse et au même stockage
@@ -152,31 +132,48 @@ export async function runChurnAnalysis(
     }
   }
 
-  // Facturation à la performance (voir lib/performanceBilling.ts) : un
-  // client marqué à risque pour une raison de paiement, dont le paiement
-  // est revenu "ok" à ce ré-import, compte comme un revenu récupéré grâce à
-  // Churnly — attribution nette, contrairement à un signal usage/support.
-  // Seulement pour les comptes qui ont explicitement choisi ce mode de
-  // facturation (jamais le défaut), et seulement quand les données brutes
-  // viennent de Stripe (payment_status n'existe pas sur un import CSV).
+  // Facturation à la performance (voir lib/performanceBilling.ts) : compter
+  // un client comme "récupéré" exige deux choses, pas une seule — (1) il
+  // était à risque, ET (2) Churnly a fait quelque chose de concret pour lui
+  // (un email de rétention réellement envoyé depuis le compte, voir
+  // client_retention_drafts), après quoi il est toujours là au scan suivant.
+  // Jamais juste "le score est redescendu tout seul" : un score IA peut
+  // bouger pour mille raisons sans rapport avec nous, alors qu'un email
+  // envoyé est une action traçable qu'on peut montrer à un client qui doute.
+  //
+  // Même règle pour tout le monde, Stripe ou CSV : on ne s'appuie plus sur
+  // payment_status (absent d'un import CSV) mais sur la présence du client
+  // dans CE ré-import — s'il a disparu, on l'a perdu (voir plus haut,
+  // disappearedClients) ; s'il est encore là, on l'a sauvé.
   if (businessProfile?.billing_mode === 'performance') {
-    const previousByClient = new Map<string, { churn_score: number; reason: string | null; analyzedAt: string }>();
+    const previousByClient = new Map<string, { churn_score: number; analyzedAt: string }>();
     for (const r of previousResults ?? []) {
-      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, { churn_score: r.churn_score, reason: r.reason, analyzedAt: r.analyzed_at });
+      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, { churn_score: r.churn_score, analyzedAt: r.analyzed_at });
     }
-    const paymentStatusByName = new Map<string, string>();
-    for (const c of clients) {
-      const status = c.payment_status;
-      if (typeof status === 'string') paymentStatusByName.set(c.name as string, status);
+
+    const { data: sentDrafts } = await supabaseAdmin
+      .from('client_retention_drafts')
+      .select('client_name, sent_at')
+      .eq('account_id', userId)
+      .eq('status', 'sent');
+
+    // Un seul brouillon existe par (compte, client) — voir la contrainte
+    // unique dans la migration correspondante — donc pas besoin de garder le
+    // plus récent parmi plusieurs, juste sa date d'envoi.
+    const emailSentAt = new Map<string, string>();
+    for (const d of sentDrafts ?? []) {
+      if (d.sent_at) emailSentAt.set(d.client_name, d.sent_at);
     }
 
     const recoveredRows = rows
       .filter((row) => {
         const previous = previousByClient.get(row.client_name);
-        if (!previous || previous.churn_score < 60 || !mentionsPaymentRisk(previous.reason)) return false;
-        if (paymentStatusByName.get(row.client_name) !== 'ok') return false;
-        const daysSinceFlagged = (Date.now() - new Date(previous.analyzedAt).getTime()) / 86_400_000;
-        return daysSinceFlagged >= STRIPE_SMART_RETRY_WINDOW_DAYS;
+        if (!previous || previous.churn_score < 60) return false;
+        const sentAt = emailSentAt.get(row.client_name);
+        // L'email doit avoir été envoyé APRÈS ce signalement précis — sinon
+        // un vieil email envoyé pour un tout autre épisode de risque
+        // suffirait à justifier n'importe quelle récupération ultérieure.
+        return !!sentAt && sentAt >= previous.analyzedAt;
       })
       .map((row) => ({
         user_id: userId,
