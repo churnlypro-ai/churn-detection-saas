@@ -56,6 +56,18 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Comptés tous confondus (facturables ou non — voir counts_for_billing
+  // dans lib/analysis.ts) : c'est le nombre réel de clients qu'on a aidé à
+  // retenir, indépendamment du mode de facturation choisi par le compte.
+  const { count: clientsSaved } = await supabaseAdmin
+    .from('recovered_revenue_events')
+    .select('id', { count: 'exact', head: true });
+
+  const { count: performanceInvoicesFailed } = await supabaseAdmin
+    .from('performance_invoices')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'failed');
+
   const now = Date.now();
   const accounts = ((users ?? []) as UserRow[]).map((u) => {
     const lastActivityAt = lastActivityByUser.get(u.id) ?? null;
@@ -91,6 +103,8 @@ export async function GET(req: NextRequest) {
     mrr: accounts.filter((a) => a.subscriptionStatus === 'active').reduce((sum, a) => sum + a.monthlyPrice, 0),
     highRiskCount: accounts.filter((a) => a.risk.level === 'high' && a.subscriptionStatus !== 'canceled').length,
     fromAds: accounts.filter((a) => !!a.utmSource).length,
+    clientsSaved: clientsSaved ?? 0,
+    performanceInvoicesFailed: performanceInvoicesFailed ?? 0,
   };
 
   return NextResponse.json({ summary, accounts });

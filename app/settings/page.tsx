@@ -223,7 +223,12 @@ export default function Settings() {
       setAnalysisFrequency(p?.analysis_frequency ?? 'daily');
       setLoading(false);
 
-      if (p?.billing_mode === 'performance') {
+      {
+        // Récupéré même hors mode performance : sert de comparatif chiffré
+        // ("ça t'aurait coûté combien ?") avant de basculer, voir le bloc
+        // pitch plus bas — recovered_revenue_events est désormais alimenté
+        // pour tous les comptes, pas seulement ceux déjà en performance
+        // (voir lib/analysis.ts).
         const { data: sessionDataForBilling } = await supabase.auth.getSession();
         const billingToken = sessionDataForBilling?.session?.access_token;
         const statsRes = await fetch('/api/settings/billing-mode', { headers: { Authorization: `Bearer ${billingToken}` } });
@@ -1105,6 +1110,18 @@ export default function Settings() {
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t.performanceBilling.title}</h3>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.pitch}</p>
+                {performanceStats && performanceStats.recoveredSinceLastInvoice > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.previewCurrentLabel}</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(currentPrice)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.previewEstimateLabel}</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(performanceStats.estimatedFee)}</p>
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={handleSwitchBillingMode}
                   disabled={switchingBillingMode}

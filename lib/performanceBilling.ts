@@ -55,7 +55,12 @@ export async function runPerformanceBilling(
       .from('recovered_revenue_events')
       .select('id, amount')
       .eq('user_id', user.id)
-      .eq('billed', false);
+      .eq('billed', false)
+      // Certains événements sont désormais enregistrés même pour des comptes
+      // pas encore en mode performance (voir lib/analysis.ts, comparatif
+      // /settings) — jamais facturés, sinon un compte qui bascule aujourd'hui
+      // se retrouverait avec un historique d'avant son choix sur sa 1re facture.
+      .eq('counts_for_billing', true);
 
     if (eventsError) {
       results.push({ userId: user.id, recoveredTotal: 0, fee: 0, error: 'events lookup failed' });
@@ -91,6 +96,20 @@ export async function runPerformanceBilling(
       });
 
       const finalized = await stripe.invoices.finalizeInvoice(invoice.id!);
+
+      // Trace de chaque facture émise, pour pouvoir réagir si son paiement
+      // échoue (voir invoice.payment_failed dans app/api/stripe-webhook) —
+      // avant cette table, un échec de paiement sur une facture performance
+      // ne se voyait nulle part côté Churnly.
+      const { error: invoiceTrackError } = await supabaseAdmin.from('performance_invoices').insert({
+        user_id: user.id,
+        stripe_invoice_id: finalized.id,
+        amount: fee,
+        status: finalized.status === 'paid' ? 'paid' : 'open',
+      });
+      if (invoiceTrackError) {
+        console.error('[performanceBilling] failed to record invoice', JSON.stringify({ userId: user.id, invoiceTrackError }));
+      }
 
       if (eventIds.length > 0) {
         const { error: markError } = await supabaseAdmin

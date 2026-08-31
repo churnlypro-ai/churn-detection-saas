@@ -237,7 +237,7 @@ export const en: Dictionary = {
     legend: 'Size: customers · Color: churn · Thickness: revenue · Speed: urgency',
     performanceBilling: {
       title: 'Performance-based billing',
-      pitch: '€50/mo base fee + 25% of the revenue Churnly actually recovered for you (failed payments successfully retried), instead of a revenue-based tier.',
+      pitch: '€50/mo base fee + 25% of the revenue from clients Churnly actually helped you retain (outreach sent, client stayed), instead of a revenue-based tier.',
       switchButton: 'Switch to performance-based billing',
       switching: 'Switching…',
       switchError: 'The switch failed — try again.',
@@ -245,6 +245,8 @@ export const en: Dictionary = {
       active: 'Billed monthly: €50 base fee + 25% of the revenue recovered this month.',
       recoveredLabel: 'Recovered this month',
       nextInvoiceLabel: 'Estimated next invoice',
+      previewCurrentLabel: 'Your current tier',
+      previewEstimateLabel: 'Would have cost on performance',
     },
     edit: 'Edit',
     companyNameLabel: 'Company name',
@@ -716,7 +718,7 @@ export const en: Dictionary = {
       { q: 'What\'s included in every plan?', a: 'Every tier includes ready-to-send retention emails personalized per customer, the full list of your at-risk customers, a detailed churn score, Churnly-recommended actions, and email support.' },
       { q: 'Do you offer a discount for annual billing?', a: 'Yes — annual billing works out to about one month free compared to paying monthly.' },
       { q: 'What happens if my numbers change after signing up?', a: 'Your price recalculates automatically from your real data. No surprises, no renegotiation needed.' },
-      { q: 'Can I pay on recovered revenue instead of my revenue?', a: 'Yes — once subscribed, you can switch to performance-based billing from your settings: €50/mo base fee + 25% of the revenue Churnly actually recovered for you (failed payments successfully retried).' },
+      { q: 'Can I pay on recovered revenue instead of my revenue?', a: 'Yes — once subscribed, you can switch to performance-based billing from your settings: €50/mo base fee + 25% of the revenue from clients Churnly actually helped you retain (outreach sent, client stayed).' },
     ],
   },
   signals: {

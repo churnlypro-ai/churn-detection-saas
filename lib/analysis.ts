@@ -145,7 +145,16 @@ export async function runChurnAnalysis(
   // payment_status (absent d'un import CSV) mais sur la présence du client
   // dans CE ré-import — s'il a disparu, on l'a perdu (voir plus haut,
   // disappearedClients) ; s'il est encore là, on l'a sauvé.
-  if (businessProfile?.billing_mode === 'performance') {
+  //
+  // Calculé pour TOUS les comptes, pas seulement ceux déjà en mode
+  // performance — ça permet à un compte en abonnement classique de voir un
+  // vrai comparatif chiffré avant de basculer (voir /api/settings/billing-mode
+  // et app/settings/page.tsx), au lieu de deviner. counts_for_billing
+  // distingue ce qui est réellement facturable (compte déjà en performance
+  // au moment du sauvetage) de ce qui n'est enregistré qu'à titre indicatif
+  // — jamais de facturation rétroactive d'un historique accumulé avant que
+  // le client n'ait choisi ce mode (voir lib/performanceBilling.ts).
+  {
     const previousByClient = new Map<string, { churn_score: number; analyzedAt: string }>();
     for (const r of previousResults ?? []) {
       if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, { churn_score: r.churn_score, analyzedAt: r.analyzed_at });
@@ -179,6 +188,7 @@ export async function runChurnAnalysis(
         user_id: userId,
         client_name: row.client_name,
         amount: row.revenue_monthly,
+        counts_for_billing: businessProfile?.billing_mode === 'performance',
       }));
 
     if (recoveredRows.length > 0) {

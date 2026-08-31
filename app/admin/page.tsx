@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Users, Euro, AlertTriangle, TrendingUp, XCircle, Clock, ExternalLink, Megaphone } from 'lucide-react';
+import { Users, Euro, AlertTriangle, TrendingUp, XCircle, Clock, ExternalLink, Megaphone, ShieldCheck, ReceiptText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -42,6 +42,8 @@ interface Summary {
   mrr: number;
   highRiskCount: number;
   fromAds: number;
+  clientsSaved: number;
+  performanceInvoicesFailed: number;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -143,6 +145,8 @@ export default function AdminOverview() {
     { label: 'Paiement en échec', value: summary.pastDue, icon: AlertTriangle },
     { label: 'Risque élevé', value: summary.highRiskCount, icon: AlertTriangle },
     { label: 'Venus de pub', value: summary.fromAds, icon: Megaphone },
+    { label: 'Clients sauvés', value: summary.clientsSaved, icon: ShieldCheck },
+    { label: 'Factures perf. en échec', value: summary.performanceInvoicesFailed, icon: ReceiptText },
   ] : [];
 
   return (
@@ -187,7 +191,7 @@ export default function AdminOverview() {
           <p className="text-sm text-slate-400">Chargement…</p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-9">
               {cards.map((card) => (
                 <div key={card.label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                   <card.icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />

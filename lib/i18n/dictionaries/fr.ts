@@ -235,7 +235,7 @@ export const fr = {
     legend: 'Taille: clients · Couleur: churn · Épaisseur: revenu · Vitesse: urgence',
     performanceBilling: {
       title: 'Facturation à la performance',
-      pitch: '50€/mois de socle + 25% du revenu que Churnly vous a fait récupérer (paiements en échec relancés avec succès) plutôt qu\'un palier basé sur votre CA.',
+      pitch: '50€/mois de socle + 25% du revenu des clients que Churnly vous a concrètement aidé à retenir (relance envoyée et client resté), plutôt qu\'un palier basé sur votre CA.',
       switchButton: 'Passer à la facturation à la performance',
       switching: 'Bascule en cours…',
       switchError: 'La bascule a échoué — réessaie.',
@@ -243,6 +243,8 @@ export const fr = {
       active: 'Facturé chaque mois : 50€ de socle + 25% du revenu récupéré ce mois-ci.',
       recoveredLabel: 'Récupéré ce mois-ci',
       nextInvoiceLabel: 'Prochaine facture estimée',
+      previewCurrentLabel: 'Ton palier actuel',
+      previewEstimateLabel: 'Aurait coûté en performance',
     },
     edit: 'Modifier',
     companyNameLabel: 'Nom de l\'entreprise',
@@ -714,7 +716,7 @@ export const fr = {
       { q: 'Qu\'est-ce qui est inclus dans tous les plans ?', a: 'Tous les paliers incluent des emails de rétention prêts à envoyer et personnalisés par client, la liste complète de vos clients à risque, un score de churn détaillé, des actions recommandées par Churnly, et le support par email.' },
       { q: 'Proposez-vous une remise à l\'engagement annuel ?', a: 'Oui — l\'engagement annuel revient à environ un mois offert par rapport au paiement mensuel.' },
       { q: 'Que se passe-t-il si mes chiffres changent après l\'inscription ?', a: 'Votre prix se recalcule automatiquement à partir de vos données réelles. Aucune surprise, aucune renégociation nécessaire.' },
-      { q: 'Puis-je payer sur le revenu récupéré plutôt que sur mon CA ?', a: 'Oui — depuis vos réglages une fois abonné, vous pouvez basculer vers une facturation à la performance : 50€/mois de socle + 25% du revenu que Churnly vous a concrètement fait récupérer (paiements en échec relancés avec succès).' },
+      { q: 'Puis-je payer sur le revenu récupéré plutôt que sur mon CA ?', a: 'Oui — depuis vos réglages une fois abonné, vous pouvez basculer vers une facturation à la performance : 50€/mois de socle + 25% du revenu des clients que Churnly vous a concrètement aidé à retenir (relance envoyée, client resté).' },
     ],
   },
   signals: {
