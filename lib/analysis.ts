@@ -19,6 +19,16 @@ function mentionsPaymentRisk(reason: string | null | undefined): boolean {
   return !!reason && PAYMENT_KEYWORD_PATTERN.test(reason);
 }
 
+// Le programme "Smart Retries" de Stripe relance déjà, tout seul et
+// gratuitement, un paiement en échec pendant environ 3 semaines après le
+// premier échec — voir la doc Stripe Billing. Un paiement qui repasse "ok"
+// pendant cette fenêtre a de bonnes chances d'être ce retry natif, pas une
+// conséquence de notre alerte : on ne peut pas prétendre l'avoir "récupéré"
+// et le facturer en mode performance (voir lib/performanceBilling.ts) sans
+// mentir sur l'attribution. Volontairement conservateur (arrondi au-dessus
+// du calendrier Stripe habituel) : en cas de doute, on ne facture pas.
+const STRIPE_SMART_RETRY_WINDOW_DAYS = 21;
+
 // Partagée entre l'import CSV (app/api/analyze) et l'import Stripe Connect
 // (app/api/stripe/connect/import) — les deux se ramènent au même tableau de
 // clients normalisés en entrée, donc à la même analyse et au même stockage
@@ -150,9 +160,9 @@ export async function runChurnAnalysis(
   // facturation (jamais le défaut), et seulement quand les données brutes
   // viennent de Stripe (payment_status n'existe pas sur un import CSV).
   if (businessProfile?.billing_mode === 'performance') {
-    const previousByClient = new Map<string, { churn_score: number; reason: string | null }>();
+    const previousByClient = new Map<string, { churn_score: number; reason: string | null; analyzedAt: string }>();
     for (const r of previousResults ?? []) {
-      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, { churn_score: r.churn_score, reason: r.reason });
+      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, { churn_score: r.churn_score, reason: r.reason, analyzedAt: r.analyzed_at });
     }
     const paymentStatusByName = new Map<string, string>();
     for (const c of clients) {
@@ -164,7 +174,9 @@ export async function runChurnAnalysis(
       .filter((row) => {
         const previous = previousByClient.get(row.client_name);
         if (!previous || previous.churn_score < 60 || !mentionsPaymentRisk(previous.reason)) return false;
-        return paymentStatusByName.get(row.client_name) === 'ok';
+        if (paymentStatusByName.get(row.client_name) !== 'ok') return false;
+        const daysSinceFlagged = (Date.now() - new Date(previous.analyzedAt).getTime()) / 86_400_000;
+        return daysSinceFlagged >= STRIPE_SMART_RETRY_WINDOW_DAYS;
       })
       .map((row) => ({
         user_id: userId,
