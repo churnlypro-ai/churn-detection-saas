@@ -34,7 +34,7 @@ export function calcPrice(revenue: number): number {
 // lib/performanceBilling.ts. Alternative optionnelle au palier basé sur le
 // CA (calcPrice ci-dessus), jamais le défaut.
 export const PERFORMANCE_BASE_FEE = 50;
-export const PERFORMANCE_FEE_RATE = 0.2;
+export const PERFORMANCE_FEE_RATE = 0.25;
 
 // Taux de churn moyen utilisé uniquement à titre d'illustration sur les
 // pages publiques (calculateur pré-inscription) pour donner un ordre de
