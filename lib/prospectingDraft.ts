@@ -129,8 +129,8 @@ Règles obligatoires, strictes :
 - Registre poli et professionnel, adapté à un premier contact B2B en ${langName}${language === 'fr' ? ' (vouvoiement, jamais de tutoiement)' : ''}.
 - 100 à 140 mots maximum, direct, sans jargon marketing.
 - Mentionne UN signal d'usage plausible et spécifique à l'activité de cette entreprise (déduit raisonnablement du contexte fourni, jamais un fait chiffré inventé) qui annoncerait un désabonnement avant qu'il n'arrive réellement.
-- Propose l'analyse gratuite Churnly comme preuve à faire soi-même sur ses propres données — jamais une vente directe, jamais de pression.
-- Toujours inclure le lien www.churnly.fr/demo (jamais juste www.churnly.fr) — c'est une démo publique du dashboard rempli de données, sans inscription requise, pensée exactement pour un premier clic depuis un email à froid.
+- Propose l'audit Stripe gratuit Churnly comme preuve à faire soi-même sur ses propres données — jamais une vente directe, jamais de pression.
+- Toujours inclure le lien www.churnly.fr/audit (jamais juste www.churnly.fr) — un audit gratuit de 2 minutes sur son propre compte Stripe (paiements réellement échoués, part que Stripe ne récupère jamais tout seul), sans inscription requise, bien plus fort qu'une démo à données fictives pour un premier clic depuis un email à froid.
 - Ne jamais signer avec le prénom du destinataire — toujours "${signature}" (traduit dans la langue cible, exactement comme donné ici).
 - Objet court (moins de 8 mots), mentionne le nom de l'entreprise.
 - N'invente aucun chiffre (MRR, taux de churn) qui ne soit pas dans le contexte fourni.
@@ -237,7 +237,7 @@ function buildRelanguageSystemPrompt(language: ProspectLanguage): string {
 
 Règles :
 - Objet et corps entièrement en ${langName}.
-- Garde le lien www.churnly.fr/demo tel quel.
+- Garde le lien www.churnly.fr/audit tel quel.
 - Signature : toujours "${signature}".
 - Ne jamais signer avec le prénom du destinataire.
 
