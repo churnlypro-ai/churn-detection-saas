@@ -42,7 +42,7 @@ interface Summary {
   mrr: number;
   highRiskCount: number;
   fromAds: number;
-  clientsSaved: number;
+  treatedResolvedTotal: number;
   performanceInvoicesFailed: number;
 }
 
@@ -145,7 +145,7 @@ export default function AdminOverview() {
     { label: 'Paiement en échec', value: summary.pastDue, icon: AlertTriangle },
     { label: 'Risque élevé', value: summary.highRiskCount, icon: AlertTriangle },
     { label: 'Venus de pub', value: summary.fromAds, icon: Megaphone },
-    { label: 'Clients sauvés', value: summary.clientsSaved, icon: ShieldCheck },
+    { label: 'Épisodes résolus (traités)', value: summary.treatedResolvedTotal, icon: ShieldCheck },
     { label: 'Factures perf. en échec', value: summary.performanceInvoicesFailed, icon: ReceiptText },
   ] : [];
 

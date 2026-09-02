@@ -13,28 +13,51 @@ async function requireUser(req: NextRequest) {
   return { supabaseAdmin, userId: userData.user.id };
 }
 
-// Statut affiché dans /settings : montant récupéré depuis la dernière
-// facture (ou depuis la bascule si jamais encore facturé) et estimation de
-// la prochaine facture — jamais le vrai montant Stripe tant que la
-// facturation mensuelle (lib/performanceBilling.ts) n'est pas passée.
+// Statut affiché dans /settings : l'échantillon en cours depuis la
+// dernière facture (groupe traité vs groupe témoin, voir
+// churn_recovery_samples et lib/analysis.ts) et l'estimation de la
+// prochaine facture calculée exactement comme lib/performanceBilling.ts —
+// jamais le vrai montant Stripe tant que la facturation mensuelle n'est
+// pas passée.
 export async function GET(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { data: unbilled, error } = await auth.supabaseAdmin
-    .from('recovered_revenue_events')
-    .select('amount')
+  const { data: samples, error } = await auth.supabaseAdmin
+    .from('churn_recovery_samples')
+    .select('sample_group, revenue_monthly, resolved')
     .eq('user_id', auth.userId)
-    .eq('billed', false);
+    .is('billed_at', null);
 
   if (error) return NextResponse.json({ error: 'Chargement échoué.' }, { status: 500 });
 
-  const recoveredSinceLastInvoice = (unbilled ?? []).reduce((sum, e) => sum + Number(e.amount), 0);
+  const treatment = (samples ?? []).filter((s) => s.sample_group === 'treatment');
+  const control = (samples ?? []).filter((s) => s.sample_group === 'control');
+  const treatedResolvedCount = treatment.filter((s) => s.resolved).length;
+  const controlResolvedCount = control.filter((s) => s.resolved).length;
+
+  // Même calcul que computeIncrementalRevenue dans lib/performanceBilling.ts
+  // — pas de témoin mesurable ce mois-ci, pas d'incrément affirmé.
+  let incrementalRevenue = 0;
+  if (treatment.length > 0 && control.length > 0) {
+    const treatedRate = treatedResolvedCount / treatment.length;
+    const controlRate = controlResolvedCount / control.length;
+    const incrementalRate = Math.max(0, treatedRate - controlRate);
+    if (incrementalRate > 0) {
+      const treatedRevenue = treatment.reduce((sum, s) => sum + Number(s.revenue_monthly), 0);
+      incrementalRevenue = Math.round(incrementalRate * treatedRevenue * 100) / 100;
+    }
+  }
+
   return NextResponse.json({
-    recoveredSinceLastInvoice,
-    // Le socle mensuel est toujours dû, contrairement au % de revenu
-    // récupéré — voir lib/performanceBilling.ts.
-    estimatedFee: PERFORMANCE_BASE_FEE + Math.round(recoveredSinceLastInvoice * PERFORMANCE_FEE_RATE * 100) / 100,
+    treatmentCount: treatment.length,
+    controlCount: control.length,
+    treatedResolvedCount,
+    controlResolvedCount,
+    incrementalRevenue,
+    // Le socle mensuel est toujours dû, contrairement au % de l'écart
+    // mesuré — voir lib/performanceBilling.ts.
+    estimatedFee: PERFORMANCE_BASE_FEE + Math.round(incrementalRevenue * PERFORMANCE_FEE_RATE * 100) / 100,
     baseFee: PERFORMANCE_BASE_FEE,
     feeRate: PERFORMANCE_FEE_RATE,
   });

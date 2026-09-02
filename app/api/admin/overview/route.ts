@@ -56,12 +56,16 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Comptés tous confondus (facturables ou non — voir counts_for_billing
-  // dans lib/analysis.ts) : c'est le nombre réel de clients qu'on a aidé à
-  // retenir, indépendamment du mode de facturation choisi par le compte.
-  const { count: clientsSaved } = await supabaseAdmin
-    .from('recovered_revenue_events')
-    .select('id', { count: 'exact', head: true });
+  // Volontairement PAS "clients sauvés" — un épisode traité résolu ne
+  // prouve pas que Churnly en est la cause (voir la migration
+  // churn_recovery_samples et lib/performanceBilling.ts pour la vraie
+  // mesure, via groupe témoin). Ce chiffre est juste informatif : combien
+  // d'épisodes de risque suivis, côté traité, se sont résolus.
+  const { count: treatedResolvedTotal } = await supabaseAdmin
+    .from('churn_recovery_samples')
+    .select('id', { count: 'exact', head: true })
+    .eq('sample_group', 'treatment')
+    .eq('resolved', true);
 
   const { count: performanceInvoicesFailed } = await supabaseAdmin
     .from('performance_invoices')
@@ -103,7 +107,7 @@ export async function GET(req: NextRequest) {
     mrr: accounts.filter((a) => a.subscriptionStatus === 'active').reduce((sum, a) => sum + a.monthlyPrice, 0),
     highRiskCount: accounts.filter((a) => a.risk.level === 'high' && a.subscriptionStatus !== 'canceled').length,
     fromAds: accounts.filter((a) => !!a.utmSource).length,
-    clientsSaved: clientsSaved ?? 0,
+    treatedResolvedTotal: treatedResolvedTotal ?? 0,
     performanceInvoicesFailed: performanceInvoicesFailed ?? 0,
   };
 

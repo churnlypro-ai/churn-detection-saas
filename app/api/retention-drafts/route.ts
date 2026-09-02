@@ -61,7 +61,22 @@ export async function GET(req: NextRequest) {
   for (const row of (rows ?? []) as AnalysisRowLite[]) {
     if (!latestByClient.has(row.client_name)) latestByClient.set(row.client_name, row);
   }
-  const atRiskClients = Array.from(latestByClient.values()).filter((r) => r.churn_score >= AT_RISK_THRESHOLD);
+
+  // Le groupe témoin (voir lib/analysis.ts et la migration
+  // churn_recovery_samples) ne doit JAMAIS recevoir de relance tant que son
+  // épisode est ouvert — sinon la mesure de l'incrément réel n'a plus de
+  // sens. On ne génère donc simplement aucun brouillon pour ces clients-là,
+  // pas de bouton à retenir de ne pas cliquer.
+  const { data: controlSamples } = await supabaseAdmin
+    .from('churn_recovery_samples')
+    .select('client_name')
+    .eq('user_id', accountId)
+    .eq('sample_group', 'control')
+    .eq('resolved', false);
+  const withheldNames = new Set((controlSamples ?? []).map((s) => s.client_name));
+
+  const atRiskClients = Array.from(latestByClient.values())
+    .filter((r) => r.churn_score >= AT_RISK_THRESHOLD && !withheldNames.has(r.client_name));
 
   const { data: existingDrafts, error: draftsError } = await supabaseAdmin
     .from('client_retention_drafts')

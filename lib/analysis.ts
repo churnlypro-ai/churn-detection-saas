@@ -137,64 +137,71 @@ export async function runChurnAnalysis(
   // était à risque, ET (2) Churnly a fait quelque chose de concret pour lui
   // (un email de rétention réellement envoyé depuis le compte, voir
   // client_retention_drafts), après quoi il est toujours là au scan suivant.
-  // Jamais juste "le score est redescendu tout seul" : un score IA peut
-  // bouger pour mille raisons sans rapport avec nous, alors qu'un email
-  // envoyé est une action traçable qu'on peut montrer à un client qui doute.
+  // "Relance envoyée puis client toujours là" ne prouve pas que Churnly a
+  // causé quoi que ce soit — une relance qui part juste avant que Stripe
+  // réussisse son propre retry ne fait que précéder l'événement, pas le
+  // causer (retour de Kevin). La seule mesure qui prouve un effet causal :
+  // un groupe témoin. Sur chaque NOUVEL épisode de risque, 5% des clients
+  // sont tirés au sort et volontairement pas relancés (voir la suppression
+  // du brouillon de rétention pour ce groupe dans
+  // app/api/retention-drafts/route.ts). Le taux de résolution spontanée du
+  // témoin sert de référence pour mesurer l'incrément réel du groupe traité
+  // — voir lib/performanceBilling.ts pour le calcul de facturation dessus.
   //
-  // Même règle pour tout le monde, Stripe ou CSV : on ne s'appuie plus sur
-  // payment_status (absent d'un import CSV) mais sur la présence du client
-  // dans CE ré-import — s'il a disparu, on l'a perdu (voir plus haut,
-  // disappearedClients) ; s'il est encore là, on l'a sauvé.
-  //
-  // Calculé pour TOUS les comptes, pas seulement ceux déjà en mode
-  // performance — ça permet à un compte en abonnement classique de voir un
-  // vrai comparatif chiffré avant de basculer (voir /api/settings/billing-mode
-  // et app/settings/page.tsx), au lieu de deviner. counts_for_billing
-  // distingue ce qui est réellement facturable (compte déjà en performance
-  // au moment du sauvetage) de ce qui n'est enregistré qu'à titre indicatif
-  // — jamais de facturation rétroactive d'un historique accumulé avant que
-  // le client n'ait choisi ce mode (voir lib/performanceBilling.ts).
-  {
-    const previousByClient = new Map<string, { churn_score: number; analyzedAt: string }>();
+  // Seulement pour les comptes déjà en mode performance : priver un client
+  // de relance a un vrai coût, on ne l'impose pas à un compte qui n'a pas
+  // choisi ce mode.
+  if (businessProfile?.billing_mode === 'performance') {
+    const previousByClient = new Map<string, number>();
     for (const r of previousResults ?? []) {
-      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, { churn_score: r.churn_score, analyzedAt: r.analyzed_at });
+      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, r.churn_score);
     }
 
-    const { data: sentDrafts } = await supabaseAdmin
-      .from('client_retention_drafts')
-      .select('client_name, sent_at')
-      .eq('account_id', userId)
-      .eq('status', 'sent');
-
-    // Un seul brouillon existe par (compte, client) — voir la contrainte
-    // unique dans la migration correspondante — donc pas besoin de garder le
-    // plus récent parmi plusieurs, juste sa date d'envoi.
-    const emailSentAt = new Map<string, string>();
-    for (const d of sentDrafts ?? []) {
-      if (d.sent_at) emailSentAt.set(d.client_name, d.sent_at);
-    }
-
-    const recoveredRows = rows
+    // Nouvel épisode = à risque maintenant, ne l'était pas juste avant (ou
+    // apparaît pour la première fois) — c'est le moment où son groupe est
+    // tiré au sort, une seule fois par épisode.
+    const newSamples = rows
       .filter((row) => {
+        if (row.churn_score < 60) return false;
         const previous = previousByClient.get(row.client_name);
-        if (!previous || previous.churn_score < 60) return false;
-        const sentAt = emailSentAt.get(row.client_name);
-        // L'email doit avoir été envoyé APRÈS ce signalement précis — sinon
-        // un vieil email envoyé pour un tout autre épisode de risque
-        // suffirait à justifier n'importe quelle récupération ultérieure.
-        return !!sentAt && sentAt >= previous.analyzedAt;
+        return previous === undefined || previous < 60;
       })
       .map((row) => ({
         user_id: userId,
         client_name: row.client_name,
-        amount: row.revenue_monthly,
-        counts_for_billing: businessProfile?.billing_mode === 'performance',
+        sample_group: Math.random() < 0.05 ? 'control' : 'treatment',
+        revenue_monthly: row.revenue_monthly,
       }));
 
-    if (recoveredRows.length > 0) {
-      const { error: recoveredError } = await supabaseAdmin.from('recovered_revenue_events').insert(recoveredRows);
-      if (recoveredError) {
-        console.error('[analysis] recovered revenue insert failed', JSON.stringify({ userId, recoveredError }));
+    if (newSamples.length > 0) {
+      const { error: sampleError } = await supabaseAdmin.from('churn_recovery_samples').insert(newSamples);
+      if (sampleError) {
+        console.error('[analysis] recovery sample insert failed', JSON.stringify({ userId, sampleError }));
+      }
+    }
+
+    // Résolution des épisodes ouverts : le client est présent dans CE
+    // ré-import et n'est plus à risque — peu importe s'il a reçu une
+    // relance ou non, c'est justement le témoin qui n'en reçoit jamais et
+    // sert de taux "spontané" de comparaison.
+    const currentScoreByClient = new Map(rows.map((r) => [r.client_name, r.churn_score]));
+    const { data: openSamples } = await supabaseAdmin
+      .from('churn_recovery_samples')
+      .select('id, client_name')
+      .eq('user_id', userId)
+      .eq('resolved', false);
+
+    const toResolve = (openSamples ?? [])
+      .filter((s) => (currentScoreByClient.get(s.client_name) ?? 100) < 60)
+      .map((s) => s.id);
+
+    if (toResolve.length > 0) {
+      const { error: resolveError } = await supabaseAdmin
+        .from('churn_recovery_samples')
+        .update({ resolved: true, resolved_at: new Date().toISOString() })
+        .in('id', toResolve);
+      if (resolveError) {
+        console.error('[analysis] recovery sample resolve failed', JSON.stringify({ userId, resolveError }));
       }
     }
   }
