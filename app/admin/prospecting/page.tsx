@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, XCircle, Mail, CheckCircle2, Clock, AlertTriangle, Send, Trash2, Plug, Pencil, Linkedin, ExternalLink } from 'lucide-react';
+import { ArrowLeft, XCircle, Mail, CheckCircle2, Clock, AlertTriangle, Send, Trash2, Plug, Pencil, Linkedin, ExternalLink, Copy, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -138,6 +138,7 @@ function ProspectingContent() {
   const [liSelectedIds, setLiSelectedIds] = useState<Set<string>>(new Set());
   const [liDeletingSelection, setLiDeletingSelection] = useState(false);
   const [liSendingId, setLiSendingId] = useState<string | null>(null);
+  const [liCopiedId, setLiCopiedId] = useState<string | null>(null);
 
   const [liEditingId, setLiEditingId] = useState<string | null>(null);
   const [liEditName, setLiEditName] = useState('');
@@ -681,23 +682,31 @@ function ProspectingContent() {
     }
   }
 
-  // Pas d'API LinkedIn pour envoyer à sa place (voir migration) : on ouvre
-  // le profil dans un nouvel onglet et on copie le message dans le
-  // presse-papiers pour qu'il ne reste plus qu'à coller et cliquer envoyer
-  // sur LinkedIn, puis on marque le contact "envoyé" côté Churnly.
-  async function handleSendLinkedIn(entry: LinkedInEntry) {
-    setLiSendingId(entry.id);
-    // Presse-papiers non-awaité puis window.open() appelé tout de suite
-    // après, encore dans le même tick que le clic — awaiter le
-    // presse-papiers d'abord ferait perdre l'activation utilisateur avant
-    // window.open() et le ferait bloquer comme un popup sur certains
-    // navigateurs (Safari notamment). L'écriture presse-papiers doit aussi
-    // se faire avant que le nouvel onglet ne prenne le focus, sans quoi le
-    // document d'origine n'est plus "focused" et l'écriture échoue.
-    navigator.clipboard.writeText(entry.message).catch(() => {
+  // Séparé de l'ouverture du profil : écrire dans le presse-papiers et
+  // appeler window.open() dans le même clic perdait la course contre le
+  // changement de focus vers le nouvel onglet, et l'écriture échouait
+  // silencieusement une fois sur deux (l'API Clipboard exige que le
+  // document appelant soit toujours au premier plan au moment où l'écriture
+  // aboutit). Ce bouton ne fait que copier, jamais de navigation — on peut
+  // le recliquer à tout moment, y compris après avoir déjà ouvert le
+  // profil, pour re-remplir le presse-papiers sans race condition.
+  async function handleCopyLinkedInMessage(entry: LinkedInEntry) {
+    try {
+      await navigator.clipboard.writeText(entry.message);
+      setLiCopiedId(entry.id);
+      setTimeout(() => setLiCopiedId((current) => (current === entry.id ? null : current)), 2000);
+    } catch {
       // Presse-papiers indisponible — pas bloquant, le message reste
       // affiché dans la file pour un copier-coller manuel.
-    });
+    }
+  }
+
+  // Pas d'API LinkedIn pour envoyer à sa place (voir migration) : ouvre le
+  // profil dans un nouvel onglet et marque le contact "envoyé" côté
+  // Churnly — la copie du message est un bouton séparé (voir
+  // handleCopyLinkedInMessage) pour éviter la race condition ci-dessus.
+  async function handleSendLinkedIn(entry: LinkedInEntry) {
+    setLiSendingId(entry.id);
     window.open(entry.linkedin_url, '_blank', 'noopener,noreferrer');
     try {
       const authToken = await getAuthToken();
@@ -1366,12 +1375,19 @@ message:
                             {entry.status === 'queued' && (
                               <div className="flex flex-shrink-0 items-center gap-3">
                                 <button
+                                  onClick={() => handleCopyLinkedInMessage(entry)}
+                                  className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                >
+                                  {liCopiedId === entry.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                  {liCopiedId === entry.id ? 'Copié' : 'Copier le message'}
+                                </button>
+                                <button
                                   onClick={() => handleSendLinkedIn(entry)}
                                   disabled={liSendingId === entry.id}
                                   className="flex items-center gap-1.5 rounded-full bg-brand-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
                                 >
                                   <ExternalLink className="h-3.5 w-3.5" />
-                                  {liSendingId === entry.id ? 'Ouverture…' : 'Ouvrir & copier'}
+                                  {liSendingId === entry.id ? 'Ouverture…' : 'Ouvrir le profil'}
                                 </button>
                                 <button
                                   onClick={() => startEditLinkedIn(entry)}
