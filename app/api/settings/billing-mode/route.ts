@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
 import { logAuditEvent } from '@/lib/auditLog';
-import { PERFORMANCE_BASE_FEE, PERFORMANCE_FEE_RATE } from '@/lib/pricing';
+import { calcPerformanceBaseFee, PERFORMANCE_FEE_RATE } from '@/lib/pricing';
 
 async function requireUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -22,6 +22,13 @@ async function requireUser(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { data: profile } = await auth.supabaseAdmin
+    .from('users')
+    .select('monthly_revenue')
+    .eq('id', auth.userId)
+    .maybeSingle();
+  const baseFee = calcPerformanceBaseFee(Number(profile?.monthly_revenue) || 0);
 
   const { data: samples, error } = await auth.supabaseAdmin
     .from('churn_recovery_samples')
@@ -57,8 +64,8 @@ export async function GET(req: NextRequest) {
     incrementalRevenue,
     // Le socle mensuel est toujours dû, contrairement au % de l'écart
     // mesuré — voir lib/performanceBilling.ts.
-    estimatedFee: PERFORMANCE_BASE_FEE + Math.round(incrementalRevenue * PERFORMANCE_FEE_RATE * 100) / 100,
-    baseFee: PERFORMANCE_BASE_FEE,
+    estimatedFee: baseFee + Math.round(incrementalRevenue * PERFORMANCE_FEE_RATE * 100) / 100,
+    baseFee,
     feeRate: PERFORMANCE_FEE_RATE,
   });
 }

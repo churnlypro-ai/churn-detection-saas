@@ -1,12 +1,13 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
-import { PERFORMANCE_BASE_FEE, PERFORMANCE_FEE_RATE, formatEuro } from '@/lib/pricing';
+import { calcPerformanceBaseFee, PERFORMANCE_FEE_RATE, formatEuro } from '@/lib/pricing';
 import { logAuditEvent } from '@/lib/auditLog';
 
 interface PerformanceUser {
   id: string;
   stripe_customer_id: string | null;
   company_name: string | null;
+  monthly_revenue: number | null;
 }
 
 interface PerformanceBillingResult {
@@ -48,17 +49,18 @@ function computeIncrementalRevenue(samples: RecoverySample[]): number {
 // Facture une fois par mois (voir l'appel depuis /api/cron/resync-stripe, le
 // 1er du mois — pas de créneau cron dédié, le plan Vercel Hobby limite à 2
 // jobs) chaque compte en mode "performance". Deux lignes possibles sur la
-// même facture : un socle fixe (PERFORMANCE_BASE_FEE, toujours facturé —
-// sans lui, un mois sans rien à récupérer rendrait Churnly gratuit) et un %
-// de l'incrément mesuré via groupe témoin (voir computeIncrementalRevenue
-// ci-dessus et la migration 20260901000000_add_recovery_control_group.sql
-// pour le pourquoi de ce mécanisme plutôt qu'une liste de clients nommés).
+// même facture : un socle basé sur le CA déclaré (calcPerformanceBaseFee,
+// toujours facturé — sans lui, un mois sans rien à récupérer rendrait
+// Churnly gratuit) et un % de l'incrément mesuré via groupe témoin (voir
+// computeIncrementalRevenue ci-dessus et la migration
+// 20260901000000_add_recovery_control_group.sql pour le pourquoi de ce
+// mécanisme plutôt qu'une liste de clients nommés).
 export async function runPerformanceBilling(
   supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
 ): Promise<PerformanceBillingResult[]> {
   const { data: users, error: usersError } = await supabaseAdmin
     .from('users')
-    .select('id, stripe_customer_id, company_name')
+    .select('id, stripe_customer_id, company_name, monthly_revenue')
     .eq('billing_mode', 'performance');
 
   if (usersError) {
@@ -92,13 +94,14 @@ export async function runPerformanceBilling(
     const sampleRows = (samples ?? []) as RecoverySample[];
     const incrementalRevenue = computeIncrementalRevenue(sampleRows);
     const performanceFee = incrementalRevenue > 0 ? Math.round(incrementalRevenue * PERFORMANCE_FEE_RATE * 100) / 100 : 0;
-    const fee = PERFORMANCE_BASE_FEE + performanceFee;
+    const baseFee = calcPerformanceBaseFee(Number(user.monthly_revenue) || 0);
+    const fee = baseFee + performanceFee;
     const sampleIds = sampleRows.map((s) => s.id);
 
     try {
       await stripe.invoiceItems.create({
         customer: user.stripe_customer_id,
-        amount: Math.round(PERFORMANCE_BASE_FEE * 100),
+        amount: Math.round(baseFee * 100),
         currency: 'eur',
         description: 'Churnly — socle mensuel',
       });

@@ -5,18 +5,19 @@ export interface PricingResult {
   tierName: string;
 }
 
-// Deux plans au choix dès l'inscription (voir /pricing) :
+// Deux plans au choix dès l'inscription (voir /pricing), tous deux calculés
+// à partir du même CA mensuel déclaré, affichés côte à côte pour comparer :
 //
 // - Standard (billing_mode 'revenue_tier', le défaut) : uniquement un
-//   socle basé sur le CA mensuel déclaré (calcPrice ci-dessous), facturé
-//   une fois par mois via l'abonnement Stripe classique — jamais de %
-//   sur le revenu récupéré, jamais de groupe témoin sur ce plan.
-// - Performance (billing_mode 'performance') : un socle fixe plus bas
-//   (PERFORMANCE_BASE_FEE, 50€ — pour ne pas rendre Churnly gratuit un
-//   mois sans rien à récupérer) + PERFORMANCE_FEE_RATE (20%) du revenu
-//   concrètement récupéré grâce à Churnly, mesuré via groupe témoin (voir
-//   lib/performanceBilling.ts). Les deux facturés ensemble en une seule
-//   facture ad hoc mensuelle (pas d'abonnement Stripe récurrent).
+//   socle basé sur le CA (calcPrice ci-dessous), sans plafond, facturé une
+//   fois par mois via l'abonnement Stripe classique — jamais de % sur le
+//   revenu récupéré, jamais de groupe témoin sur ce plan.
+// - Performance (billing_mode 'performance') : un socle plus bas et
+//   plafonné (calcPerformanceBaseFee ci-dessous) + PERFORMANCE_FEE_RATE
+//   (20%) du revenu concrètement récupéré grâce à Churnly, mesuré via
+//   groupe témoin (voir lib/performanceBilling.ts). Les deux facturés
+//   ensemble en une seule facture ad hoc mensuelle (pas d'abonnement
+//   Stripe récurrent).
 //
 // On ne demande jamais le taux de churn à l'inscription — une entreprise
 // qui vient chez nous ne connaît généralement pas son propre taux de
@@ -39,9 +40,19 @@ export function calcPrice(revenue: number): number {
   return 100 + 50 * Math.floor((revenue - 2000) / 2000);
 }
 
-// Voir le commentaire en tête de fichier pour le rôle de ces deux valeurs
-// — plan Performance uniquement.
-export const PERFORMANCE_BASE_FEE = 50;
+// Socle du plan Performance : 50€ de départ, +50€ tous les 2 000€ de CA
+// supplémentaires (même rythme que Standard ci-dessus), mais plafonné à
+// 3 000€/mois — contrairement à Standard, jamais plus cher que ça, même
+// sur un très gros compte. C'est ce qui rend Performance structurellement
+// moins cher que Standard à partir d'un certain CA, en échange du 20% sur
+// le revenu récupéré (voir PERFORMANCE_FEE_RATE ci-dessous).
+export function calcPerformanceBaseFee(revenue: number): number {
+  return Math.min(3000, 50 + 50 * Math.floor(revenue / 2000));
+}
+
+// Voir le commentaire en tête de fichier — le % s'applique uniquement au
+// plan Performance, sur le revenu concrètement récupéré (mesuré via
+// groupe témoin), jamais sur le socle lui-même.
 export const PERFORMANCE_FEE_RATE = 0.2;
 
 // Taux de churn moyen utilisé uniquement à titre d'illustration sur les
