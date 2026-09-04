@@ -14,9 +14,9 @@ import { useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 const DEFAULT_CLIENT_COUNT = 100;
 
 const TIER_EXAMPLE_META = [
-  { name: 'Starter', price: 60, highlight: false },
-  { name: 'Scale', price: 400, highlight: true },
-  { name: 'Enterprise', price: 2500, highlight: false },
+  { name: 'Starter', price: 60 },
+  { name: 'Scale', price: 250 },
+  { name: 'Enterprise', price: 2550 },
 ];
 
 function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
@@ -371,11 +371,7 @@ export default function PricingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.1 }}
-              className={`rounded-3xl border p-8 ${
-                tier.highlight
-                  ? 'border-brand-200 bg-brand-50/60 shadow-lg shadow-brand-600/10 dark:border-brand-800/40 dark:bg-brand-500/5'
-                  : 'border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900'
-              }`}
+              className="rounded-3xl border border-slate-100 bg-white p-8 dark:border-slate-800 dark:bg-slate-900"
             >
               <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{tierName(tier.name)}</p>
               <p className="mt-2 text-4xl font-extrabold text-slate-900 dark:text-white">
