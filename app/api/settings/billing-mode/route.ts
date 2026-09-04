@@ -23,6 +23,16 @@ export async function GET(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  const { data: profile } = await auth.supabaseAdmin
+    .from('users')
+    .select('billing_mode')
+    .eq('id', auth.userId)
+    .maybeSingle();
+  // Le socle fixe (50€) n'est dû qu'en plan Performance pur — en Standard
+  // ('revenue_tier'), le socle basé sur le CA est déjà prélevé via
+  // l'abonnement Stripe classique, seul le % mesuré ci-dessous s'ajoute.
+  const baseFee = profile?.billing_mode === 'performance' ? PERFORMANCE_BASE_FEE : 0;
+
   const { data: samples, error } = await auth.supabaseAdmin
     .from('churn_recovery_samples')
     .select('sample_group, revenue_monthly, resolved')
@@ -55,10 +65,10 @@ export async function GET(req: NextRequest) {
     treatedResolvedCount,
     controlResolvedCount,
     incrementalRevenue,
-    // Le socle mensuel est toujours dû, contrairement au % de l'écart
-    // mesuré — voir lib/performanceBilling.ts.
-    estimatedFee: PERFORMANCE_BASE_FEE + Math.round(incrementalRevenue * PERFORMANCE_FEE_RATE * 100) / 100,
-    baseFee: PERFORMANCE_BASE_FEE,
+    // Le socle de 50€ n'est dû qu'en plan Performance — voir baseFee
+    // ci-dessus et lib/performanceBilling.ts.
+    estimatedFee: baseFee + Math.round(incrementalRevenue * PERFORMANCE_FEE_RATE * 100) / 100,
+    baseFee,
     feeRate: PERFORMANCE_FEE_RATE,
   });
 }

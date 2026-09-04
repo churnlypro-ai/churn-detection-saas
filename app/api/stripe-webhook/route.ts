@@ -91,6 +91,53 @@ export async function POST(req: NextRequest) {
         const session = event.data.object;
         const userId = session.metadata?.supabase_user_id;
         const tier = session.metadata?.tier;
+
+        // Plan Performance (voir app/api/create-checkout-session) : une
+        // session en mode 'setup', pas d'abonnement — on attache le moyen de
+        // paiement collecté comme moyen par défaut du customer (utilisé
+        // ensuite par lib/performanceBilling.ts pour les factures ad hoc
+        // mensuelles), puis on active directement le compte en plan
+        // Performance. Même garde anti-doublon (became_paying_at) et même
+        // récompense de parrainage que l'activation par abonnement ci-dessous.
+        if (session.mode === 'setup' && session.metadata?.billing_mode === 'performance') {
+          if (!userId) {
+            console.error('[stripe-webhook] checkout.session.completed (setup): missing supabase_user_id');
+            break;
+          }
+          if (session.setup_intent) {
+            const setupIntent = await stripe.setupIntents.retrieve(String(session.setup_intent));
+            if (setupIntent.payment_method && session.customer) {
+              await stripe.customers.update(String(session.customer), {
+                invoice_settings: { default_payment_method: String(setupIntent.payment_method) },
+              });
+            }
+          }
+          const { error, data, becamePayingNow } = await applyActivation(
+            supabaseAdmin,
+            'id',
+            userId,
+            {
+              billing_mode: 'performance',
+              performance_billing_started_at: new Date().toISOString(),
+              subscription_status: 'active',
+              stripe_subscription_id: null,
+              subscription_tier: null,
+            },
+            'active',
+          );
+          if (error) {
+            console.error('[stripe-webhook] checkout.session.completed (setup): supabase update failed', JSON.stringify({ userId, error }));
+          } else if (!data || data.length === 0) {
+            console.error('[stripe-webhook] checkout.session.completed (setup): no user row matched', JSON.stringify({ userId }));
+          } else {
+            console.log('[stripe-webhook] checkout.session.completed (setup): performance plan activated', JSON.stringify({ userId }));
+            if (becamePayingNow && data[0].referred_by) {
+              await rewardReferrerForConversion(supabaseAdmin, data[0].referred_by);
+            }
+          }
+          break;
+        }
+
         if (userId && tier && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
           const newStatus = mapStripeStatus(subscription.status);

@@ -13,12 +13,6 @@ import { useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 
 const DEFAULT_CLIENT_COUNT = 100;
 
-const TIER_EXAMPLE_META = [
-  { name: 'Starter', price: 60 },
-  { name: 'Scale', price: 250 },
-  { name: 'Enterprise', price: 2550 },
-];
-
 function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -63,6 +57,10 @@ export default function PricingPage() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  // Choix fait sur les deux cartes en haut de page, avant même le
+  // simulateur — 'revenue_tier' (Standard) est le défaut, cohérent avec le
+  // fait que c'était jusqu'ici la seule option proposée à l'inscription.
+  const [selectedPlan, setSelectedPlan] = useState<'revenue_tier' | 'performance'>('revenue_tier');
   const t = useTranslations('pricing');
   const tFooter = useTranslations('home').footer;
   const tierName = useTierName();
@@ -83,7 +81,7 @@ export default function PricingPage() {
     }, 2200);
   }
 
-  async function handleSubscribe() {
+  async function handleSubscribe(billingMode: 'revenue_tier' | 'performance') {
     if (!user) {
       router.push('/signup');
       return;
@@ -96,19 +94,22 @@ export default function PricingPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
-      // Le palier facturé est recalculé côté serveur à partir du profil en
-      // base (voir /api/create-checkout-session) — on enregistre donc les
-      // valeurs du simulateur sur le compte avant de payer, pour que le prix
-      // facturé corresponde bien à ce qui vient d'être affiché à l'écran.
-      await supabase
-        .from('users')
-        .update({ client_count: DEFAULT_CLIENT_COUNT, monthly_revenue: monthlyRevenue })
-        .eq('id', user.id);
+      // Le socle Standard facturé est recalculé côté serveur à partir du
+      // profil en base (voir /api/create-checkout-session) — on enregistre
+      // donc les valeurs du simulateur sur le compte avant de payer, pour
+      // que le prix facturé corresponde bien à ce qui vient d'être affiché
+      // à l'écran. Sans objet pour le plan Performance (pas de CA impliqué).
+      if (billingMode === 'revenue_tier') {
+        await supabase
+          .from('users')
+          .update({ client_count: DEFAULT_CLIENT_COUNT, monthly_revenue: monthlyRevenue })
+          .eq('id', user.id);
+      }
 
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ billingMode }),
       });
 
       if (!response.ok) throw new Error(t.checkoutErrorStart);
@@ -152,6 +153,139 @@ export default function PricingPage() {
         </motion.p>
       </section>
 
+      <section className="px-6 py-10">
+        <motion.h2
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: EASE_OUT }}
+          className="text-center text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl"
+        >
+          {t.plans.sectionTitle}
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }}
+          className="mx-auto mt-3 max-w-xl text-center text-sm text-slate-500 dark:text-slate-400"
+        >
+          {t.plans.sectionSubtitle}
+        </motion.p>
+
+        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-5 sm:grid-cols-2">
+          {(
+            [
+              { key: 'revenue_tier' as const, plan: t.plans.standard },
+              { key: 'performance' as const, plan: t.plans.performance },
+            ]
+          ).map(({ key, plan }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSelectedPlan(key)}
+              className={`rounded-3xl border p-6 text-left transition ${
+                selectedPlan === key
+                  ? 'border-brand-300 bg-brand-50/60 shadow-lg shadow-brand-600/10 dark:border-brand-700 dark:bg-brand-500/10'
+                  : 'border-slate-100 bg-white hover:border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700'
+              }`}
+            >
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{plan.name}</p>
+              <p className="mt-1 text-2xl font-extrabold text-slate-900 dark:text-white">{plan.price}</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{plan.tagline}</p>
+              <ul className="mt-4 space-y-1.5 text-left text-sm text-slate-600 dark:text-slate-400">
+                {plan.bullets.map((b) => (
+                  <li key={b} className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <p
+                className={`mt-4 inline-block rounded-full px-4 py-1.5 text-xs font-semibold ${
+                  selectedPlan === key
+                    ? 'bg-brand-600 text-white'
+                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                }`}
+              >
+                {selectedPlan === key ? '✓ ' : ''}{plan.cta}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-slate-400 dark:text-slate-500">
+          {t.plans.disclosure}
+        </p>
+      </section>
+
+      {selectedPlan === 'performance' ? (
+        <main className="relative flex min-h-[50vh] flex-col items-center justify-center overflow-hidden px-6 py-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: EASE_OUT }}
+            className="relative flex w-full max-w-lg flex-col items-center text-center"
+          >
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.08]">
+              <MagicHexagon variant="large" status="success" />
+            </div>
+
+            <div className="relative z-10 w-full rounded-3xl border border-slate-100 bg-white p-10 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">
+                {t.plans.performance.name}
+              </p>
+              <p className="mt-3 text-6xl font-extrabold text-slate-900 dark:text-white">
+                {t.plans.performance.price}
+              </p>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.plans.performance.tagline}</p>
+
+              <div className="mt-8 space-y-2.5 text-left">
+                {t.features.map((feature) => (
+                  <div key={feature} className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
+                    <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
+                      <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    {feature}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 flex w-full flex-col gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSubscribe('performance')}
+                  disabled={checkoutLoading}
+                  className="flex items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                >
+                  {checkoutLoading ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      {t.redirecting}
+                    </>
+                  ) : user ? (
+                    t.subscribeNow
+                  ) : (
+                    t.createAccount
+                  )}
+                </motion.button>
+                <button
+                  onClick={() => setSelectedPlan('revenue_tier')}
+                  className="rounded-full border-2 border-brand-600 px-8 py-4 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10"
+                >
+                  {t.plans.backToStandard}
+                </button>
+                {checkoutError && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
+                )}
+              </div>
+
+              <p className="mt-5 text-xs text-slate-400 dark:text-slate-500">
+                {t.noCommitment}
+              </p>
+            </div>
+          </motion.div>
+        </main>
+      ) : (
       <main className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden px-6 py-16">
         <AnimatePresence mode="wait">
           {step === 1 && (
@@ -267,6 +401,9 @@ export default function PricingPage() {
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   {t.tierPrefix} {tierName(pricing.tierName)}
                 </p>
+                <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                  {t.standardFeeNote}
+                </p>
 
                 <div className="mt-8 space-y-2.5 text-left">
                   {t.features.map((feature, i) => (
@@ -306,7 +443,7 @@ export default function PricingPage() {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={handleSubscribe}
+                    onClick={() => handleSubscribe('revenue_tier')}
                     disabled={checkoutLoading}
                     className="flex items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
                   >
@@ -342,54 +479,7 @@ export default function PricingPage() {
           )}
         </AnimatePresence>
       </main>
-
-      <section className="border-t border-slate-100 px-6 py-24 dark:border-slate-800">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.6, ease: EASE_OUT }}
-          className="mb-4 text-center text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
-        >
-          {t.tierExamplesTitle}
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }}
-          className="mx-auto mb-12 max-w-lg text-center text-sm text-slate-500 dark:text-slate-400"
-        >
-          {t.tierExamplesSubtitle}
-        </motion.p>
-
-        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-3">
-          {TIER_EXAMPLE_META.map((tier, i) => (
-            <motion.div
-              key={tier.name}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.1 }}
-              className="rounded-3xl border border-slate-100 bg-white p-8 dark:border-slate-800 dark:bg-slate-900"
-            >
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{tierName(tier.name)}</p>
-              <p className="mt-2 text-4xl font-extrabold text-slate-900 dark:text-white">
-                {formatEuro(tier.price)}<span className="text-base font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
-              </p>
-              <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.tierExamples[i].description}</p>
-              <ul className="mt-6 space-y-2 text-left text-sm text-slate-600 dark:text-slate-400">
-                {t.features.slice(0, 3).map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <Check className="h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+      )}
 
       <section className="border-t border-slate-100 px-6 py-24 dark:border-slate-800">
         <motion.h2
