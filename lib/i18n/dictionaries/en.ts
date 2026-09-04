@@ -720,9 +720,9 @@ export const en: Dictionary = {
       performance: {
         name: 'Performance',
         price: '€50/mo',
-        tagline: 'Pay less than Standard — we only take 20% of the customers we actually help you keep.',
+        tagline: 'Pay less than Standard — a base fee capped at €3,000/mo, plus only 20% of the customers we actually help you keep.',
         bullets: [
-          '€50/mo base fee, regardless of your revenue',
+          'Base fee that also follows your revenue, but capped at €3,000/mo',
           '+ 20% of each at-risk customer actually retained',
           'No classic subscription: a single monthly invoice',
         ],
@@ -733,12 +733,12 @@ export const en: Dictionary = {
     },
     faqTitle: 'Frequently asked questions',
     faq: [
-      { q: 'How is the price calculated?', a: 'On the Standard plan, your price depends only on your monthly revenue — no need to know your churn rate upfront, that\'s exactly what Churnly calculates for you from your real data. The Performance plan has a flat €50/mo base fee regardless of revenue, plus 20% of customers actually retained.' },
-      { q: 'Can I change tiers later?', a: 'Yes. On the Standard plan, your price is automatically recalculated every time your revenue updates — nothing to do manually.' },
+      { q: 'How is the price calculated?', a: 'Both plans start from the same monthly revenue. On the Standard plan, the price follows your revenue with no cap. On the Performance plan, the base fee also follows your revenue but starts lower and caps at €3,000/mo, in exchange for the 20% on customers actually retained.' },
+      { q: 'Can I change tiers later?', a: 'Yes. Both plans\' base fee is automatically recalculated every time your revenue updates — nothing to do manually.' },
       { q: 'Is there a commitment?', a: 'None. You can cancel anytime from your settings, no fees, no notice period.' },
       { q: 'What\'s included in every plan?', a: 'Every plan includes ready-to-send retention emails personalized per customer, the full list of your at-risk customers, a detailed churn score, Churnly-recommended actions, and email support.' },
       { q: 'Do you offer a discount for annual billing?', a: 'Yes, on the Standard plan — annual billing works out to about one month free compared to paying monthly. The Performance plan is billed monthly, with no annual option.' },
-      { q: 'What happens if my numbers change after signing up?', a: 'On the Standard plan, your price recalculates automatically from your real data. No surprises, no renegotiation needed.' },
+      { q: 'What happens if my numbers change after signing up?', a: 'Both plans\' base fee recalculates automatically from your real data. No surprises, no renegotiation needed.' },
       { q: 'What\'s this 20% and control group on the Performance plan?', a: 'Each month, 5% of your at-risk customers are randomly picked and deliberately not contacted automatically — that\'s the baseline. The gap in retention rate between your contacted customers and this control group, applied to their revenue, is what actually gets billed at 20% — never an invented number, always a measured gap.' },
       { q: 'Can I switch plans after signing up?', a: 'From your settings, you can switch from Standard to Performance at any time. The reverse (Performance to Standard) is done by resubscribing from this page.' },
     ],
