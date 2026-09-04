@@ -148,15 +148,11 @@ export async function runChurnAnalysis(
   // témoin sert de référence pour mesurer l'incrément réel du groupe traité
   // — voir lib/performanceBilling.ts pour le calcul de facturation dessus.
   //
-  // Les deux plans payants (Standard 'revenue_tier' et 'performance', voir
-  // lib/pricing.ts) incluent désormais le 20% mesuré via groupe témoin —
-  // priver un client de relance a un vrai coût, on ne l'impose donc qu'à
-  // un compte réellement abonné (subscription_status active), jamais
-  // pendant l'unique analyse gratuite pré-inscription.
-  if (
-    businessProfile?.billing_mode === 'performance' ||
-    (businessProfile?.billing_mode === 'revenue_tier' && businessProfile?.subscription_status === 'active')
-  ) {
+  // Seulement pour les comptes déjà en mode performance : priver un client
+  // de relance a un vrai coût, on ne l'impose pas à un compte qui n'a pas
+  // choisi ce mode (le plan Standard n'a pas de % sur le revenu récupéré,
+  // voir lib/pricing.ts).
+  if (businessProfile?.billing_mode === 'performance') {
     const previousByClient = new Map<string, number>();
     for (const r of previousResults ?? []) {
       if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, r.churn_score);

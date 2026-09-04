@@ -7,43 +7,40 @@ export interface PricingResult {
 
 // Deux plans au choix dès l'inscription (voir /pricing) :
 //
-// - Standard (billing_mode 'revenue_tier', le défaut) : un socle basé sur
-//   le CA mensuel déclaré (calcPrice ci-dessous), plafonné à
-//   STANDARD_FEE_CAP — un gros compte ne paie jamais plus que ce plafond
-//   sur ce socle — PLUS PERFORMANCE_FEE_RATE (20%) du revenu récupéré
-//   grâce à Churnly, mesuré via groupe témoin (voir plus bas et
-//   lib/performanceBilling.ts). Les deux sont toujours facturés ensemble :
-//   le socle via l'abonnement Stripe classique, le % via une facture ad
-//   hoc mensuelle.
-// - Performance (billing_mode 'performance') : pas de socle basé sur le
-//   CA du tout — seulement PERFORMANCE_BASE_FEE (50€, pour ne pas rendre
-//   Churnly gratuit un mois sans rien à récupérer) + le même 20% mesuré
-//   par groupe témoin. Les deux facturés ensemble en une seule facture ad
-//   hoc mensuelle (pas d'abonnement Stripe récurrent pour ce plan).
+// - Standard (billing_mode 'revenue_tier', le défaut) : uniquement un
+//   socle basé sur le CA mensuel déclaré (calcPrice ci-dessous), facturé
+//   une fois par mois via l'abonnement Stripe classique — jamais de %
+//   sur le revenu récupéré, jamais de groupe témoin sur ce plan.
+// - Performance (billing_mode 'performance') : un socle fixe plus bas
+//   (PERFORMANCE_BASE_FEE, 50€ — pour ne pas rendre Churnly gratuit un
+//   mois sans rien à récupérer) + PERFORMANCE_FEE_RATE (20%) du revenu
+//   concrètement récupéré grâce à Churnly, mesuré via groupe témoin (voir
+//   lib/performanceBilling.ts). Les deux facturés ensemble en une seule
+//   facture ad hoc mensuelle (pas d'abonnement Stripe récurrent).
 //
 // On ne demande jamais le taux de churn à l'inscription — une entreprise
 // qui vient chez nous ne connaît généralement pas son propre taux de
 // churn (c'est précisément le problème que Churnly résout). C'est Churnly
 // qui le calcule, à partir de la vraie analyse des données une fois
 // importées — jamais demandé en amont.
-export const STANDARD_FEE_CAP = 300;
-
-// Échelle continue sous le plafond : 60€ sous 2 000€ de CA, puis +50€
-// tous les 2 000€ de CA supplémentaires, jusqu'à STANDARD_FEE_CAP — un
-// compte à 100 000€ de CA paie le même plafond qu'un compte à 1M€, jamais
-// un tarif négocié à part. Voir lib/stripe.ts (priceDataForAmount) pour
-// comment Stripe facture un montant calculé à la volée sans qu'un Price
-// existe pour chacun d'entre eux à l'avance. Toujours affiché
-// automatiquement, jamais de devis/démo manuelle : un gros compte doit
-// rester self-serve comme les autres, sinon on retombe dans un tunnel de
-// vente qu'on a justement voulu éviter partout ailleurs sur le produit.
+//
+// Échelle continue plutôt que quelques gros paliers espacés : 60€ sous
+// 2 000€ de CA, puis +50€ tous les 2 000€ de CA supplémentaires, sans
+// plafond — un compte à 1M€ de CA paie le même calcul qu'un compte à
+// 10 000€, jamais un tarif négocié à part. Voir lib/stripe.ts
+// (priceDataForAmount) pour comment Stripe facture un montant calculé à
+// la volée sans qu'un Price existe pour chacun d'entre eux à l'avance.
+// Toujours affiché automatiquement, jamais de devis/démo manuelle : un
+// gros compte doit rester self-serve comme les autres, sinon on retombe
+// dans un tunnel de vente qu'on a justement voulu éviter partout ailleurs
+// sur le produit.
 export function calcPrice(revenue: number): number {
   if (revenue < 2000) return 60;
-  return Math.min(STANDARD_FEE_CAP, 100 + 50 * Math.floor((revenue - 2000) / 2000));
+  return 100 + 50 * Math.floor((revenue - 2000) / 2000);
 }
 
 // Voir le commentaire en tête de fichier pour le rôle de ces deux valeurs
-// dans les plans Standard et Performance.
+// — plan Performance uniquement.
 export const PERFORMANCE_BASE_FEE = 50;
 export const PERFORMANCE_FEE_RATE = 0.2;
 

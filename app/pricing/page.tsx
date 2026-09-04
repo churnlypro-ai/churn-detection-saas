@@ -401,9 +401,6 @@ export default function PricingPage() {
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   {t.tierPrefix} {tierName(pricing.tierName)}
                 </p>
-                <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-                  {t.standardFeeNote}
-                </p>
 
                 <div className="mt-8 space-y-2.5 text-left">
                   {t.features.map((feature, i) => (
