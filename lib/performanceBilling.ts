@@ -7,7 +7,6 @@ interface PerformanceUser {
   id: string;
   stripe_customer_id: string | null;
   company_name: string | null;
-  billing_mode: 'revenue_tier' | 'performance';
 }
 
 interface PerformanceBillingResult {
@@ -48,26 +47,19 @@ function computeIncrementalRevenue(samples: RecoverySample[]): number {
 
 // Facture une fois par mois (voir l'appel depuis /api/cron/resync-stripe, le
 // 1er du mois — pas de créneau cron dédié, le plan Vercel Hobby limite à 2
-// jobs) le % mesuré via groupe témoin (voir computeIncrementalRevenue
+// jobs) chaque compte en mode "performance". Deux lignes possibles sur la
+// même facture : un socle fixe (PERFORMANCE_BASE_FEE, toujours facturé —
+// sans lui, un mois sans rien à récupérer rendrait Churnly gratuit) et un %
+// de l'incrément mesuré via groupe témoin (voir computeIncrementalRevenue
 // ci-dessus et la migration 20260901000000_add_recovery_control_group.sql
 // pour le pourquoi de ce mécanisme plutôt qu'une liste de clients nommés).
-// Concerne désormais les DEUX plans (Standard 'revenue_tier' et
-// 'performance', voir lib/pricing.ts) puisque les deux incluent ce 20% —
-// seul le socle fixe diffère selon le plan :
-// - Performance : PERFORMANCE_BASE_FEE (50€) toujours facturé ici en plus
-//   du %, puisque ce plan n'a pas d'abonnement Stripe récurrent.
-// - Standard : le socle basé sur le CA est déjà prélevé via l'abonnement
-//   Stripe classique — on ne facture ici QUE le %, et seulement s'il y en
-//   a un ce mois-ci (sinon rien à facturer, on ne crée même pas de
-//   facture vide).
 export async function runPerformanceBilling(
   supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
 ): Promise<PerformanceBillingResult[]> {
   const { data: users, error: usersError } = await supabaseAdmin
     .from('users')
-    .select('id, stripe_customer_id, company_name, billing_mode')
-    .in('billing_mode', ['performance', 'revenue_tier'])
-    .eq('subscription_status', 'active');
+    .select('id, stripe_customer_id, company_name')
+    .eq('billing_mode', 'performance');
 
   if (usersError) {
     console.error('[performanceBilling] failed to load users', usersError);
@@ -79,7 +71,7 @@ export async function runPerformanceBilling(
 
   for (const user of (users ?? []) as PerformanceUser[]) {
     if (!user.stripe_customer_id) {
-      // Ne devrait pas arriver (les deux plans supposent un client déjà
+      // Ne devrait pas arriver (le mode performance suppose un client déjà
       // passé par le checkout), mais on ne facture jamais à l'aveugle sans
       // customer Stripe — repris au prochain cycle une fois corrigé.
       results.push({ userId: user.id, incrementalRevenue: 0, fee: 0, skipped: 'no_customer' });
@@ -100,28 +92,16 @@ export async function runPerformanceBilling(
     const sampleRows = (samples ?? []) as RecoverySample[];
     const incrementalRevenue = computeIncrementalRevenue(sampleRows);
     const performanceFee = incrementalRevenue > 0 ? Math.round(incrementalRevenue * PERFORMANCE_FEE_RATE * 100) / 100 : 0;
-    const isPerformancePlan = user.billing_mode === 'performance';
-    const baseFee = isPerformancePlan ? PERFORMANCE_BASE_FEE : 0;
-    const fee = baseFee + performanceFee;
+    const fee = PERFORMANCE_BASE_FEE + performanceFee;
     const sampleIds = sampleRows.map((s) => s.id);
 
-    // Plan Standard sans rien à récupérer ce mois-ci : le socle CA est déjà
-    // réglé par l'abonnement Stripe, il n'y a donc littéralement rien à
-    // facturer ici — pas de facture à 0€.
-    if (!isPerformancePlan && performanceFee <= 0) {
-      results.push({ userId: user.id, incrementalRevenue: 0, fee: 0 });
-      continue;
-    }
-
     try {
-      if (baseFee > 0) {
-        await stripe.invoiceItems.create({
-          customer: user.stripe_customer_id,
-          amount: Math.round(baseFee * 100),
-          currency: 'eur',
-          description: 'Churnly — socle mensuel',
-        });
-      }
+      await stripe.invoiceItems.create({
+        customer: user.stripe_customer_id,
+        amount: Math.round(PERFORMANCE_BASE_FEE * 100),
+        currency: 'eur',
+        description: 'Churnly — socle mensuel',
+      });
 
       if (performanceFee > 0) {
         await stripe.invoiceItems.create({
