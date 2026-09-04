@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
 import { rewardReferrerForConversion } from '@/lib/referralRewards';
+import { logAuditEvent } from '@/lib/auditLog';
 
 function mapStripeStatus(status: string): 'trialing' | 'active' | 'canceled' | 'past_due' {
   if (status === 'trialing') return 'trialing';
@@ -162,6 +163,39 @@ export async function POST(req: NextRequest) {
 
       case 'payment_intent.succeeded':
         break;
+
+      // Suit le paiement (ou l'échec) des factures de facturation à la
+      // performance — voir performance_invoices dans lib/performanceBilling.ts.
+      // Ne touche que les factures qu'on a nous-même tracées : un abonnement
+      // classique n'a pas de ligne dans performance_invoices, donc ces
+      // updates n'y matchent simplement aucune ligne (no-op).
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        if (invoice.id) {
+          const { data, error } = await supabaseAdmin
+            .from('performance_invoices')
+            .update({ status: 'failed', updated_at: new Date().toISOString() })
+            .eq('stripe_invoice_id', invoice.id)
+            .select('user_id');
+          if (error) {
+            console.error('[stripe-webhook] invoice.payment_failed: update failed', JSON.stringify({ invoiceId: invoice.id, error }));
+          } else if (data && data.length > 0) {
+            await logAuditEvent(supabaseAdmin, data[0].user_id, 'performance_invoice_failed', { invoiceId: invoice.id });
+          }
+        }
+        break;
+      }
+
+      case 'invoice.paid': {
+        const invoice = event.data.object;
+        if (invoice.id) {
+          await supabaseAdmin
+            .from('performance_invoices')
+            .update({ status: 'paid', updated_at: new Date().toISOString() })
+            .eq('stripe_invoice_id', invoice.id);
+        }
+        break;
+      }
 
       default:
         break;

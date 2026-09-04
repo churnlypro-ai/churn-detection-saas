@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getStripe, PRICE_IDS } from '@/lib/stripe';
+import { getStripe, priceDataForAmount } from '@/lib/stripe';
 import { calcPrice, calcManagerPrice } from '@/lib/pricing';
 
 export async function POST(req: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   // Le palier est calculé côté serveur à partir des données du profil en
   // base, jamais à partir de ce que le client envoie dans le body — sinon
   // n'importe qui pourrait appeler cette route avec un tier arbitraire (ex:
-  // "150") et payer moins cher que ce que son propre CA ne le justifie.
+  // "60") et payer moins cher que ce que son propre CA ne le justifie.
   const p = profile as {
     industry?: string;
     client_count?: number | null;
@@ -36,17 +36,9 @@ export async function POST(req: NextRequest) {
   const tier = isManagerProfile
     ? calcManagerPrice(Number(p?.client_count) || 0)
     : calcPrice(Number(p?.monthly_revenue) || 0);
-  const priceId = PRICE_IDS[String(tier)];
-  if (!priceId) {
-    console.error(
-      '[create-checkout-session] no price configured for computed tier',
-      JSON.stringify({
-        computedTier: tier,
-        configuredPriceEnvVars: Object.fromEntries(
-          Object.entries(PRICE_IDS).map(([key, value]) => [key, value ? 'set' : 'MISSING']),
-        ),
-      }),
-    );
+  const productId = process.env.STRIPE_PRODUCT_ID;
+  if (!productId) {
+    console.error('[create-checkout-session] STRIPE_PRODUCT_ID not configured', JSON.stringify({ computedTier: tier }));
     return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 400 });
   }
 
@@ -85,7 +77,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price_data: priceDataForAmount(tier, productId), quantity: 1 }],
       ...(discounts ? { discounts } : {}),
       subscription_data: {
         metadata: { supabase_user_id: user.id, tier: String(tier) },

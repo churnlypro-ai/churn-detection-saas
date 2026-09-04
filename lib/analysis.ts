@@ -9,16 +9,6 @@ function parseDateOrNull(value: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
-// Heuristique volontairement simple pour repérer un risque "paiement" dans
-// un texte déjà rédigé par Claude (reason + preuves des risk_factors) —
-// seul ce type de signal a une attribution nette (voir
-// lib/performanceBilling.ts) : soit le paiement est repassé, soit non.
-const PAYMENT_KEYWORD_PATTERN = /paiement|payment|échec|failed|carte|card|impayé/i;
-
-function mentionsPaymentRisk(reason: string | null | undefined): boolean {
-  return !!reason && PAYMENT_KEYWORD_PATTERN.test(reason);
-}
-
 // Partagée entre l'import CSV (app/api/analyze) et l'import Stripe Connect
 // (app/api/stripe/connect/import) — les deux se ramènent au même tableau de
 // clients normalisés en entrée, donc à la même analyse et au même stockage
@@ -142,40 +132,76 @@ export async function runChurnAnalysis(
     }
   }
 
-  // Facturation à la performance (voir lib/performanceBilling.ts) : un
-  // client marqué à risque pour une raison de paiement, dont le paiement
-  // est revenu "ok" à ce ré-import, compte comme un revenu récupéré grâce à
-  // Churnly — attribution nette, contrairement à un signal usage/support.
-  // Seulement pour les comptes qui ont explicitement choisi ce mode de
-  // facturation (jamais le défaut), et seulement quand les données brutes
-  // viennent de Stripe (payment_status n'existe pas sur un import CSV).
+  // Facturation à la performance (voir lib/performanceBilling.ts) : compter
+  // un client comme "récupéré" exige deux choses, pas une seule — (1) il
+  // était à risque, ET (2) Churnly a fait quelque chose de concret pour lui
+  // (un email de rétention réellement envoyé depuis le compte, voir
+  // client_retention_drafts), après quoi il est toujours là au scan suivant.
+  // "Relance envoyée puis client toujours là" ne prouve pas que Churnly a
+  // causé quoi que ce soit — une relance qui part juste avant que Stripe
+  // réussisse son propre retry ne fait que précéder l'événement, pas le
+  // causer (retour de Kevin). La seule mesure qui prouve un effet causal :
+  // un groupe témoin. Sur chaque NOUVEL épisode de risque, 5% des clients
+  // sont tirés au sort et volontairement pas relancés (voir la suppression
+  // du brouillon de rétention pour ce groupe dans
+  // app/api/retention-drafts/route.ts). Le taux de résolution spontanée du
+  // témoin sert de référence pour mesurer l'incrément réel du groupe traité
+  // — voir lib/performanceBilling.ts pour le calcul de facturation dessus.
+  //
+  // Seulement pour les comptes déjà en mode performance : priver un client
+  // de relance a un vrai coût, on ne l'impose pas à un compte qui n'a pas
+  // choisi ce mode.
   if (businessProfile?.billing_mode === 'performance') {
-    const previousByClient = new Map<string, { churn_score: number; reason: string | null }>();
+    const previousByClient = new Map<string, number>();
     for (const r of previousResults ?? []) {
-      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, { churn_score: r.churn_score, reason: r.reason });
-    }
-    const paymentStatusByName = new Map<string, string>();
-    for (const c of clients) {
-      const status = c.payment_status;
-      if (typeof status === 'string') paymentStatusByName.set(c.name as string, status);
+      if (!previousByClient.has(r.client_name)) previousByClient.set(r.client_name, r.churn_score);
     }
 
-    const recoveredRows = rows
+    // Nouvel épisode = à risque maintenant, ne l'était pas juste avant (ou
+    // apparaît pour la première fois) — c'est le moment où son groupe est
+    // tiré au sort, une seule fois par épisode.
+    const newSamples = rows
       .filter((row) => {
+        if (row.churn_score < 60) return false;
         const previous = previousByClient.get(row.client_name);
-        if (!previous || previous.churn_score < 60 || !mentionsPaymentRisk(previous.reason)) return false;
-        return paymentStatusByName.get(row.client_name) === 'ok';
+        return previous === undefined || previous < 60;
       })
       .map((row) => ({
         user_id: userId,
         client_name: row.client_name,
-        amount: row.revenue_monthly,
+        sample_group: Math.random() < 0.05 ? 'control' : 'treatment',
+        revenue_monthly: row.revenue_monthly,
       }));
 
-    if (recoveredRows.length > 0) {
-      const { error: recoveredError } = await supabaseAdmin.from('recovered_revenue_events').insert(recoveredRows);
-      if (recoveredError) {
-        console.error('[analysis] recovered revenue insert failed', JSON.stringify({ userId, recoveredError }));
+    if (newSamples.length > 0) {
+      const { error: sampleError } = await supabaseAdmin.from('churn_recovery_samples').insert(newSamples);
+      if (sampleError) {
+        console.error('[analysis] recovery sample insert failed', JSON.stringify({ userId, sampleError }));
+      }
+    }
+
+    // Résolution des épisodes ouverts : le client est présent dans CE
+    // ré-import et n'est plus à risque — peu importe s'il a reçu une
+    // relance ou non, c'est justement le témoin qui n'en reçoit jamais et
+    // sert de taux "spontané" de comparaison.
+    const currentScoreByClient = new Map(rows.map((r) => [r.client_name, r.churn_score]));
+    const { data: openSamples } = await supabaseAdmin
+      .from('churn_recovery_samples')
+      .select('id, client_name')
+      .eq('user_id', userId)
+      .eq('resolved', false);
+
+    const toResolve = (openSamples ?? [])
+      .filter((s) => (currentScoreByClient.get(s.client_name) ?? 100) < 60)
+      .map((s) => s.id);
+
+    if (toResolve.length > 0) {
+      const { error: resolveError } = await supabaseAdmin
+        .from('churn_recovery_samples')
+        .update({ resolved: true, resolved_at: new Date().toISOString() })
+        .in('id', toResolve);
+      if (resolveError) {
+        console.error('[analysis] recovery sample resolve failed', JSON.stringify({ userId, resolveError }));
       }
     }
   }

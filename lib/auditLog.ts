@@ -1,6 +1,6 @@
 import type { getSupabaseAdmin } from '@/lib/supabase';
 
-export type AuditAction = 'stripe_connected' | 'stripe_disconnected' | 'subscription_tier_changed' | 'referral_reward_applied' | 'prospecting_batch_sent' | 'linkedin_prospect_marked_sent' | 'billing_mode_switched' | 'performance_revenue_billed';
+export type AuditAction = 'stripe_connected' | 'stripe_disconnected' | 'subscription_tier_changed' | 'referral_reward_applied' | 'prospecting_batch_sent' | 'linkedin_prospect_marked_sent' | 'billing_mode_switched' | 'performance_revenue_billed' | 'performance_invoice_failed';
 
 // Best-effort et jamais bloquant : une entrée de journal manquée ne doit
 // jamais faire échouer l'action réelle qu'elle décrit (connexion Stripe,

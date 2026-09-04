@@ -20,6 +20,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Locale>('fr');
 
   useEffect(() => {
+    // ?lang=en dans l'URL (ex: lien de partage à un réseau non-francophone)
+    // prime sur la préférence stockée — c'est un choix explicite fait pour
+    // ce visiteur précis au moment du partage, pas juste sa dernière visite.
+    const fromUrl = new URLSearchParams(window.location.search).get('lang');
+    if (isLocale(fromUrl)) {
+      setLanguageState(fromUrl);
+      window.localStorage.setItem(STORAGE_KEY, fromUrl);
+      return;
+    }
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (isLocale(stored)) {
       setLanguageState(stored);

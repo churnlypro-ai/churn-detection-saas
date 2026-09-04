@@ -445,7 +445,7 @@ export async function sendTeamInviteEmail({ to, inviterCompanyName, acceptUrl, l
           Accept invitation
         </a>
       </p>
-      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">If you weren't expecting this, you can ignore this email.</p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">This link expires in 7 days. If you weren't expecting this, you can ignore this email.</p>
     </div>
   ` : `
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; color: #111827;">
@@ -456,7 +456,7 @@ export async function sendTeamInviteEmail({ to, inviterCompanyName, acceptUrl, l
           Accepter l'invitation
         </a>
       </p>
-      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Si vous ne vous attendiez pas à cet email, vous pouvez l'ignorer.</p>
+      <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">Ce lien expire dans 7 jours. Si vous ne vous attendiez pas à cet email, vous pouvez l'ignorer.</p>
     </div>
   `;
 

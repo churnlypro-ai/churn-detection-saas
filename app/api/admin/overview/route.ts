@@ -56,6 +56,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Volontairement PAS "clients sauvés" — un épisode traité résolu ne
+  // prouve pas que Churnly en est la cause (voir la migration
+  // churn_recovery_samples et lib/performanceBilling.ts pour la vraie
+  // mesure, via groupe témoin). Ce chiffre est juste informatif : combien
+  // d'épisodes de risque suivis, côté traité, se sont résolus.
+  const { count: treatedResolvedTotal } = await supabaseAdmin
+    .from('churn_recovery_samples')
+    .select('id', { count: 'exact', head: true })
+    .eq('sample_group', 'treatment')
+    .eq('resolved', true);
+
+  const { count: performanceInvoicesFailed } = await supabaseAdmin
+    .from('performance_invoices')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'failed');
+
   const now = Date.now();
   const accounts = ((users ?? []) as UserRow[]).map((u) => {
     const lastActivityAt = lastActivityByUser.get(u.id) ?? null;
@@ -91,6 +107,8 @@ export async function GET(req: NextRequest) {
     mrr: accounts.filter((a) => a.subscriptionStatus === 'active').reduce((sum, a) => sum + a.monthlyPrice, 0),
     highRiskCount: accounts.filter((a) => a.risk.level === 'high' && a.subscriptionStatus !== 'canceled').length,
     fromAds: accounts.filter((a) => !!a.utmSource).length,
+    treatedResolvedTotal: treatedResolvedTotal ?? 0,
+    performanceInvoicesFailed: performanceInvoicesFailed ?? 0,
   };
 
   return NextResponse.json({ summary, accounts });

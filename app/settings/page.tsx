@@ -140,7 +140,7 @@ export default function Settings() {
   const [analysisFrequencyStatus, setAnalysisFrequencyStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const analysisFrequencyRequestId = useRef(0);
   const [planMessage, setPlanMessage] = useState('');
-  const [performanceStats, setPerformanceStats] = useState<{ recoveredSinceLastInvoice: number; estimatedFee: number; feeRate: number } | null>(null);
+  const [performanceStats, setPerformanceStats] = useState<{ treatmentCount: number; controlCount: number; treatedResolvedCount: number; controlResolvedCount: number; incrementalRevenue: number; estimatedFee: number; feeRate: number } | null>(null);
   const [switchingBillingMode, setSwitchingBillingMode] = useState(false);
   const [billingModeMessage, setBillingModeMessage] = useState('');
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
@@ -223,7 +223,12 @@ export default function Settings() {
       setAnalysisFrequency(p?.analysis_frequency ?? 'daily');
       setLoading(false);
 
-      if (p?.billing_mode === 'performance') {
+      {
+        // Toujours appelé, même hors mode performance — sans effet pour un
+        // compte classique (aucun échantillon n'existe tant qu'il n'a pas
+        // basculé, voir churn_recovery_samples dans lib/analysis.ts) donc
+        // performanceStats reste vide, ce qui masque simplement le bloc
+        // d'affichage plus bas.
         const { data: sessionDataForBilling } = await supabase.auth.getSession();
         const billingToken = sessionDataForBilling?.session?.access_token;
         const statsRes = await fetch('/api/settings/billing-mode', { headers: { Authorization: `Bearer ${billingToken}` } });
@@ -1084,16 +1089,21 @@ export default function Settings() {
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.active}</p>
                 {performanceStats && (
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.recoveredLabel}</p>
-                      <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(performanceStats.recoveredSinceLastInvoice)}</p>
+                  <>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.sampleLabel}</p>
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">
+                          {performanceStats.treatedResolvedCount}/{performanceStats.treatmentCount} · {performanceStats.controlResolvedCount}/{performanceStats.controlCount}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.nextInvoiceLabel}</p>
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(performanceStats.estimatedFee)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.nextInvoiceLabel}</p>
-                      <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(performanceStats.estimatedFee)}</p>
-                    </div>
-                  </div>
+                    <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">{t.performanceBilling.sampleHint}</p>
+                  </>
                 )}
               </div>
             )}
@@ -1105,6 +1115,7 @@ export default function Settings() {
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t.performanceBilling.title}</h3>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.pitch}</p>
+                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{t.performanceBilling.controlGroupDisclosure}</p>
                 <button
                   onClick={handleSwitchBillingMode}
                   disabled={switchingBillingMode}

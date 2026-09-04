@@ -107,6 +107,38 @@ export function verifySignupState(state: string): { language: 'fr' | 'en'; utm: 
   return { language: language === 'en' ? 'en' : 'fr', utm: decodeUtm(utmToken) };
 }
 
+// Comme signSignupState (préfixe littéral, jamais confondu avec un userId
+// ou un state de signup) mais plus simple : l'audit ne crée ni compte ni
+// session, juste un aller-retour OAuth anonyme protégé contre le CSRF par
+// un nonce, voir /api/audit/start et /api/audit/callback.
+export function signAuditState(): string {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const timestamp = Date.now().toString();
+  const signature = crypto
+    .createHmac('sha256', getStateSecret())
+    .update(`audit.${nonce}.${timestamp}`)
+    .digest('hex');
+  return `audit.${nonce}.${timestamp}.${signature}`;
+}
+
+export function verifyAuditState(state: string): boolean {
+  const parts = state.split('.');
+  if (parts.length !== 4 || parts[0] !== 'audit') return false;
+  const [prefix, nonce, timestamp, signature] = parts;
+
+  const expected = crypto
+    .createHmac('sha256', getStateSecret())
+    .update(`${prefix}.${nonce}.${timestamp}`)
+    .digest('hex');
+
+  const sigBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (sigBuffer.length !== expectedBuffer.length) return false;
+  if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) return false;
+
+  return Date.now() - Number(timestamp) <= STATE_TTL_MS;
+}
+
 export function getConnectAuthUrl(state: string, redirectPath: string): string {
   const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
   if (!clientId) throw new Error('STRIPE_CONNECT_CLIENT_ID is not set');
@@ -265,4 +297,101 @@ export async function fetchClientsFromConnectedAccount(
   }
 
   return clients;
+}
+
+const AUDIT_LOOKBACK_DAYS = 180;
+
+// Codes documentés par Stripe comme jamais relancés par Smart Retries — le
+// paiement ne repassera pas tant que le client n'a pas fourni un nouveau
+// moyen de paiement (carte perdue/volée, données de carte invalides,
+// authentification requise...). Liste volontairement resserrée à ce qui est
+// noir sur blanc dans la doc Stripe plutôt qu'exhaustive : mieux vaut sous-
+// compter que prétendre "incontestable" sur un cas discutable — voir le
+// contexte de cette fonction (outil d'audit public, pas le moteur de
+// facturation principal qui reste volontairement égal Stripe/CSV, voir
+// lib/analysis.ts).
+const NON_RETRYABLE_FAILURE_CODES = new Set([
+  'authentication_required',
+  'incorrect_number',
+  'incorrect_cvc',
+  'invalid_cvc',
+  'incorrect_expiry_month',
+  'incorrect_expiry_year',
+  'invalid_expiry_month',
+  'invalid_expiry_year',
+  'expired_card',
+]);
+const NON_RETRYABLE_DECLINE_CODES = new Set([
+  'lost_card',
+  'stolen_card',
+  'pickup_card',
+  'restricted_card',
+  'security_violation',
+  'fraudulent',
+  'card_not_supported',
+  'currency_not_supported',
+]);
+
+export interface FailedPaymentAudit {
+  currency: string;
+  lookbackDays: number;
+  failedCount: number;
+  failedAmount: number;
+  unrecoverableCount: number;
+  unrecoverableAmount: number;
+}
+
+// Outil d'acquisition public (voir app/audit) : montre à un prospect, sur
+// son propre compte Stripe et avant toute inscription, ce qu'il a
+// concrètement perdu sur les 6 derniers mois — et la part de cette perte
+// que Stripe ne récupérera jamais tout seul (codes de refus ci-dessus).
+// Aucune écriture, aucune donnée conservée côté Churnly au-delà du calcul :
+// voir /api/audit/callback qui déconnecte le compte juste après.
+export async function fetchFailedPaymentAudit(accountId: string): Promise<FailedPaymentAudit> {
+  const stripe = getStripe();
+  const since = Math.floor(Date.now() / 1000) - AUDIT_LOOKBACK_DAYS * 86400;
+
+  const charges = stripe.charges.list(
+    { created: { gte: since }, limit: 100 },
+    { stripeAccount: accountId },
+  );
+
+  let failedCount = 0;
+  let failedAmount = 0;
+  let unrecoverableCount = 0;
+  let unrecoverableAmount = 0;
+  // Simplification volontaire : on additionne dans la devise du premier
+  // paiement en échec rencontré — un compte multi-devises verrait un
+  // chiffre légèrement faussé, acceptable pour un outil d'accroche, pas
+  // pour de la facturation réelle.
+  let currency = 'eur';
+  let currencySet = false;
+
+  for await (const charge of charges) {
+    if (charge.status !== 'failed') continue;
+    if (!currencySet) {
+      currency = charge.currency;
+      currencySet = true;
+    }
+    if (charge.currency !== currency) continue;
+
+    failedCount += 1;
+    failedAmount += charge.amount;
+
+    const failureCode = charge.failure_code ?? '';
+    const declineCode = charge.outcome?.reason ?? '';
+    if (NON_RETRYABLE_FAILURE_CODES.has(failureCode) || NON_RETRYABLE_DECLINE_CODES.has(declineCode)) {
+      unrecoverableCount += 1;
+      unrecoverableAmount += charge.amount;
+    }
+  }
+
+  return {
+    currency,
+    lookbackDays: AUDIT_LOOKBACK_DAYS,
+    failedCount,
+    failedAmount: Math.round(failedAmount) / 100,
+    unrecoverableCount,
+    unrecoverableAmount: Math.round(unrecoverableAmount) / 100,
+  };
 }

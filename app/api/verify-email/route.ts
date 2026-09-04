@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 let resendClient: Resend | null = null;
 
@@ -10,11 +10,6 @@ function getResend(): Resend {
   }
   return resendClient;
 }
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
 
 function generateCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -59,6 +54,7 @@ const MESSAGES = {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { email, action, code: submittedCode, language } = await req.json();
     const m = language === 'en' ? MESSAGES.en : MESSAGES.fr;
 

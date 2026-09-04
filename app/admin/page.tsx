@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Users, Euro, AlertTriangle, TrendingUp, XCircle, Clock, ExternalLink, Megaphone } from 'lucide-react';
+import { Users, Euro, AlertTriangle, TrendingUp, XCircle, Clock, ExternalLink, Megaphone, ShieldCheck, ReceiptText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -42,6 +42,8 @@ interface Summary {
   mrr: number;
   highRiskCount: number;
   fromAds: number;
+  treatedResolvedTotal: number;
+  performanceInvoicesFailed: number;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -85,6 +87,7 @@ export default function AdminOverview() {
   const [forbidden, setForbidden] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  const [sourceFilter, setSourceFilter] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -125,6 +128,15 @@ export default function AdminOverview() {
     );
   }
 
+  const normalizedFilter = sourceFilter.trim().toLowerCase();
+  const filteredAccounts = normalizedFilter
+    ? accounts.filter((account) =>
+        [account.utmSource, account.utmMedium, account.utmCampaign, account.companyName, account.email]
+          .filter(Boolean)
+          .some((field) => field!.toLowerCase().includes(normalizedFilter)),
+      )
+    : accounts;
+
   const cards = summary ? [
     { label: 'Comptes total', value: summary.totalAccounts, icon: Users },
     { label: 'MRR', value: formatEuro(summary.mrr), icon: Euro },
@@ -133,6 +145,8 @@ export default function AdminOverview() {
     { label: 'Paiement en échec', value: summary.pastDue, icon: AlertTriangle },
     { label: 'Risque élevé', value: summary.highRiskCount, icon: AlertTriangle },
     { label: 'Venus de pub', value: summary.fromAds, icon: Megaphone },
+    { label: 'Épisodes résolus (traités)', value: summary.treatedResolvedTotal, icon: ShieldCheck },
+    { label: 'Factures perf. en échec', value: summary.performanceInvoicesFailed, icon: ReceiptText },
   ] : [];
 
   return (
@@ -165,11 +179,19 @@ export default function AdminOverview() {
           </Link>
         </div>
 
+        <input
+          type="text"
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value)}
+          placeholder="Filtrer par source (ex: djibril), entreprise ou email…"
+          className="mb-6 w-full max-w-md rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:placeholder:text-slate-500"
+        />
+
         {loading ? (
           <p className="text-sm text-slate-400">Chargement…</p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-9">
               {cards.map((card) => (
                 <div key={card.label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                   <card.icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -193,7 +215,7 @@ export default function AdminOverview() {
                   </tr>
                 </thead>
                 <tbody>
-                  {accounts.map((account) => (
+                  {filteredAccounts.map((account) => (
                     <tr key={account.id} className="border-b border-slate-50 last:border-0 dark:border-slate-800">
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-900 dark:text-white">{account.companyName || '—'}</p>
