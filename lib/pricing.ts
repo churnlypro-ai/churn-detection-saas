@@ -5,35 +5,45 @@ export interface PricingResult {
   tierName: string;
 }
 
-// Le prix ne dépend que du CA mensuel — demander le taux de churn à
-// l'inscription n'avait pas de sens : une entreprise qui vient chez nous
-// ne connaît généralement pas son propre taux de churn (c'est précisément
-// le problème que Churnly résout). C'est Churnly qui le calcule, à partir
-// de la vraie analyse des données une fois importées — jamais demandé en
-// amont.
+// Deux plans au choix dès l'inscription (voir /pricing) :
 //
-// Échelle continue plutôt que quelques gros paliers espacés : 60€ sous
-// 2 000€ de CA, puis +50€ tous les 2 000€ de CA supplémentaires, sans
-// plafond — un compte à 1M€ de CA paie le même calcul qu'un compte à
-// 10 000€, jamais un tarif négocié à part. Le prix n'est donc plus une
-// poignée de valeurs fixes mais un nombre parmi des dizaines possibles ;
-// voir lib/stripe.ts (priceDataForAmount) pour comment Stripe facture un
-// montant calculé à la volée sans qu'un Price existe pour chacun d'entre
-// eux à l'avance. Toujours affiché automatiquement, jamais de devis/démo
-// manuelle : un gros compte doit rester self-serve comme les autres,
-// sinon on retombe dans un tunnel de vente qu'on a justement voulu éviter
-// partout ailleurs sur le produit.
+// - Standard (billing_mode 'revenue_tier', le défaut) : un socle basé sur
+//   le CA mensuel déclaré (calcPrice ci-dessous), plafonné à
+//   STANDARD_FEE_CAP — un gros compte ne paie jamais plus que ce plafond
+//   sur ce socle — PLUS PERFORMANCE_FEE_RATE (20%) du revenu récupéré
+//   grâce à Churnly, mesuré via groupe témoin (voir plus bas et
+//   lib/performanceBilling.ts). Les deux sont toujours facturés ensemble :
+//   le socle via l'abonnement Stripe classique, le % via une facture ad
+//   hoc mensuelle.
+// - Performance (billing_mode 'performance') : pas de socle basé sur le
+//   CA du tout — seulement PERFORMANCE_BASE_FEE (50€, pour ne pas rendre
+//   Churnly gratuit un mois sans rien à récupérer) + le même 20% mesuré
+//   par groupe témoin. Les deux facturés ensemble en une seule facture ad
+//   hoc mensuelle (pas d'abonnement Stripe récurrent pour ce plan).
+//
+// On ne demande jamais le taux de churn à l'inscription — une entreprise
+// qui vient chez nous ne connaît généralement pas son propre taux de
+// churn (c'est précisément le problème que Churnly résout). C'est Churnly
+// qui le calcule, à partir de la vraie analyse des données une fois
+// importées — jamais demandé en amont.
+export const STANDARD_FEE_CAP = 300;
+
+// Échelle continue sous le plafond : 60€ sous 2 000€ de CA, puis +50€
+// tous les 2 000€ de CA supplémentaires, jusqu'à STANDARD_FEE_CAP — un
+// compte à 100 000€ de CA paie le même plafond qu'un compte à 1M€, jamais
+// un tarif négocié à part. Voir lib/stripe.ts (priceDataForAmount) pour
+// comment Stripe facture un montant calculé à la volée sans qu'un Price
+// existe pour chacun d'entre eux à l'avance. Toujours affiché
+// automatiquement, jamais de devis/démo manuelle : un gros compte doit
+// rester self-serve comme les autres, sinon on retombe dans un tunnel de
+// vente qu'on a justement voulu éviter partout ailleurs sur le produit.
 export function calcPrice(revenue: number): number {
   if (revenue < 2000) return 60;
-  return 100 + 50 * Math.floor((revenue - 2000) / 2000);
+  return Math.min(STANDARD_FEE_CAP, 100 + 50 * Math.floor((revenue - 2000) / 2000));
 }
 
-// Facturation à la performance : un socle mensuel fixe (pour ne pas rendre
-// Churnly gratuit à quiconque n'a simplement rien à récupérer un mois donné)
-// + un % du revenu concrètement récupéré par Churnly (ex: paiement en échec
-// relancé avec succès), les deux facturés ensemble une fois par mois — voir
-// lib/performanceBilling.ts. Alternative optionnelle au palier basé sur le
-// CA (calcPrice ci-dessus), jamais le défaut.
+// Voir le commentaire en tête de fichier pour le rôle de ces deux valeurs
+// dans les plans Standard et Performance.
 export const PERFORMANCE_BASE_FEE = 50;
 export const PERFORMANCE_FEE_RATE = 0.2;
 

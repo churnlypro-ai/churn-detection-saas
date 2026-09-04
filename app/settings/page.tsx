@@ -1081,13 +1081,19 @@ export default function Settings() {
               </p>
             </div>
 
-            {!isLocked && profile?.billing_mode === 'performance' && (
+            {/* Le 20% mesuré via groupe témoin s'applique désormais aux deux
+                plans (Standard 'revenue_tier' et 'performance', voir
+                lib/pricing.ts) — ce bloc de stats est donc affiché pour tout
+                compte abonné, plus seulement pour le mode performance pur. */}
+            {!isLocked && (
               <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-6 shadow-sm dark:border-emerald-800/40 dark:bg-emerald-500/5">
                 <div className="mb-2 flex items-center gap-2">
                   <Percent className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{t.performanceBilling.title}</h3>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.active}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {profile?.billing_mode === 'performance' ? t.performanceBilling.activePerformance : t.performanceBilling.activeStandard}
+                </p>
                 {performanceStats && (
                   <>
                     <div className="mt-3 grid grid-cols-2 gap-3">

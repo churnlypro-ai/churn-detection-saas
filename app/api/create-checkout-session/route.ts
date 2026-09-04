@@ -32,15 +32,14 @@ export async function POST(req: NextRequest) {
     monthly_revenue?: number | null;
     referred_by?: string | null;
   } | null;
-  const isManagerProfile = p?.industry === 'manager';
-  const tier = isManagerProfile
-    ? calcManagerPrice(Number(p?.client_count) || 0)
-    : calcPrice(Number(p?.monthly_revenue) || 0);
-  const productId = process.env.STRIPE_PRODUCT_ID;
-  if (!productId) {
-    console.error('[create-checkout-session] STRIPE_PRODUCT_ID not configured', JSON.stringify({ computedTier: tier }));
-    return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 400 });
-  }
+
+  // Le plan (Standard vs Performance, voir lib/pricing.ts), en revanche, est
+  // un vrai choix de l'utilisateur fait sur /pricing — jamais recalculé côté
+  // serveur, contrairement au tier ci-dessus. Rien à trafiquer ici : les deux
+  // plans facturent le même 20% mesuré via groupe témoin, seul le socle fixe
+  // diffère.
+  const body = await req.json().catch(() => ({}));
+  const billingMode = body?.billingMode === 'performance' ? 'performance' : 'revenue_tier';
 
   try {
     const stripe = getStripe();
@@ -58,9 +57,11 @@ export async function POST(req: NextRequest) {
     // Un utilisateur inscrit via un lien de parrainage (referred_by posé au
     // signup, voir handle_new_user) reçoit -50% sur sa première facture —
     // coupon à usage unique, appliqué une seule fois au checkout, jamais
-    // reconduit sur les factures suivantes.
+    // reconduit sur les factures suivantes. Ne s'applique qu'au plan Standard
+    // (le seul avec un abonnement/une facture Stripe classique à l'inscription
+    // — le plan Performance n'a rien à facturer avant le premier cycle mensuel).
     let discounts: { coupon: string }[] | undefined;
-    if (p?.referred_by) {
+    if (p?.referred_by && billingMode !== 'performance') {
       const coupon = await stripe.coupons.create({
         percent_off: 50,
         duration: 'once',
@@ -68,6 +69,34 @@ export async function POST(req: NextRequest) {
         name: 'Bienvenue — parrainage (-50% premier mois)',
       });
       discounts = [{ coupon: coupon.id }];
+    }
+
+    // Plan Performance : pas de socle basé sur le CA, donc pas d'abonnement
+    // Stripe à créer ici — seulement une session en mode 'setup' pour
+    // enregistrer un moyen de paiement, utilisé ensuite chaque mois par
+    // lib/performanceBilling.ts (50€ + 20% mesuré via groupe témoin). Le
+    // compte est activé par le webhook checkout.session.completed une fois
+    // ce setup terminé (voir app/api/stripe-webhook).
+    if (billingMode === 'performance') {
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: 'setup',
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
+        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=cancelled`,
+        metadata: { supabase_user_id: user.id, billing_mode: 'performance' },
+        locale: 'auto',
+      });
+      return NextResponse.json({ url: session.url });
+    }
+
+    const isManagerProfile = p?.industry === 'manager';
+    const tier = isManagerProfile
+      ? calcManagerPrice(Number(p?.client_count) || 0)
+      : calcPrice(Number(p?.monthly_revenue) || 0);
+    const productId = process.env.STRIPE_PRODUCT_ID;
+    if (!productId) {
+      console.error('[create-checkout-session] STRIPE_PRODUCT_ID not configured', JSON.stringify({ computedTier: tier }));
+      return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 400 });
     }
 
     // Chaque compte reçoit une seule analyse gratuite à l'inscription (voir
