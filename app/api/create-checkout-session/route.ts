@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getStripe, PRICE_IDS } from '@/lib/stripe';
+import { getStripe, priceDataForAmount } from '@/lib/stripe';
 import { calcPrice, calcManagerPrice } from '@/lib/pricing';
 
 export async function POST(req: NextRequest) {
@@ -36,17 +36,9 @@ export async function POST(req: NextRequest) {
   const tier = isManagerProfile
     ? calcManagerPrice(Number(p?.client_count) || 0)
     : calcPrice(Number(p?.monthly_revenue) || 0);
-  const priceId = PRICE_IDS[String(tier)];
-  if (!priceId) {
-    console.error(
-      '[create-checkout-session] no price configured for computed tier',
-      JSON.stringify({
-        computedTier: tier,
-        configuredPriceEnvVars: Object.fromEntries(
-          Object.entries(PRICE_IDS).map(([key, value]) => [key, value ? 'set' : 'MISSING']),
-        ),
-      }),
-    );
+  const productId = process.env.STRIPE_PRODUCT_ID;
+  if (!productId) {
+    console.error('[create-checkout-session] STRIPE_PRODUCT_ID not configured', JSON.stringify({ computedTier: tier }));
     return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 400 });
   }
 
@@ -85,7 +77,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price_data: priceDataForAmount(tier, productId), quantity: 1 }],
       ...(discounts ? { discounts } : {}),
       subscription_data: {
         metadata: { supabase_user_id: user.id, tier: String(tier) },

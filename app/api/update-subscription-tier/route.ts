@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getStripe, PRICE_IDS } from '@/lib/stripe';
+import { getStripe, priceDataForAmount } from '@/lib/stripe';
 import { calcPrice, calcManagerPrice } from '@/lib/pricing';
 import { logAuditEvent } from '@/lib/auditLog';
 
@@ -48,9 +48,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ updated: false, tier });
   }
 
-  const priceId = PRICE_IDS[String(tier)];
-  if (!priceId) {
-    console.error('[update-subscription-tier] no price configured for computed tier', JSON.stringify({ userId, tier }));
+  const productId = process.env.STRIPE_PRODUCT_ID;
+  if (!productId) {
+    console.error('[update-subscription-tier] STRIPE_PRODUCT_ID not configured', JSON.stringify({ userId, tier }));
     return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 400 });
   }
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     if (!itemId) throw new Error('Subscription has no items');
 
     await stripe.subscriptions.update(profile.stripe_subscription_id, {
-      items: [{ id: itemId, price: priceId }],
+      items: [{ id: itemId, price_data: priceDataForAmount(tier, productId) }],
       // Le client passe d'un palier à l'autre en cours de mois : Stripe
       // calcule et applique automatiquement la différence proratisée,
       // plutôt que d'attendre le prochain cycle de facturation.
