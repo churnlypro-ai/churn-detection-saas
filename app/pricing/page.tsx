@@ -14,7 +14,7 @@ import { useTierName, useTranslations } from '@/lib/i18n/LanguageContext';
 const DEFAULT_CLIENT_COUNT = 100;
 
 const TIER_EXAMPLE_META = [
-  { name: 'Starter', price: 150, highlight: false },
+  { name: 'Starter', price: 60, highlight: false },
   { name: 'Scale', price: 400, highlight: true },
   { name: 'Enterprise', price: 2500, highlight: false },
 ];

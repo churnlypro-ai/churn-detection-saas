@@ -14,7 +14,7 @@ export function getStripe(): Stripe {
 // Keys must match the tier prices returned by calcPrice() in lib/pricing.ts —
 // that's the pricing engine actually used by signup/settings/preview/pricing.
 export const PRICE_IDS: Record<string, string | undefined> = {
-  '150': process.env.STRIPE_PRICE_150,
+  '60': process.env.STRIPE_PRICE_60,
   '250': process.env.STRIPE_PRICE_250,
   '400': process.env.STRIPE_PRICE_400,
   '600': process.env.STRIPE_PRICE_600,

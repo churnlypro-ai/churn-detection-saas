@@ -18,7 +18,7 @@ export interface PricingResult {
 // doit rester nettement inférieur à ce qu'une réduction de churn peut
 // réalistement faire économiser à ce niveau de CA.
 export function calcPrice(revenue: number): number {
-  if (revenue < 5000) return 150;
+  if (revenue < 5000) return 60;
   if (revenue < 10000) return 250;
   if (revenue < 15000) return 400;
   if (revenue < 20000) return 600;
@@ -46,7 +46,7 @@ export const ASSUMED_CHURN_RATE = 5;
 // trois derniers paliers (800€/1200€/2500€) malgré des prix très différents,
 // donnant l'impression que rien ne change en montant de palier.
 export function tierName(price: number): string {
-  if (price <= 150) return 'Starter';
+  if (price <= 60) return 'Starter';
   if (price <= 250) return 'Croissance';
   if (price <= 400) return 'Scale';
   if (price <= 600) return 'Avancé';
@@ -72,7 +72,7 @@ export function calcPricing(revenue: number): PricingResult {
 // base de clients classique — le prix dépend uniquement du nombre géré,
 // pas du CA. Réutilise les mêmes 5 paliers Stripe existants.
 export function calcManagerPrice(modelCount: number): number {
-  if (modelCount <= 1) return 150;
+  if (modelCount <= 1) return 60;
   if (modelCount <= 3) return 250;
   if (modelCount <= 6) return 400;
   if (modelCount <= 10) return 600;

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   // Le palier est calculé côté serveur à partir des données du profil en
   // base, jamais à partir de ce que le client envoie dans le body — sinon
   // n'importe qui pourrait appeler cette route avec un tier arbitraire (ex:
-  // "150") et payer moins cher que ce que son propre CA ne le justifie.
+  // "60") et payer moins cher que ce que son propre CA ne le justifie.
   const p = profile as {
     industry?: string;
     client_count?: number | null;
