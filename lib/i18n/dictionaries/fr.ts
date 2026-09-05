@@ -718,9 +718,9 @@ export const fr = {
       performance: {
         name: 'Performance',
         price: '50€/mois',
-        tagline: 'Payez moins qu\'avec Standard — un socle plafonné à 3 000€/mois, et 20% seulement des clients qu\'on vous aide vraiment à garder.',
+        tagline: 'Payez moins qu\'avec Standard — un socle plafonné à 300€/mois, et 20% seulement des clients qu\'on vous aide vraiment à garder.',
         bullets: [
-          'Socle qui suit aussi votre CA, mais plafonné à 3 000€/mois',
+          'Socle qui suit aussi votre CA, mais plafonné à 300€/mois',
           '+ 20% de chaque client à risque effectivement retenu',
           'Pas d\'abonnement classique : une facture mensuelle unique',
         ],
@@ -731,7 +731,7 @@ export const fr = {
     },
     faqTitle: 'Questions fréquentes',
     faq: [
-      { q: 'Comment le prix est-il calculé ?', a: 'Les deux plans partent du même chiffre d\'affaires mensuel. Sur le plan Standard, le prix suit votre CA sans plafond. Sur le plan Performance, le socle suit aussi votre CA mais démarre plus bas et plafonne à 3 000€/mois, en échange des 20% sur les clients effectivement retenus.' },
+      { q: 'Comment le prix est-il calculé ?', a: 'Les deux plans partent du même chiffre d\'affaires mensuel. Sur le plan Standard, le prix suit votre CA sans plafond. Sur le plan Performance, le socle suit aussi votre CA mais démarre plus bas et plafonne à 300€/mois, en échange des 20% sur les clients effectivement retenus.' },
       { q: 'Puis-je changer de palier plus tard ?', a: 'Oui. Le socle des deux plans est recalculé automatiquement à chaque mise à jour de votre CA — vous n\'avez rien à faire manuellement.' },
       { q: 'Y a-t-il un engagement ?', a: 'Aucun. Vous pouvez annuler à tout moment depuis vos réglages, sans frais ni préavis.' },
       { q: 'Qu\'est-ce qui est inclus dans tous les plans ?', a: 'Tous les plans incluent des emails de rétention prêts à envoyer et personnalisés par client, la liste complète de vos clients à risque, un score de churn détaillé, des actions recommandées par Churnly, et le support par email.' },

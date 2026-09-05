@@ -720,9 +720,9 @@ export const en: Dictionary = {
       performance: {
         name: 'Performance',
         price: '€50/mo',
-        tagline: 'Pay less than Standard — a base fee capped at €3,000/mo, plus only 20% of the customers we actually help you keep.',
+        tagline: 'Pay less than Standard — a base fee capped at €300/mo, plus only 20% of the customers we actually help you keep.',
         bullets: [
-          'Base fee that also follows your revenue, but capped at €3,000/mo',
+          'Base fee that also follows your revenue, but capped at €300/mo',
           '+ 20% of each at-risk customer actually retained',
           'No classic subscription: a single monthly invoice',
         ],
@@ -733,7 +733,7 @@ export const en: Dictionary = {
     },
     faqTitle: 'Frequently asked questions',
     faq: [
-      { q: 'How is the price calculated?', a: 'Both plans start from the same monthly revenue. On the Standard plan, the price follows your revenue with no cap. On the Performance plan, the base fee also follows your revenue but starts lower and caps at €3,000/mo, in exchange for the 20% on customers actually retained.' },
+      { q: 'How is the price calculated?', a: 'Both plans start from the same monthly revenue. On the Standard plan, the price follows your revenue with no cap. On the Performance plan, the base fee also follows your revenue but starts lower and caps at €300/mo, in exchange for the 20% on customers actually retained.' },
       { q: 'Can I change tiers later?', a: 'Yes. Both plans\' base fee is automatically recalculated every time your revenue updates — nothing to do manually.' },
       { q: 'Is there a commitment?', a: 'None. You can cancel anytime from your settings, no fees, no notice period.' },
       { q: 'What\'s included in every plan?', a: 'Every plan includes ready-to-send retention emails personalized per customer, the full list of your at-risk customers, a detailed churn score, Churnly-recommended actions, and email support.' },

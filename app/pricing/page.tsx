@@ -66,7 +66,7 @@ export default function PricingPage() {
   // Les deux prix sont calculés à partir de la même barre de CA, affichés
   // côte à côte pour comparer directement — voir lib/pricing.ts pour le
   // détail des deux formules (Standard sans plafond, Performance plafonné
-  // à 3 000€ mais plus bas au départ).
+  // à 300€ mais plus bas au départ).
   const standardPrice = calcPrice(monthlyRevenue);
   const standardAnnualPerMonth = Math.round((standardPrice * 12 - standardPrice) / 12);
   const performancePrice = calcPerformanceBaseFee(monthlyRevenue);

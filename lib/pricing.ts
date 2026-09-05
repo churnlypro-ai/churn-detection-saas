@@ -42,12 +42,12 @@ export function calcPrice(revenue: number): number {
 
 // Socle du plan Performance : 50€ de départ, +50€ tous les 2 000€ de CA
 // supplémentaires (même rythme que Standard ci-dessus), mais plafonné à
-// 3 000€/mois — contrairement à Standard, jamais plus cher que ça, même
+// 300€/mois — contrairement à Standard, jamais plus cher que ça, même
 // sur un très gros compte. C'est ce qui rend Performance structurellement
 // moins cher que Standard à partir d'un certain CA, en échange du 20% sur
 // le revenu récupéré (voir PERFORMANCE_FEE_RATE ci-dessous).
 export function calcPerformanceBaseFee(revenue: number): number {
-  return Math.min(3000, 50 + 50 * Math.floor(revenue / 2000));
+  return Math.min(300, 50 + 50 * Math.floor(revenue / 2000));
 }
 
 // Voir le commentaire en tête de fichier — le % s'applique uniquement au
