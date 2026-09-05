@@ -12,6 +12,38 @@ import { useTranslations } from '@/lib/i18n/LanguageContext';
 
 const DEFAULT_CLIENT_COUNT = 100;
 
+// La barre de CA n'est pas linéaire : le curseur va de 0 à SLIDER_MAX, et
+// son milieu (SLIDER_MID) correspond toujours à REVENUE_MID (50 000€) —
+// la moitié gauche du curseur ne couvre que REVENUE_MIN–REVENUE_MID (donc
+// plus précise, chaque pixel vaut peu de CA), la moitié droite couvre
+// REVENUE_MID–REVENUE_MAX (donc plus large, chaque pixel vaut beaucoup
+// plus de CA). Un seul rapport linéaire par moitié suffit — pas besoin
+// d'une vraie échelle logarithmique pour obtenir "plus précis en bas, plus
+// large en haut, sans contraste extrême".
+const SLIDER_MAX = 1000;
+const SLIDER_MID = 500;
+const REVENUE_MIN = 1000;
+const REVENUE_MID = 50000;
+const REVENUE_MAX = 2000000;
+
+function sliderPosToRevenue(pos: number): number {
+  if (pos <= SLIDER_MID) {
+    const ratio = pos / SLIDER_MID;
+    return Math.round((REVENUE_MIN + ratio * (REVENUE_MID - REVENUE_MIN)) / 1000) * 1000;
+  }
+  const ratio = (pos - SLIDER_MID) / (SLIDER_MAX - SLIDER_MID);
+  return Math.round((REVENUE_MID + ratio * (REVENUE_MAX - REVENUE_MID)) / 1000) * 1000;
+}
+
+function revenueToSliderPos(revenue: number): number {
+  if (revenue <= REVENUE_MID) {
+    const ratio = (revenue - REVENUE_MIN) / (REVENUE_MID - REVENUE_MIN);
+    return ratio * SLIDER_MID;
+  }
+  const ratio = (revenue - REVENUE_MID) / (REVENUE_MAX - REVENUE_MID);
+  return SLIDER_MID + ratio * (SLIDER_MAX - SLIDER_MID);
+}
+
 function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -153,11 +185,11 @@ export default function PricingPage() {
 
         <input
           type="range"
-          min={1000}
-          max={2000000}
-          step={5000}
-          value={monthlyRevenue}
-          onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
+          min={0}
+          max={SLIDER_MAX}
+          step={1}
+          value={revenueToSliderPos(monthlyRevenue)}
+          onChange={(e) => setMonthlyRevenue(sliderPosToRevenue(Number(e.target.value)))}
           className="mt-8 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700"
         />
 
