@@ -101,6 +101,19 @@ canvas {
   transition: none !important;
 }
 
+/* Pendant une View Transition (voir ThemeToggle.tsx), le rendu visible est
+   entièrement porté par le clip-path sur ::view-transition-new(root) — une
+   opération purement GPU sur deux captures figées. La transition 450ms par
+   élément ci-dessus n'a alors plus aucun rôle visuel (masquée par la
+   capture), mais continue de tourner en arrière-plan sur des dizaines
+   d'éléments à la fois : ce travail de style/paint superflu vole du temps
+   de frame au thread principal et fait ramer l'animation du cercle,
+   perçue comme un effet "peu d'images par seconde". On la coupe donc
+   entièrement le temps de la transition. */
+.theme-transitioning * {
+  transition: none !important;
+}
+
 ::selection {
   background-color: #fde68a;
 }

@@ -62,10 +62,20 @@ export function ThemeToggle() {
       document.documentElement.style.setProperty('--vt-y', '50%');
     }
 
+    // Coupe les transitions CSS par élément (voir globals.css) et met en
+    // pause le rendu WebGL de la hero (voir AnimatedHero.tsx) le temps de la
+    // View Transition : sans ça, ce travail continue en arrière-plan derrière
+    // la capture figée et vole des frames au thread principal, rendant
+    // l'animation du cercle saccadée plutôt que fluide.
+    document.documentElement.classList.add('theme-transitioning');
+    document.dispatchEvent(new Event('theme-transition-start'));
+
     isTransitioningRef.current = true;
     const transition = doc.startViewTransition(() => setTheme(next));
     transition.finished.finally(() => {
       isTransitioningRef.current = false;
+      document.documentElement.classList.remove('theme-transitioning');
+      document.dispatchEvent(new Event('theme-transition-end'));
     });
   }
 

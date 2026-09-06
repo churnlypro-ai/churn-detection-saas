@@ -91,6 +91,7 @@ export default function AnimatedHero() {
     let frameId: number | null = null;
     let isVisible = true;
     let isTabVisible = document.visibilityState === 'visible';
+    let isPausedForThemeTransition = false;
     const clock = new THREE.Clock();
 
     function renderFrame() {
@@ -106,7 +107,7 @@ export default function AnimatedHero() {
     // running forever regardless, a major source of jank on the rest of
     // the site.
     function updateLoop() {
-      const shouldRun = isVisible && isTabVisible;
+      const shouldRun = isVisible && isTabVisible && !isPausedForThemeTransition;
       if (shouldRun && frameId === null) {
         frameId = requestAnimationFrame(renderFrame);
       } else if (!shouldRun && frameId !== null) {
@@ -130,6 +131,22 @@ export default function AnimatedHero() {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Le cercle de bascule clair/sombre (voir ThemeToggle.tsx) anime deux
+    // captures figées de la page : le rendu 3D continu ici n'est visible
+    // par personne pendant ce court instant, mais consommait quand même du
+    // temps GPU/CPU en concurrence avec l'animation du cercle, la rendant
+    // saccadée. On coupe donc le rendu le temps de la transition.
+    function handleThemeTransitionStart() {
+      isPausedForThemeTransition = true;
+      updateLoop();
+    }
+    function handleThemeTransitionEnd() {
+      isPausedForThemeTransition = false;
+      updateLoop();
+    }
+    document.addEventListener('theme-transition-start', handleThemeTransitionStart);
+    document.addEventListener('theme-transition-end', handleThemeTransitionEnd);
+
     updateLoop();
 
     function handleResize() {
@@ -146,6 +163,8 @@ export default function AnimatedHero() {
       if (frameId !== null) cancelAnimationFrame(frameId);
       intersectionObserver.disconnect();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('theme-transition-start', handleThemeTransitionStart);
+      document.removeEventListener('theme-transition-end', handleThemeTransitionEnd);
       window.removeEventListener('resize', handleResize);
       nodeGeometry.dispose();
       nodeMaterial.dispose();
