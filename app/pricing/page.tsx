@@ -83,7 +83,7 @@ function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
 export default function PricingPage() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [monthlyRevenue, setMonthlyRevenue] = useState(100000);
+  const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const t = useTranslations('pricing');
