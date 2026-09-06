@@ -733,7 +733,7 @@ export const en: Dictionary = {
     },
     faqTitle: 'Frequently asked questions',
     faq: [
-      { q: 'How is the price calculated?', a: 'Both plans start from the same monthly revenue. On the Standard plan, the price follows your revenue with no cap. On the Performance plan, the base fee also follows your revenue but starts lower and caps at €300/mo, in exchange for the 20% on customers actually retained.' },
+      { q: 'How is the price calculated?', a: 'Both plans start from the same monthly revenue. On the Standard plan, the price follows your revenue and caps at €2,500/mo. On the Performance plan, the base fee also follows your revenue but starts lower and caps at €300/mo, in exchange for the 20% on customers actually retained.' },
       { q: 'Can I change tiers later?', a: 'Yes. Both plans\' base fee is automatically recalculated every time your revenue updates — nothing to do manually.' },
       { q: 'Is there a commitment?', a: 'None. You can cancel anytime from your settings, no fees, no notice period.' },
       { q: 'What\'s included in every plan?', a: 'Every plan includes ready-to-send retention emails personalized per customer, the full list of your at-risk customers, a detailed churn score, Churnly-recommended actions, and email support.' },

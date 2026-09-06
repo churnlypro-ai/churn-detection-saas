@@ -9,9 +9,9 @@ export interface PricingResult {
 // à partir du même CA mensuel déclaré, affichés côte à côte pour comparer :
 //
 // - Standard (billing_mode 'revenue_tier', le défaut) : uniquement un
-//   socle basé sur le CA (calcPrice ci-dessous), sans plafond, facturé une
-//   fois par mois via l'abonnement Stripe classique — jamais de % sur le
-//   revenu récupéré, jamais de groupe témoin sur ce plan.
+//   socle basé sur le CA (calcPrice ci-dessous), plafonné à 2 500€/mois,
+//   facturé une fois par mois via l'abonnement Stripe classique — jamais
+//   de % sur le revenu récupéré, jamais de groupe témoin sur ce plan.
 // - Performance (billing_mode 'performance') : un socle plus bas et
 //   plafonné (calcPerformanceBaseFee ci-dessous) + PERFORMANCE_FEE_RATE
 //   (20%) du revenu concrètement récupéré grâce à Churnly, mesuré via
@@ -26,9 +26,10 @@ export interface PricingResult {
 // importées — jamais demandé en amont.
 //
 // Échelle continue plutôt que quelques gros paliers espacés : 60€ sous
-// 2 000€ de CA, puis +50€ tous les 2 000€ de CA supplémentaires, sans
-// plafond — un compte à 1M€ de CA paie le même calcul qu'un compte à
-// 10 000€, jamais un tarif négocié à part. Voir lib/stripe.ts
+// 2 000€ de CA, puis +100€ tous les 2 000€ de CA supplémentaires, jusqu'au
+// plafond de 2 500€/mois atteint exactement à 50 000€ de CA (100 + 100×24)
+// — au-delà, jamais plus cher, quel que soit le CA. 1 500€ tombe pile à
+// 30 000€ de CA en route vers ce plafond. Voir lib/stripe.ts
 // (priceDataForAmount) pour comment Stripe facture un montant calculé à
 // la volée sans qu'un Price existe pour chacun d'entre eux à l'avance.
 // Toujours affiché automatiquement, jamais de devis/démo manuelle : un
@@ -37,7 +38,7 @@ export interface PricingResult {
 // sur le produit.
 export function calcPrice(revenue: number): number {
   if (revenue < 2000) return 60;
-  return 100 + 50 * Math.floor((revenue - 2000) / 2000);
+  return Math.min(2500, 100 + 100 * Math.floor((revenue - 2000) / 2000));
 }
 
 // Socle du plan Performance : 50€ de départ, +50€ tous les 3 000€ de CA
