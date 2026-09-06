@@ -62,7 +62,7 @@ export const en: Dictionary = {
       subtitle: 'Three steps. Thirty seconds. Actions ready to send.',
       steps: [
         { title: 'Import', description: 'Upload a CSV of your customers or connect Stripe in one click. No technical setup required.' },
-        { title: 'Analyze', description: 'Churnly analyzes every customer in 30 seconds: inactivity signals, support tickets, usage drop, payment status.' },
+        { title: 'Analyze', description: 'Churnly analyzes every customer in 30 seconds from their payment status, renewal date, and any usage or support data you provide.' },
         { title: 'Act', description: 'For every at-risk customer: the email to send, the offer to make, ready before they leave. That saves your revenue, not another score.' },
       ],
       signalsLabel: 'Churn signals worth watching',

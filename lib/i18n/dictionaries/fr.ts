@@ -60,7 +60,7 @@ export const fr = {
       subtitle: 'Trois étapes. Trente secondes. Des actions prêtes à envoyer.',
       steps: [
         { title: 'Importer', description: 'Uploadez un CSV de vos clients ou connectez Stripe en un clic. Aucune configuration technique requise.' },
-        { title: 'Analyser', description: 'Churnly analyse chaque client en 30 secondes : signaux d\'inactivité, tickets support, baisse d\'usage, statut de paiement.' },
+        { title: 'Analyser', description: 'Churnly analyse chaque client en 30 secondes à partir de son statut de paiement, son échéance de renouvellement, et de toute donnée d\'usage ou de support que vous lui fournissez.' },
         { title: 'Agir', description: 'Pour chaque client à risque : l\'email à envoyer, l\'offre à proposer, prêts avant qu\'il ne parte. Ça sauve votre revenu, pas un score de plus.' },
       ],
       signalsLabel: 'Les signaux de churn à surveiller',
