@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
+import FadeLine from '@/components/FadeLine';
 import { EASE_OUT } from '@/lib/animations';
 import { calcPricing, formatEuro, ASSUMED_CHURN_RATE } from '@/lib/pricing';
 import { TrendingDown, Users, Euro, ShieldCheck, ArrowRight, AlertTriangle, Clock } from 'lucide-react';
@@ -159,7 +160,8 @@ export default function ImpactPage() {
     <>
       <Navigation user={user} />
 
-      <div className="sticky top-[73px] z-40 border-b border-slate-100 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
+      <div className="sticky top-[73px] z-40 bg-white/90 backdrop-blur-md dark:bg-slate-950/90">
+        <FadeLine className="bottom-0" />
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.yourPrice}</span>

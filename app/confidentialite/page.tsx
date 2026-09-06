@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
+import FadeLine from '@/components/FadeLine';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const CONTACT_EMAIL = 'contact@churnly.fr';
@@ -289,7 +290,8 @@ export default function ConfidentialitePage() {
           ))}
         </div>
 
-        <div className="mt-16 border-t border-slate-100 pt-8 dark:border-slate-800">
+        <div className="relative mt-16 pt-8">
+          <FadeLine className="top-0" />
           <Link href="/" className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
             {language === 'fr' ? "← Retour à l'accueil" : '← Back to home'}
           </Link>

@@ -8,6 +8,7 @@ import { Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import FadeLine from '@/components/FadeLine';
 import { useTranslations } from '@/lib/i18n/LanguageContext';
 
 export default function Navigation({ user }: { user: { id?: string; email?: string } | null }) {
@@ -44,7 +45,8 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
   const mobileLinkClass = 'block w-full rounded-xl px-4 py-3 text-base font-medium text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800';
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md dark:bg-slate-950/80">
+      <FadeLine className="bottom-0" />
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href={user ? '/dashboard' : '/'} className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
           Churn<span className="text-brand-600">ly</span>
@@ -111,8 +113,9 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden border-t border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950 md:hidden"
+            className="relative overflow-hidden bg-white dark:bg-slate-950 md:hidden"
           >
+            <FadeLine className="top-0" />
             <div className="flex flex-col gap-1 px-4 py-3">
               {user ? (
                 <>

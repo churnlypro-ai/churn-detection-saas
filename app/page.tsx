@@ -9,6 +9,7 @@ import Calculator from '@/components/Calculator';
 import SectionDivider from '@/components/SectionDivider';
 import SectionToc from '@/components/SectionToc';
 import SignalMarquee from '@/components/SignalMarquee';
+import FadeLine from '@/components/FadeLine';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
@@ -475,7 +476,8 @@ export default function Home() {
         <CTASection />
       </main>
 
-      <footer className="relative border-t border-slate-100 bg-white py-10 dark:border-slate-800 dark:bg-slate-950">
+      <footer className="relative bg-white py-10 dark:bg-slate-950">
+        <FadeLine className="top-0" />
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 dark:text-slate-500 sm:flex-row">
           <span>© {new Date().getFullYear()} Churnly</span>
           <div className="flex gap-6">

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navigation from '@/components/Navigation';
+import FadeLine from '@/components/FadeLine';
 import { EASE_OUT } from '@/lib/animations';
 import { supabase } from '@/lib/supabase';
 import { calcPrice, calcPerformanceBaseFee, formatEuro } from '@/lib/pricing';
@@ -331,7 +332,8 @@ export default function PricingPage() {
         <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">{t.noCommitment}</p>
       </main>
 
-      <section className="border-t border-slate-100 px-6 py-24 dark:border-slate-800">
+      <section className="relative px-6 py-24">
+        <FadeLine className="top-0" />
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -344,7 +346,8 @@ export default function PricingPage() {
         <FaqAccordion items={t.faq} />
       </section>
 
-      <footer className="border-t border-slate-100 bg-white py-10 dark:border-slate-800 dark:bg-slate-950">
+      <footer className="relative bg-white py-10 dark:bg-slate-950">
+        <FadeLine className="top-0" />
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 dark:text-slate-500 sm:flex-row">
           <span>© {new Date().getFullYear()} Churnly</span>
           <div className="flex gap-6">
