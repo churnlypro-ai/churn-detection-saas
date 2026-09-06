@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, XCircle, Mail, CheckCircle2, Clock, AlertTriangle, Send, Trash2, Plug, Pencil, Linkedin, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, XCircle, Mail, CheckCircle2, Clock, AlertTriangle, Send, Trash2, Plug, Pencil, Linkedin, Instagram, ExternalLink, Copy, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -63,6 +63,26 @@ const LI_STATUS_LABELS: Record<LinkedInEntry['status'], string> = {
   sent: 'Envoyé',
 };
 
+interface InstagramEntry {
+  id: string;
+  contact_name: string;
+  instagram_url: string;
+  message: string;
+  status: 'queued' | 'sent';
+  created_at: string;
+  sent_at: string | null;
+}
+
+const IG_STATUS_STYLES: Record<InstagramEntry['status'], string> = {
+  queued: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+  sent: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
+};
+
+const IG_STATUS_LABELS: Record<InstagramEntry['status'], string> = {
+  queued: 'À envoyer',
+  sent: 'Envoyé',
+};
+
 function ProspectingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,7 +90,7 @@ function ProspectingContent() {
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
 
-  const [mode, setMode] = useState<'email' | 'linkedin'>('email');
+  const [mode, setMode] = useState<'email' | 'linkedin' | 'instagram'>('email');
 
   const [gmailConnected, setGmailConnected] = useState(false);
   const [gmailEmail, setGmailEmail] = useState<string | null>(null);
@@ -147,6 +167,35 @@ function ProspectingContent() {
   const [liEditSaving, setLiEditSaving] = useState(false);
   const [liEditError, setLiEditError] = useState('');
 
+  const [igQueue, setIgQueue] = useState<InstagramEntry[]>([]);
+
+  const [igContactName, setIgContactName] = useState('');
+  const [igInstagramUrl, setIgInstagramUrl] = useState('');
+  const [igMessage, setIgMessage] = useState('');
+  const [igAdding, setIgAdding] = useState(false);
+  const [igAddError, setIgAddError] = useState('');
+
+  const [igBulkText, setIgBulkText] = useState('');
+  const [igBulkAdding, setIgBulkAdding] = useState(false);
+  const [igBulkError, setIgBulkError] = useState('');
+  const [igBulkResult, setIgBulkResult] = useState('');
+
+  const [igFileImporting, setIgFileImporting] = useState(false);
+  const [igFileImportError, setIgFileImportError] = useState('');
+  const [igFileImportResult, setIgFileImportResult] = useState('');
+
+  const [igSelectedIds, setIgSelectedIds] = useState<Set<string>>(new Set());
+  const [igDeletingSelection, setIgDeletingSelection] = useState(false);
+  const [igSendingId, setIgSendingId] = useState<string | null>(null);
+  const [igCopiedId, setIgCopiedId] = useState<string | null>(null);
+
+  const [igEditingId, setIgEditingId] = useState<string | null>(null);
+  const [igEditName, setIgEditName] = useState('');
+  const [igEditUrl, setIgEditUrl] = useState('');
+  const [igEditMessage, setIgEditMessage] = useState('');
+  const [igEditSaving, setIgEditSaving] = useState(false);
+  const [igEditError, setIgEditError] = useState('');
+
   // Toujours relire la session au moment de l'appel plutôt que de garder un
   // token capté une seule fois au chargement de la page : sur une page
   // laissée ouverte longtemps, ce token capté expire alors que la session
@@ -182,6 +231,14 @@ function ProspectingContent() {
     }
   }, []);
 
+  const loadInstagramQueue = useCallback(async (authToken: string) => {
+    const res = await fetch('/api/admin/prospecting/instagram', { headers: { Authorization: `Bearer ${authToken}` } });
+    if (res.ok) {
+      const data = await res.json();
+      setIgQueue(data.contacts ?? []);
+    }
+  }, []);
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) { router.replace('/login'); return; }
@@ -193,7 +250,7 @@ function ProspectingContent() {
         .then((r) => r.json()).catch(() => ({ isAdmin: false }));
       if (!check.isAdmin) { setForbidden(true); setLoading(false); return; }
 
-      await Promise.all([loadStatus(authToken), loadQueue(authToken), loadLinkedInQueue(authToken)]);
+      await Promise.all([loadStatus(authToken), loadQueue(authToken), loadLinkedInQueue(authToken), loadInstagramQueue(authToken)]);
       setLoading(false);
 
       const gmailParam = searchParams.get('gmail');
@@ -720,6 +777,235 @@ function ProspectingContent() {
     }
   }
 
+  async function handleAddInstagram(e: React.FormEvent) {
+    e.preventDefault();
+    setIgAdding(true);
+    setIgAddError('');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/prospecting/instagram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ contactName: igContactName, instagramUrl: igInstagramUrl, message: igMessage }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Ajout échoué.');
+      setIgContactName('');
+      setIgInstagramUrl('');
+      setIgMessage('');
+      await loadInstagramQueue(authToken);
+    } catch (err) {
+      setIgAddError(err instanceof Error ? err.message : 'Ajout échoué.');
+    } finally {
+      setIgAdding(false);
+    }
+  }
+
+  // Même format que le collage en masse LinkedIn (name:/url:/message:
+  // séparés par ---) — le message est déjà rédigé par l'admin, jamais généré.
+  function parseInstagramBulkBlocks(text: string): { contactName: string; instagramUrl: string; message: string }[] {
+    const blocks = text.split(/^---$/m).map((b) => b.trim()).filter(Boolean);
+    return blocks.map((block) => {
+      const lines = block.split('\n');
+      let contactName = '';
+      let instagramUrl = '';
+      const messageLines: string[] = [];
+      let inMessage = false;
+      for (const line of lines) {
+        if (inMessage) { messageLines.push(line); continue; }
+        if (line.toLowerCase().startsWith('name:')) contactName = line.slice(line.indexOf(':') + 1).trim();
+        else if (line.toLowerCase().startsWith('url:') || line.toLowerCase().startsWith('instagram:')) instagramUrl = line.slice(line.indexOf(':') + 1).trim();
+        else if (line.toLowerCase().startsWith('message:')) {
+          inMessage = true;
+          const rest = line.slice(line.indexOf(':') + 1);
+          if (rest.trim()) messageLines.push(rest.trim());
+        }
+      }
+      return { contactName, instagramUrl, message: messageLines.join('\n').trim() };
+    });
+  }
+
+  async function handleBulkAddInstagram() {
+    setIgBulkAdding(true);
+    setIgBulkError('');
+    setIgBulkResult('');
+    try {
+      const parsed = parseInstagramBulkBlocks(igBulkText);
+      if (parsed.length === 0) {
+        setIgBulkError('Aucun bloc reconnu — vérifie le format (name: / url: / message: séparés par ---).');
+        return;
+      }
+      const invalid = parsed.filter((p) => !p.contactName || !p.instagramUrl || !p.message);
+      if (invalid.length > 0) {
+        setIgBulkError(`${invalid.length} bloc(s) incomplet(s) (nom/lien/message manquant) — rien n'a été importé, corrige et réessaie.`);
+        return;
+      }
+
+      const authToken = await getAuthToken();
+      let added = 0;
+      let failed = 0;
+      for (const entry of parsed) {
+        const res = await fetch('/api/admin/prospecting/instagram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ contactName: entry.contactName, instagramUrl: entry.instagramUrl, message: entry.message }),
+        });
+        if (res.ok) added += 1; else failed += 1;
+      }
+      setIgBulkResult(`${added} ajouté${added > 1 ? 's' : ''} à la file${failed ? `, ${failed} échoué${failed > 1 ? 's' : ''}` : ''}.`);
+      if (added > 0) setIgBulkText('');
+      await loadInstagramQueue(authToken);
+    } catch {
+      setIgBulkError('Import échoué.');
+    } finally {
+      setIgBulkAdding(false);
+    }
+  }
+
+  async function handleInstagramFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    setIgFileImporting(true);
+    setIgFileImportError('');
+    setIgFileImportResult('');
+    try {
+      const encoded = await Promise.all(Array.from(fileList).map(readFileAsBase64));
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/prospecting/instagram/import-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ files: encoded }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Import échoué.');
+      const skippedText = result.skippedDuplicate
+        ? ` (${result.skippedDuplicate} déjà dans la file ou déjà contacté${result.skippedDuplicate > 1 ? 's' : ''}, ignoré${result.skippedDuplicate > 1 ? 's' : ''})`
+        : '';
+      setIgFileImportResult(`${result.added} contact${result.added !== 1 ? 's' : ''} ajouté${result.added !== 1 ? 's' : ''} à la file${skippedText}.`);
+      await loadInstagramQueue(authToken);
+    } catch (err) {
+      setIgFileImportError(err instanceof Error ? err.message : 'Import échoué.');
+    } finally {
+      setIgFileImporting(false);
+      e.target.value = '';
+    }
+  }
+
+  async function handleRemoveInstagram(id: string) {
+    const authToken = await getAuthToken();
+    await fetch(`/api/admin/prospecting/instagram/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
+    setIgSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    await loadInstagramQueue(authToken);
+  }
+
+  async function handleDeleteSelectedInstagram() {
+    if (igSelectedIds.size === 0) return;
+    if (!window.confirm(`Supprimer définitivement ${igSelectedIds.size} contact${igSelectedIds.size > 1 ? 's' : ''} de la file ?`)) return;
+    setIgDeletingSelection(true);
+    try {
+      const authToken = await getAuthToken();
+      await Promise.all(
+        Array.from(igSelectedIds).map((id) =>
+          fetch(`/api/admin/prospecting/instagram/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } })
+        )
+      );
+      setIgSelectedIds(new Set());
+      await loadInstagramQueue(authToken);
+    } finally {
+      setIgDeletingSelection(false);
+    }
+  }
+
+  function toggleSelectInstagram(id: string) {
+    setIgSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllInstagram() {
+    const queuedIds = igQueue.filter((q) => q.status === 'queued').map((q) => q.id);
+    const allSelected = queuedIds.length > 0 && queuedIds.every((id) => igSelectedIds.has(id));
+    setIgSelectedIds(allSelected ? new Set() : new Set(queuedIds));
+  }
+
+  function startEditInstagram(entry: InstagramEntry) {
+    setIgEditingId(entry.id);
+    setIgEditName(entry.contact_name);
+    setIgEditUrl(entry.instagram_url);
+    setIgEditMessage(entry.message);
+    setIgEditError('');
+  }
+
+  function cancelEditInstagram() {
+    setIgEditingId(null);
+    setIgEditError('');
+  }
+
+  async function handleSaveEditInstagram(id: string) {
+    setIgEditSaving(true);
+    setIgEditError('');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch(`/api/admin/prospecting/instagram/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ contactName: igEditName, instagramUrl: igEditUrl, message: igEditMessage }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Modification échouée.');
+      setIgEditingId(null);
+      await loadInstagramQueue(authToken);
+    } catch (err) {
+      setIgEditError(err instanceof Error ? err.message : 'Modification échouée.');
+    } finally {
+      setIgEditSaving(false);
+    }
+  }
+
+  // Séparé de l'ouverture du profil — même raison que
+  // handleCopyLinkedInMessage : écrire dans le presse-papiers et appeler
+  // window.open() dans le même clic perd la course contre le changement de
+  // focus vers le nouvel onglet.
+  async function handleCopyInstagramMessage(entry: InstagramEntry) {
+    try {
+      await navigator.clipboard.writeText(entry.message);
+      setIgCopiedId(entry.id);
+      setTimeout(() => setIgCopiedId((current) => (current === entry.id ? null : current)), 2000);
+    } catch {
+      // Presse-papiers indisponible — pas bloquant, le message reste
+      // affiché dans la file pour un copier-coller manuel.
+    }
+  }
+
+  // Pas d'API Instagram pour envoyer à sa place (voir migration) : ouvre le
+  // profil dans un nouvel onglet et marque le contact "envoyé" côté
+  // Churnly — la copie du message est un bouton séparé (voir
+  // handleCopyInstagramMessage) pour éviter la race condition ci-dessus.
+  async function handleSendInstagram(entry: InstagramEntry) {
+    setIgSendingId(entry.id);
+    window.open(entry.instagram_url, '_blank', 'noopener,noreferrer');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch(`/api/admin/prospecting/instagram/${entry.id}/send`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) await loadInstagramQueue(authToken);
+    } finally {
+      setIgSendingId(null);
+    }
+  }
+
+  const igQueuedCount = igQueue.filter((q) => q.status === 'queued').length;
+  // Même repère que liSentTodayCount — aucune limite technique, juste un
+  // garde-fou visuel pour garder un rythme raisonnable sur un compte
+  // Instagram personnel.
+  const igSentTodayCount = igQueue.filter((q) => q.sent_at && new Date(q.sent_at).toDateString() === new Date().toDateString()).length;
+  const igQueuedIds = igQueue.filter((q) => q.status === 'queued').map((q) => q.id);
+  const igAllQueuedSelected = igQueuedIds.length > 0 && igQueuedIds.every((id) => igSelectedIds.has(id));
+
   const liQueuedCount = liQueue.filter((q) => q.status === 'queued').length;
   // Aucune limite technique n'est imposée (l'envoi reste un geste manuel de
   // ta part sur LinkedIn, jamais automatisé) — ce compteur est juste un
@@ -765,7 +1051,9 @@ function ProspectingContent() {
         <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
           {mode === 'email'
             ? 'Ajoute un email à la file, puis envoie-les par lots depuis churnly.pro@gmail.com — avec une pause entre chaque envoi pour rester crédible.'
-            : 'Ajoute des profils LinkedIn avec leur message déjà rédigé. LinkedIn n\'a pas d\'API d\'envoi comme Gmail : cliquer sur un contact ouvre son profil et copie le message pour toi — il ne reste qu\'à coller et cliquer envoyer sur LinkedIn.'}
+            : mode === 'linkedin'
+            ? 'Ajoute des profils LinkedIn avec leur message déjà rédigé. LinkedIn n\'a pas d\'API d\'envoi comme Gmail : cliquer sur un contact ouvre son profil et copie le message pour toi — il ne reste qu\'à coller et cliquer envoyer sur LinkedIn.'
+            : 'Ajoute des profils Instagram avec leur message déjà rédigé. Instagram n\'a pas non plus d\'API d\'envoi comme Gmail : cliquer sur un contact ouvre son profil et copie le message pour toi — il ne reste qu\'à coller et envoyer en DM.'}
         </p>
 
         <div className="mb-8 inline-flex rounded-full border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-900">
@@ -780,6 +1068,12 @@ function ProspectingContent() {
             className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${mode === 'linkedin' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
           >
             <Linkedin className="h-4 w-4" /> LinkedIn
+          </button>
+          <button
+            onClick={() => setMode('instagram')}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${mode === 'instagram' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          >
+            <Instagram className="h-4 w-4" /> Instagram
           </button>
         </div>
 
@@ -1398,6 +1692,273 @@ message:
                                 </button>
                                 <button
                                   onClick={() => handleRemoveLinkedIn(entry.id)}
+                                  className="text-slate-300 transition hover:text-red-500 dark:text-slate-600"
+                                  aria-label="Retirer"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            </>
+            )}
+
+            {mode === 'instagram' && (
+            <>
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Importer des fichiers (extraction automatique)</h2>
+              <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+                Dépose un ou plusieurs fichiers (.xlsx, .csv, .txt, .md) contenant tes prospects Instagram — Churnly extrait automatiquement le nom, le lien de profil et le message déjà rédigé pour chacun (le message n&apos;est jamais généré ni modifié, recopié tel quel). Aucun profil déjà présent dans la file (ou déjà contacté) n&apos;est ajouté en double.
+              </p>
+              <label className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-6 py-8 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-brand-700">
+                <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">
+                  {igFileImporting ? 'Extraction en cours…' : 'Choisir des fichiers'}
+                </span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">.xlsx, .csv, .txt, .md — plusieurs fichiers à la fois possibles</span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".xlsx,.xls,.csv,.txt,.md"
+                  className="hidden"
+                  onChange={handleInstagramFileImport}
+                  disabled={igFileImporting}
+                />
+              </label>
+              {igFileImporting && (
+                <p className="mt-3 animate-pulse text-xs text-slate-400 dark:text-slate-500">
+                  Peut prendre quelques minutes pour beaucoup de contacts — ne quitte pas la page.
+                </p>
+              )}
+              {igFileImportError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{igFileImportError}</p>}
+              {igFileImportResult && <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">{igFileImportResult}</p>}
+            </div>
+
+            <form onSubmit={handleAddInstagram} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-4 text-sm font-semibold text-slate-900 dark:text-white">Ajouter un contact à la file (manuel)</h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <input
+                  type="text"
+                  placeholder="Nom du contact"
+                  required
+                  value={igContactName}
+                  onChange={(e) => setIgContactName(e.target.value)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+                <input
+                  type="url"
+                  placeholder="Lien du profil Instagram"
+                  required
+                  value={igInstagramUrl}
+                  onChange={(e) => setIgInstagramUrl(e.target.value)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+              </div>
+              <textarea
+                placeholder="Message déjà rédigé"
+                required
+                rows={6}
+                value={igMessage}
+                onChange={(e) => setIgMessage(e.target.value)}
+                className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+              {igAddError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{igAddError}</p>}
+              <button
+                type="submit"
+                disabled={igAdding}
+                className="mt-4 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+              >
+                {igAdding ? 'Ajout…' : 'Ajouter à la file'}
+              </button>
+            </form>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Import en masse (texte déjà rédigé)</h2>
+              <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                Colle plusieurs contacts d&apos;un coup, un bloc par contact séparé par une ligne <code className="rounded bg-slate-100 px-1 py-0.5 dark:bg-slate-800">---</code> :
+              </p>
+              <pre className="mb-3 overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400">{`name: Alex Martin
+url: https://www.instagram.com/alexmartin
+message:
+Salut Alex !
+...
+L'équipe Churnly
+---
+name: ...
+url: ...
+message:
+...`}</pre>
+              <textarea
+                placeholder="Colle ici tes blocs de contacts…"
+                rows={8}
+                value={igBulkText}
+                onChange={(e) => setIgBulkText(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-mono text-xs text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+              {igBulkError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{igBulkError}</p>}
+              {igBulkResult && <p className="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">{igBulkResult}</p>}
+              <button
+                onClick={handleBulkAddInstagram}
+                disabled={igBulkAdding || !igBulkText.trim()}
+                className="mt-3 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+              >
+                {igBulkAdding ? 'Import…' : 'Importer en masse'}
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/40 dark:bg-amber-500/10">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">Garde un rythme raisonnable</h2>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-slate-900 dark:text-amber-300">
+                  {igSentTodayCount} envoyé{igSentTodayCount > 1 ? 's' : ''} aujourd&apos;hui
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-amber-800 dark:text-amber-300/90">
+                Chaque envoi reste un geste manuel de ta part sur Instagram — Churnly n&apos;automatise rien. Le vrai risque, c&apos;est ton propre rythme sur un compte personnel : vise 10 à 15 DM par jour maximum, étalés dans la journée plutôt qu&apos;enchaînés d&apos;un coup, et engage (like/commentaire) avant chaque DM plutôt que d&apos;envoyer à froid.
+              </p>
+            </div>
+
+            {igSelectedIds.size > 0 && (
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {igSelectedIds.size} contact{igSelectedIds.size > 1 ? 's' : ''} sélectionné{igSelectedIds.size > 1 ? 's' : ''}
+                  </p>
+                  <button
+                    onClick={handleDeleteSelectedInstagram}
+                    disabled={igDeletingSelection}
+                    className="flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {igDeletingSelection ? 'Suppression…' : `Supprimer la sélection (${igSelectedIds.size})`}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  File d&apos;attente <span className="text-slate-400 dark:text-slate-500">({igQueuedCount} à envoyer)</span>
+                </h2>
+                {igQueuedIds.length > 0 && (
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={igAllQueuedSelected}
+                      onChange={toggleSelectAllInstagram}
+                      className="h-3.5 w-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-400 dark:border-slate-600"
+                    />
+                    Tout sélectionner
+                  </label>
+                )}
+              </div>
+              {igQueue.length === 0 ? (
+                <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">Aucun contact pour l&apos;instant.</p>
+              ) : (
+                <div className="divide-y divide-slate-50 dark:divide-slate-800">
+                  {igQueue.map((entry) => {
+                    const isEditing = igEditingId === entry.id;
+                    return (
+                      <div key={entry.id} className="px-6 py-3.5">
+                        {isEditing ? (
+                          <div className="space-y-2.5">
+                            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                              <input
+                                type="text"
+                                placeholder="Nom du contact"
+                                value={igEditName}
+                                onChange={(e) => setIgEditName(e.target.value)}
+                                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                              />
+                              <input
+                                type="url"
+                                placeholder="Lien du profil Instagram"
+                                value={igEditUrl}
+                                onChange={(e) => setIgEditUrl(e.target.value)}
+                                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                              />
+                            </div>
+                            <textarea
+                              rows={5}
+                              placeholder="Message"
+                              value={igEditMessage}
+                              onChange={(e) => setIgEditMessage(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            />
+                            {igEditError && <p className="text-sm text-red-600 dark:text-red-400">{igEditError}</p>}
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleSaveEditInstagram(entry.id)}
+                                disabled={igEditSaving}
+                                className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                              >
+                                {igEditSaving ? 'Enregistrement…' : 'Enregistrer'}
+                              </button>
+                              <button
+                                onClick={cancelEditInstagram}
+                                disabled={igEditSaving}
+                                className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-4">
+                            {entry.status === 'queued' && (
+                              <input
+                                type="checkbox"
+                                checked={igSelectedIds.has(entry.id)}
+                                onChange={() => toggleSelectInstagram(entry.id)}
+                                className="h-3.5 w-3.5 flex-shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-400 dark:border-slate-600"
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
+                                {entry.contact_name}
+                              </p>
+                              <p className="truncate text-xs text-slate-400 dark:text-slate-500">
+                                {entry.instagram_url}
+                              </p>
+                            </div>
+                            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${IG_STATUS_STYLES[entry.status]}`}>
+                              {entry.status === 'sent' && <CheckCircle2 className="h-3 w-3" />}
+                              {entry.status === 'queued' && <Clock className="h-3 w-3" />}
+                              {IG_STATUS_LABELS[entry.status]}
+                            </span>
+                            {entry.status === 'queued' && (
+                              <div className="flex flex-shrink-0 items-center gap-3">
+                                <button
+                                  onClick={() => handleCopyInstagramMessage(entry)}
+                                  className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                >
+                                  {igCopiedId === entry.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                  {igCopiedId === entry.id ? 'Copié' : 'Copier le message'}
+                                </button>
+                                <button
+                                  onClick={() => handleSendInstagram(entry)}
+                                  disabled={igSendingId === entry.id}
+                                  className="flex items-center gap-1.5 rounded-full bg-brand-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  {igSendingId === entry.id ? 'Ouverture…' : 'Ouvrir le profil'}
+                                </button>
+                                <button
+                                  onClick={() => startEditInstagram(entry)}
+                                  className="text-slate-300 transition hover:text-brand-500 dark:text-slate-600"
+                                  aria-label="Modifier"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleRemoveInstagram(entry.id)}
                                   className="text-slate-300 transition hover:text-red-500 dark:text-slate-600"
                                   aria-label="Retirer"
                                 >
