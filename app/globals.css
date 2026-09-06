@@ -128,3 +128,35 @@ canvas {
   outline: 2px solid #d97706;
   outline-offset: 2px;
 }
+
+/* Bascule clair/sombre : sur les navigateurs qui supportent la View
+   Transitions API (voir ThemeToggle.tsx), le changement se joue comme un
+   cercle qui s'ouvre depuis le centre de l'écran, sur deux captures figées
+   de la page — un fondu par élément (transition ci-dessus, 450ms sur des
+   dizaines de nœuds) plus le rendu WebGL continu de la hero 3D en même
+   temps était la cause du ralentissement visible. Ici, rien de ça ne tourne
+   pendant l'animation : seules deux images statiques sont découpées par un
+   clip-path, un travail purement GPU. Navigateurs sans support : bascule
+   instantanée, sans effet, jamais cassée. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: none;
+  }
+
+  ::view-transition-new(root) {
+    animation: theme-reveal 550ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0% at 50% 50%);
+  }
+  to {
+    /* 75% suffit largement à couvrir tout le viewport depuis son centre
+       (la distance centre→coin ne dépasse jamais ~71% de la référence
+       utilisée par clip-path pour un pourcentage) — marge de sécurité
+       incluse. */
+    clip-path: circle(75% at 50% 50%);
+  }
+}
