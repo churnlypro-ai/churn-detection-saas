@@ -242,6 +242,55 @@ export default function PricingPage() {
       <main className="px-6 pb-16">
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.plans.performance.name}</p>
+            {hasInteracted ? (
+              <motion.p
+                key={`performance-${performancePrice}`}
+                initial={{ scale: 0.92, opacity: 0.6 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="mt-3 text-5xl font-extrabold text-slate-900 dark:text-white"
+              >
+                {formatEuro(performancePrice)}
+                <span className="text-xl font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
+              </motion.p>
+            ) : (
+              <p className="mt-3 text-2xl font-semibold text-slate-400 dark:text-slate-500">{t.revealHint}</p>
+            )}
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.plans.performance.tagline}</p>
+
+            <ul className="mt-6 space-y-2 text-left text-sm text-slate-600 dark:text-slate-400">
+              {t.plans.performance.bullets.map((b) => (
+                <li key={b} className="flex items-start gap-2">
+                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
+                  {b}
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-6 text-xs text-slate-400 dark:text-slate-500">{t.plans.disclosure}</p>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleSubscribe('performance')}
+              disabled={checkoutLoading}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+            >
+              {checkoutLoading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  {t.redirecting}
+                </>
+              ) : user ? (
+                t.subscribeNow
+              ) : (
+                t.createAccount
+              )}
+            </motion.button>
+          </div>
+
+          <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.plans.standard.name}</p>
             {hasInteracted ? (
               <motion.p
@@ -281,55 +330,6 @@ export default function PricingPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleSubscribe('revenue_tier')}
-              disabled={checkoutLoading}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-            >
-              {checkoutLoading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  {t.redirecting}
-                </>
-              ) : user ? (
-                t.subscribeNow
-              ) : (
-                t.createAccount
-              )}
-            </motion.button>
-          </div>
-
-          <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.plans.performance.name}</p>
-            {hasInteracted ? (
-              <motion.p
-                key={`performance-${performancePrice}`}
-                initial={{ scale: 0.92, opacity: 0.6 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="mt-3 text-5xl font-extrabold text-slate-900 dark:text-white"
-              >
-                {formatEuro(performancePrice)}
-                <span className="text-xl font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
-              </motion.p>
-            ) : (
-              <p className="mt-3 text-2xl font-semibold text-slate-400 dark:text-slate-500">{t.revealHint}</p>
-            )}
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.plans.performance.tagline}</p>
-
-            <ul className="mt-6 space-y-2 text-left text-sm text-slate-600 dark:text-slate-400">
-              {t.plans.performance.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
-                  {b}
-                </li>
-              ))}
-            </ul>
-
-            <p className="mt-6 text-xs text-slate-400 dark:text-slate-500">{t.plans.disclosure}</p>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleSubscribe('performance')}
               disabled={checkoutLoading}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
             >
