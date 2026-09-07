@@ -19,6 +19,14 @@ async function requireAdmin(req: NextRequest) {
 // raisonnement (sinon "notinstagram.com/x" passerait la vérification).
 const INSTAGRAM_URL_PATTERN = /^https?:\/\/(www\.)?instagram\.com\/[a-zA-Z0-9_.]+\/?(\?.*)?$/i;
 
+// Même normalisation que import-file/route.ts (enlève query string et
+// slash final) — un ajout manuel ou un collage en masse répété du même
+// bloc ne créait auparavant aucune erreur, juste un doublon silencieux
+// dans la file.
+function normalizeInstagramUrl(url: string): string {
+  return url.trim().toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -58,6 +66,22 @@ export async function POST(req: NextRequest) {
   }
   if (typeof message !== 'string' || !message.trim()) {
     return NextResponse.json({ error: 'Message requis.' }, { status: 400 });
+  }
+
+  const normalizedUrl = normalizeInstagramUrl(instagramUrl);
+  const { data: existing, error: existingError } = await auth.supabaseAdmin
+    .from('instagram_prospecting')
+    .select('instagram_url');
+  if (existingError) {
+    console.error('[prospecting/instagram] existing lookup failed', existingError);
+    return NextResponse.json(
+      { error: isMissingTableError(existingError) ? missingTableMessage(MIGRATION_FILE) : 'Vérification des doublons échouée.' },
+      { status: 500 },
+    );
+  }
+  const alreadyQueued = (existing ?? []).some((e) => normalizeInstagramUrl(e.instagram_url) === normalizedUrl);
+  if (alreadyQueued) {
+    return NextResponse.json({ error: 'Ce profil est déjà dans la file (ou a déjà été contacté).' }, { status: 409 });
   }
 
   const { error } = await auth.supabaseAdmin.from('instagram_prospecting').insert({
