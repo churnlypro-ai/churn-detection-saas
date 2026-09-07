@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { analyzeChurnRisk, type AnalysisLanguage, type ModelTier } from '@/lib/claude';
 import { triggerRiskWebhooks } from '@/lib/webhooks';
+import { CONTROL_GROUP_RATE } from '@/lib/pricing';
 
 function parseDateOrNull(value: unknown): string | null {
   if (!value || typeof value !== 'string') return null;
@@ -141,8 +142,9 @@ export async function runChurnAnalysis(
   // causé quoi que ce soit — une relance qui part juste avant que Stripe
   // réussisse son propre retry ne fait que précéder l'événement, pas le
   // causer (retour de Kevin). La seule mesure qui prouve un effet causal :
-  // un groupe témoin. Sur chaque NOUVEL épisode de risque, 5% des clients
-  // sont tirés au sort et volontairement pas relancés (voir la suppression
+  // un groupe témoin. Sur chaque NOUVEL épisode de risque, CONTROL_GROUP_RATE
+  // (voir lib/pricing.ts) des clients sont tirés au sort et volontairement
+  // pas relancés (voir la suppression
   // du brouillon de rétention pour ce groupe dans
   // app/api/retention-drafts/route.ts). Le taux de résolution spontanée du
   // témoin sert de référence pour mesurer l'incrément réel du groupe traité
@@ -170,7 +172,7 @@ export async function runChurnAnalysis(
       .map((row) => ({
         user_id: userId,
         client_name: row.client_name,
-        sample_group: Math.random() < 0.05 ? 'control' : 'treatment',
+        sample_group: Math.random() < CONTROL_GROUP_RATE ? 'control' : 'treatment',
         revenue_monthly: row.revenue_monthly,
       }));
 

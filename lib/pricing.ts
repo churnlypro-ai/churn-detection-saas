@@ -65,6 +65,17 @@ export function calcPerformanceBaseFee(revenue: number): number {
 // groupe témoin), jamais sur le socle lui-même.
 export const PERFORMANCE_FEE_RATE = 0.2;
 
+// Part des clients à risque volontairement pas relancés chaque mois pour
+// servir de référence (voir lib/analysis.ts) — baissé de 5% à 3% : à ce
+// niveau, la mesure reste utilisable pour un compte avec un volume correct
+// de clients à risque par mois, tout en laissant de côté moins de clients
+// qu'avant. Pour un compte avec très peu de clients à risque (quelques
+// dizaines par mois), même 3% donne un groupe témoin trop petit pour être
+// vraiment fiable statistiquement — ce n'est pas quelque chose qu'un
+// pourcentage seul peut résoudre, propre aux petits comptes plutôt qu'à ce
+// réglage précis.
+export const CONTROL_GROUP_RATE = 0.03;
+
 // Taux de churn moyen utilisé uniquement à titre d'illustration sur les
 // pages publiques (calculateur pré-inscription) pour donner un ordre de
 // grandeur de perte potentielle — jamais présenté comme le vrai chiffre

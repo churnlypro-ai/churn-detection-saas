@@ -665,6 +665,7 @@ export default function Dashboard() {
   const [outcomes, setOutcomes] = useState<Map<string, OutcomeRow>>(new Map());
   const [markingClientName, setMarkingClientName] = useState<string | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showSettingsBlockedToast, setShowSettingsBlockedToast] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
@@ -819,6 +820,15 @@ export default function Dashboard() {
       setLoading(false);
 
       const params = new URLSearchParams(window.location.search);
+      // Voir la note dans app/settings/page.tsx : un membre d'équipe qui
+      // clique "Réglages" est redirigé ici plutôt que de voir une page
+      // partiellement utilisable — sans ce toast, le clic semblait ne rien
+      // faire.
+      if (params.get('settingsBlocked') === '1') {
+        setShowSettingsBlockedToast(true);
+        setTimeout(() => setShowSettingsBlockedToast(false), 5000);
+        window.history.replaceState({}, '', '/dashboard');
+      }
       if (params.get('checkout') === 'success') {
         setShowSuccessToast(true);
         setTimeout(() => setShowSuccessToast(false), 5000);
@@ -1041,6 +1051,20 @@ export default function Dashboard() {
               className="fixed left-1/2 top-6 z-50 flex -translate-x-1/2 items-center gap-2.5 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg"
             >
               <Check className="h-4 w-4" /> {t.toast.paymentSuccess}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showSettingsBlockedToast && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.4, ease: EASE_OUT }}
+              className="fixed left-1/2 top-6 z-50 flex -translate-x-1/2 items-center gap-2.5 rounded-full bg-slate-800 px-6 py-3 text-sm font-semibold text-white shadow-lg dark:bg-slate-700"
+            >
+              <Info className="h-4 w-4" /> {t.toast.settingsBlocked}
             </motion.div>
           )}
         </AnimatePresence>

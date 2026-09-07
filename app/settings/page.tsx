@@ -217,7 +217,11 @@ export default function Settings() {
       // renvoyé directement vers /dashboard plutôt que de voir une page
       // /settings partiellement utilisable pour lui.
       const resolvedAccountId = await resolveAccountIdClient(supabase, data.user.id);
-      if (resolvedAccountId !== data.user.id) { router.replace('/dashboard'); return; }
+      // Un membre d'équipe atterrissait ici silencieusement renvoyé vers le
+      // dashboard, sans jamais savoir pourquoi son clic sur "Réglages" n'avait
+      // "rien fait" — le paramètre déclenche un toast explicatif côté
+      // dashboard (voir la même mécanique que ?checkout=success).
+      if (resolvedAccountId !== data.user.id) { router.replace('/dashboard?settingsBlocked=1'); return; }
       setUser(data.user);
       const { data: profileData } = await supabase
         .from('users')
