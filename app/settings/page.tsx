@@ -136,6 +136,18 @@ export default function Settings() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'disconnecting'>('idle');
   const [stripeMessage, setStripeMessage] = useState('');
+  // Paddle et Lemon Squeezy n'ont pas d'OAuth tiers (voir lib/paddleConnect.ts
+  // et lib/lemonSqueezyConnect.ts) — 'entering' remplace la redirection
+  // Stripe par un petit formulaire inline où coller la clé API.
+  const [paddleConnected, setPaddleConnected] = useState(false);
+  const [paddleStatus, setPaddleStatus] = useState<'idle' | 'entering' | 'connecting' | 'disconnecting'>('idle');
+  const [paddleMessage, setPaddleMessage] = useState('');
+  const [paddleApiKey, setPaddleApiKey] = useState('');
+  const [paddleEnvironment, setPaddleEnvironment] = useState<'production' | 'sandbox'>('production');
+  const [lsConnected, setLsConnected] = useState(false);
+  const [lsStatus, setLsStatus] = useState<'idle' | 'entering' | 'connecting' | 'disconnecting'>('idle');
+  const [lsMessage, setLsMessage] = useState('');
+  const [lsApiKey, setLsApiKey] = useState('');
   const [analysisFrequency, setAnalysisFrequency] = useState('daily');
   const [analysisFrequencyStatus, setAnalysisFrequencyStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const analysisFrequencyRequestId = useRef(0);
@@ -222,6 +234,24 @@ export default function Settings() {
       setStripeConnected(!!p?.stripe_connect_account_id);
       setAnalysisFrequency(p?.analysis_frequency ?? 'daily');
       setLoading(false);
+
+      // paddle_connection / lemonsqueezy_connection n'ont aucune policy RLS
+      // (service-role uniquement) — statut lu via une route dédiée plutôt
+      // qu'une requête Supabase directe, voir /api/paddle/connect/status.
+      {
+        const { data: sessionDataForConnections } = await supabase.auth.getSession();
+        const connectionsToken = sessionDataForConnections?.session?.access_token;
+        if (connectionsToken) {
+          fetch('/api/paddle/connect/status', { headers: { Authorization: `Bearer ${connectionsToken}` } })
+            .then((r) => r.json())
+            .then((body) => setPaddleConnected(!!body.connected))
+            .catch(() => {});
+          fetch('/api/lemonsqueezy/connect/status', { headers: { Authorization: `Bearer ${connectionsToken}` } })
+            .then((r) => r.json())
+            .then((body) => setLsConnected(!!body.connected))
+            .catch(() => {});
+        }
+      }
 
       {
         // Toujours appelé, même hors mode performance — sans effet pour un
@@ -575,6 +605,90 @@ export default function Settings() {
     }
   }
 
+  async function handleSubmitPaddle() {
+    setPaddleStatus('connecting');
+    setPaddleMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/paddle/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ apiKey: paddleApiKey, environment: paddleEnvironment }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || t.paddleConnectError);
+      setPaddleConnected(true);
+      setPaddleApiKey('');
+      setPaddleStatus('idle');
+    } catch (err) {
+      setPaddleStatus('entering');
+      setPaddleMessage(err instanceof Error ? err.message : t.paddleConnectError);
+    }
+  }
+
+  async function handleDisconnectPaddle() {
+    setPaddleStatus('disconnecting');
+    setPaddleMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/paddle/connect/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t.paddleDisconnectError);
+      setPaddleConnected(false);
+      setPaddleMessage(t.paddleDisconnected);
+    } catch (err) {
+      setPaddleMessage(err instanceof Error ? err.message : t.paddleDisconnectError);
+    } finally {
+      setPaddleStatus('idle');
+    }
+  }
+
+  async function handleSubmitLemonSqueezy() {
+    setLsStatus('connecting');
+    setLsMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/lemonsqueezy/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ apiKey: lsApiKey }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || t.lemonSqueezyConnectError);
+      setLsConnected(true);
+      setLsApiKey('');
+      setLsStatus('idle');
+    } catch (err) {
+      setLsStatus('entering');
+      setLsMessage(err instanceof Error ? err.message : t.lemonSqueezyConnectError);
+    }
+  }
+
+  async function handleDisconnectLemonSqueezy() {
+    setLsStatus('disconnecting');
+    setLsMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/lemonsqueezy/connect/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t.lemonSqueezyDisconnectError);
+      setLsConnected(false);
+      setLsMessage(t.lemonSqueezyDisconnected);
+    } catch (err) {
+      setLsMessage(err instanceof Error ? err.message : t.lemonSqueezyDisconnectError);
+    } finally {
+      setLsStatus('idle');
+    }
+  }
+
   async function handleAnalysisFrequencyChange(value: string) {
     if (!user) return;
     const previous = analysisFrequency;
@@ -804,6 +918,139 @@ export default function Settings() {
                 {!stripeConnected && (
                   <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t.analysisFrequency.csvNote}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.paddleConnectTitle}</h3>
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.paddleConnectDescription}</p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className={`flex items-center gap-1.5 text-xs font-semibold ${paddleConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {paddleConnected ? t.paddleConnectedLabel : t.paddleNotConnectedLabel}
+                  </span>
+                  {paddleConnected ? (
+                    <button
+                      onClick={handleDisconnectPaddle}
+                      disabled={paddleStatus === 'disconnecting'}
+                      className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      {paddleStatus === 'disconnecting' ? t.paddleDisconnecting : t.paddleDisconnectButton}
+                    </button>
+                  ) : paddleStatus !== 'entering' && paddleStatus !== 'connecting' ? (
+                    <button
+                      onClick={() => setPaddleStatus('entering')}
+                      className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                    >
+                      {t.paddleConnectButton}
+                    </button>
+                  ) : null}
+                </div>
+                {paddleMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{paddleMessage}</p>}
+                {(paddleStatus === 'entering' || paddleStatus === 'connecting') && (
+                  <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {t.paddleApiKeyLabel}
+                      <input
+                        type="password"
+                        value={paddleApiKey}
+                        onChange={(e) => setPaddleApiKey(e.target.value)}
+                        placeholder={t.paddleApiKeyPlaceholder}
+                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                      />
+                    </label>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {t.paddleEnvironmentLabel}
+                      <select
+                        value={paddleEnvironment}
+                        onChange={(e) => setPaddleEnvironment(e.target.value === 'sandbox' ? 'sandbox' : 'production')}
+                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                      >
+                        <option value="production">{t.paddleEnvironmentProduction}</option>
+                        <option value="sandbox">{t.paddleEnvironmentSandbox}</option>
+                      </select>
+                    </label>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setPaddleStatus('idle'); setPaddleMessage(''); setPaddleApiKey(''); }}
+                        className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      >
+                        {t.paddleCancel}
+                      </button>
+                      <button
+                        onClick={handleSubmitPaddle}
+                        disabled={!paddleApiKey || paddleStatus === 'connecting'}
+                        className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                      >
+                        {paddleStatus === 'connecting' ? t.paddleConnecting : t.paddleSubmit}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.lemonSqueezyConnectTitle}</h3>
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.lemonSqueezyConnectDescription}</p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className={`flex items-center gap-1.5 text-xs font-semibold ${lsConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {lsConnected ? t.lemonSqueezyConnectedLabel : t.lemonSqueezyNotConnectedLabel}
+                  </span>
+                  {lsConnected ? (
+                    <button
+                      onClick={handleDisconnectLemonSqueezy}
+                      disabled={lsStatus === 'disconnecting'}
+                      className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      {lsStatus === 'disconnecting' ? t.lemonSqueezyDisconnecting : t.lemonSqueezyDisconnectButton}
+                    </button>
+                  ) : lsStatus !== 'entering' && lsStatus !== 'connecting' ? (
+                    <button
+                      onClick={() => setLsStatus('entering')}
+                      className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                    >
+                      {t.lemonSqueezyConnectButton}
+                    </button>
+                  ) : null}
+                </div>
+                {lsMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{lsMessage}</p>}
+                {(lsStatus === 'entering' || lsStatus === 'connecting') && (
+                  <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {t.lemonSqueezyApiKeyLabel}
+                      <input
+                        type="password"
+                        value={lsApiKey}
+                        onChange={(e) => setLsApiKey(e.target.value)}
+                        placeholder={t.lemonSqueezyApiKeyPlaceholder}
+                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                      />
+                    </label>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setLsStatus('idle'); setLsMessage(''); setLsApiKey(''); }}
+                        className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      >
+                        {t.lemonSqueezyCancel}
+                      </button>
+                      <button
+                        onClick={handleSubmitLemonSqueezy}
+                        disabled={!lsApiKey || lsStatus === 'connecting'}
+                        className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                      >
+                        {lsStatus === 'connecting' ? t.lemonSqueezyConnecting : t.lemonSqueezySubmit}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

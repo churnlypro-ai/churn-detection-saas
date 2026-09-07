@@ -31,6 +31,21 @@ function UploadContent() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<'idle' | 'connecting' | 'importing' | 'error'>('idle');
   const [stripeMessage, setStripeMessage] = useState('');
+
+  // Paddle et Lemon Squeezy n'ont pas d'OAuth tiers (voir lib/paddleConnect.ts
+  // et lib/lemonSqueezyConnect.ts) — 'entering' remplace le redirect Stripe
+  // par un petit formulaire inline où coller la clé API.
+  const [paddleConnected, setPaddleConnected] = useState(false);
+  const [paddleStatus, setPaddleStatus] = useState<'idle' | 'entering' | 'connecting' | 'importing' | 'error'>('idle');
+  const [paddleMessage, setPaddleMessage] = useState('');
+  const [paddleApiKey, setPaddleApiKey] = useState('');
+  const [paddleEnvironment, setPaddleEnvironment] = useState<'production' | 'sandbox'>('production');
+
+  const [lsConnected, setLsConnected] = useState(false);
+  const [lsStatus, setLsStatus] = useState<'idle' | 'entering' | 'connecting' | 'importing' | 'error'>('idle');
+  const [lsMessage, setLsMessage] = useState('');
+  const [lsApiKey, setLsApiKey] = useState('');
+
   const t = useTranslations('upload');
   const { language } = useLanguage();
 
@@ -51,6 +66,24 @@ function UploadContent() {
           setCompanyName(profile?.company_name || '');
           setStripeConnected(!!profile?.stripe_connect_account_id);
         });
+
+      // paddle_connection / lemonsqueezy_connection n'ont aucune policy RLS
+      // (service-role uniquement, voir la migration 20260907020000) — ce
+      // sont de vrais secrets chiffrés, jamais lus directement par le
+      // client, donc une route dédiée plutôt qu'une requête Supabase
+      // directe (même raison que /api/gmail/status).
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (token) {
+        fetch('/api/paddle/connect/status', { headers: { Authorization: `Bearer ${token}` } })
+          .then((r) => r.json())
+          .then((body) => setPaddleConnected(!!body.connected))
+          .catch(() => {});
+        fetch('/api/lemonsqueezy/connect/status', { headers: { Authorization: `Bearer ${token}` } })
+          .then((r) => r.json())
+          .then((body) => setLsConnected(!!body.connected))
+          .catch(() => {});
+      }
     });
   }, [router]);
 
@@ -216,6 +249,109 @@ function UploadContent() {
     }
   }
 
+  // Pas d'OAuth chez Paddle ni Lemon Squeezy (voir lib/paddleConnect.ts) —
+  // 'entering' ouvre juste le petit formulaire de clé API, la connexion
+  // elle-même se fait en un POST direct plutôt qu'une redirection.
+  async function handleSubmitPaddle() {
+    setPaddleStatus('connecting');
+    setPaddleMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/paddle/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ apiKey: paddleApiKey, environment: paddleEnvironment }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || t.stripeError);
+      setPaddleConnected(true);
+      setPaddleApiKey('');
+      await handleImportFromPaddle();
+    } catch (err) {
+      setPaddleStatus('error');
+      setPaddleMessage(err instanceof Error ? err.message : t.stripeError);
+    }
+  }
+
+  async function handleImportFromPaddle() {
+    setPaddleStatus('importing');
+    setPaddleMessage('');
+    setSubscriptionRequired(false);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/paddle/connect/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ language }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        if (response.status === 402) {
+          setSubscriptionRequired(true);
+          throw new Error(t.errors.subscriptionRequired);
+        }
+        throw new Error(body.error || t.errors.paddleImportFailed);
+      }
+      const result = await response.json();
+      router.push(`/preview?uploadId=${result.uploadId}`);
+    } catch (err) {
+      setPaddleStatus('error');
+      setPaddleMessage(err instanceof Error ? err.message : t.errors.paddleImportFailed);
+    }
+  }
+
+  async function handleSubmitLemonSqueezy() {
+    setLsStatus('connecting');
+    setLsMessage('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/lemonsqueezy/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ apiKey: lsApiKey }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || t.stripeError);
+      setLsConnected(true);
+      setLsApiKey('');
+      await handleImportFromLemonSqueezy();
+    } catch (err) {
+      setLsStatus('error');
+      setLsMessage(err instanceof Error ? err.message : t.stripeError);
+    }
+  }
+
+  async function handleImportFromLemonSqueezy() {
+    setLsStatus('importing');
+    setLsMessage('');
+    setSubscriptionRequired(false);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const response = await fetch('/api/lemonsqueezy/connect/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ language }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        if (response.status === 402) {
+          setSubscriptionRequired(true);
+          throw new Error(t.errors.subscriptionRequired);
+        }
+        throw new Error(body.error || t.errors.lemonSqueezyImportFailed);
+      }
+      const result = await response.json();
+      router.push(`/preview?uploadId=${result.uploadId}`);
+    } catch (err) {
+      setLsStatus('error');
+      setLsMessage(err instanceof Error ? err.message : t.errors.lemonSqueezyImportFailed);
+    }
+  }
+
   if (!user) return null;
 
   return (
@@ -286,22 +422,139 @@ function UploadContent() {
           <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
         </div>
 
-        <button
-          type="button"
-          onClick={stripeConnected ? handleImportFromStripe : handleConnectStripe}
-          disabled={stripeStatus === 'connecting' || stripeStatus === 'importing'}
-          className="mt-6 rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-400"
-        >
-          {stripeStatus === 'connecting'
-            ? t.connectingStripe
-            : stripeStatus === 'importing'
-            ? t.importingStripe
-            : stripeConnected
-            ? t.importFromStripe
-            : t.connectStripe}
-        </button>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={stripeConnected ? handleImportFromStripe : handleConnectStripe}
+            disabled={stripeStatus === 'connecting' || stripeStatus === 'importing'}
+            className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-400"
+          >
+            {stripeStatus === 'connecting'
+              ? t.connectingStripe
+              : stripeStatus === 'importing'
+              ? t.importingStripe
+              : stripeConnected
+              ? t.importFromStripe
+              : t.connectStripe}
+          </button>
+
+          {paddleStatus !== 'entering' && (
+            <button
+              type="button"
+              onClick={paddleConnected ? handleImportFromPaddle : () => setPaddleStatus('entering')}
+              disabled={paddleStatus === 'connecting' || paddleStatus === 'importing'}
+              className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-400"
+            >
+              {paddleStatus === 'connecting'
+                ? t.connectingPaddle
+                : paddleStatus === 'importing'
+                ? t.importingPaddle
+                : paddleConnected
+                ? t.importFromPaddle
+                : t.connectPaddle}
+            </button>
+          )}
+
+          {lsStatus !== 'entering' && (
+            <button
+              type="button"
+              onClick={lsConnected ? handleImportFromLemonSqueezy : () => setLsStatus('entering')}
+              disabled={lsStatus === 'connecting' || lsStatus === 'importing'}
+              className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-400"
+            >
+              {lsStatus === 'connecting'
+                ? t.connectingLemonSqueezy
+                : lsStatus === 'importing'
+                ? t.importingLemonSqueezy
+                : lsConnected
+                ? t.importFromLemonSqueezy
+                : t.connectLemonSqueezy}
+            </button>
+          )}
+        </div>
         {stripeMessage && !subscriptionRequired && (
           <p className="mt-3 text-sm text-red-600 dark:text-red-400">{stripeMessage}</p>
+        )}
+        {paddleMessage && !subscriptionRequired && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400">{paddleMessage}</p>
+        )}
+        {lsMessage && !subscriptionRequired && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400">{lsMessage}</p>
+        )}
+
+        {paddleStatus === 'entering' && (
+          <div className="mt-4 flex w-full flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 text-left dark:border-slate-700 dark:bg-slate-900/60">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+              {t.paddleApiKeyLabel}
+              <input
+                type="password"
+                value={paddleApiKey}
+                onChange={(e) => setPaddleApiKey(e.target.value)}
+                placeholder={t.paddleApiKeyPlaceholder}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+            </label>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+              {t.paddleEnvironmentLabel}
+              <select
+                value={paddleEnvironment}
+                onChange={(e) => setPaddleEnvironment(e.target.value === 'sandbox' ? 'sandbox' : 'production')}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              >
+                <option value="production">{t.paddleEnvironmentProduction}</option>
+                <option value="sandbox">{t.paddleEnvironmentSandbox}</option>
+              </select>
+            </label>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setPaddleStatus('idle'); setPaddleMessage(''); setPaddleApiKey(''); }}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                {t.paddleCancel}
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitPaddle}
+                disabled={!paddleApiKey}
+                className="rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+              >
+                {t.paddleSubmit}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {lsStatus === 'entering' && (
+          <div className="mt-4 flex w-full flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 text-left dark:border-slate-700 dark:bg-slate-900/60">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+              {t.lemonSqueezyApiKeyLabel}
+              <input
+                type="password"
+                value={lsApiKey}
+                onChange={(e) => setLsApiKey(e.target.value)}
+                placeholder={t.lemonSqueezyApiKeyPlaceholder}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+            </label>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setLsStatus('idle'); setLsMessage(''); setLsApiKey(''); }}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                {t.lemonSqueezyCancel}
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitLemonSqueezy}
+                disabled={!lsApiKey}
+                className="rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+              >
+                {t.lemonSqueezySubmit}
+              </button>
+            </div>
+          </div>
         )}
       </main>
     </>

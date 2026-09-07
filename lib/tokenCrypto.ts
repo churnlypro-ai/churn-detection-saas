@@ -1,9 +1,12 @@
 import crypto from 'crypto';
 
-// AES-256-GCM, clé fixe depuis l'environnement — utilisé uniquement pour
-// stocker le refresh token Gmail admin en base (jamais en clair, voir la
-// migration 20260820000000). Pas d'usage plus large prévu : un seul secret
-// à protéger, pas la peine d'un vault dédié.
+// AES-256-GCM, clé fixe depuis l'environnement — générique malgré le nom de
+// la variable d'origine (GMAIL_TOKEN_ENCRYPTION_KEY, premier secret protégé
+// ainsi, voir la migration 20260820000000) : réutilisé tel quel pour les
+// clés API Paddle et Lemon Squeezy (voir 20260907020000) plutôt que
+// d'introduire une clé de chiffrement par intégration — un seul secret à
+// protéger dans l'environnement, pas la peine d'un vault dédié par
+// fournisseur.
 function getKey(): Buffer {
   // .trim() + guillemets retirés : un copier-coller depuis un terminal ou
   // un gestionnaire de mots de passe ajoute facilement un retour à la ligne
