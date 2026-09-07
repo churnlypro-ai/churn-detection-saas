@@ -680,7 +680,7 @@ export const en: Dictionary = {
     revenueAriaLabel: 'Monthly revenue in euros',
     helperText: 'That\'s the only number needed to calculate your price.',
     revealHint: '👆 Move the slider to see your price',
-    averageNoteBold: '📊 It\'s an average:',
+    averageNoteBold: 'It\'s an average:',
     averageNoteBody: 'this number is your average monthly revenue — no need to be exact, we adjust automatically at billing time. No need to know your churn rate either: Churnly calculates it for you once you\'re signed up.',
     calculateButton: 'Calculate my price',
     calculatingLabel: 'Calculating your price…',
