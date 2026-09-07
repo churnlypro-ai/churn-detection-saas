@@ -12,8 +12,8 @@ export function getStripe(): Stripe {
 }
 
 // calcPrice() (lib/pricing.ts) renvoie désormais un point parmi des dizaines
-// de valeurs possibles sur une échelle continue (60€, puis +100€ tous les
-// 2 000€ de CA, plafonné à 2 500€) — pré-créer un Stripe Price par valeur
+// de valeurs possibles sur une échelle continue (60€, puis +150€ tous les
+// 10 000€ de CA, plafonné à 2 500€) — pré-créer un Stripe Price par valeur
 // possible n'est plus praticable. Stripe accepte un prix calculé à la volée
 // via price_data à la place d'un Price existant, aussi bien en création
 // d'abonnement (checkout.sessions.create) qu'en mise à jour d'un item

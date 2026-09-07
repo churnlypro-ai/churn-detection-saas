@@ -677,6 +677,7 @@ export const fr = {
     step1Title: 'Quel est votre chiffre d\'affaires mensuel ?',
     revenueAriaLabel: 'Chiffre d\'affaires mensuel en euros',
     helperText: 'C\'est le seul chiffre nécessaire pour calculer votre prix.',
+    revealHint: '👆 Bougez le curseur pour voir votre tarif',
     averageNoteBold: '📊 C\'est une moyenne :',
     averageNoteBody: 'ce chiffre représente votre CA mensuel moyen — pas besoin d\'être précis, on ajuste automatiquement à la facturation. Pas besoin non plus de connaître votre taux de churn : Churnly le calcule pour vous une fois inscrit.',
     calculateButton: 'Calculer mon prix',

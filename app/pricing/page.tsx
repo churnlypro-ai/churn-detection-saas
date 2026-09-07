@@ -85,6 +85,12 @@ export default function PricingPage() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [monthlyRevenue, setMonthlyRevenue] = useState(50000);
+  // Le curseur démarre au milieu (50 000€) sans qu'aucun prix ne soit
+  // affiché : le tarif au plafond (2 500€) apparaissant tel quel dès le
+  // chargement de la page fait fuir avant même d'avoir touché le curseur.
+  // Le prix ne s'affiche qu'au premier geste du visiteur, quelle que soit
+  // la position où il atterrit — jamais avant.
+  const [hasInteracted, setHasInteracted] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const t = useTranslations('pricing');
@@ -190,7 +196,10 @@ export default function PricingPage() {
           max={SLIDER_MAX}
           step={1}
           value={revenueToSliderPos(monthlyRevenue)}
-          onChange={(e) => setMonthlyRevenue(sliderPosToRevenue(Number(e.target.value)))}
+          onChange={(e) => {
+            setMonthlyRevenue(sliderPosToRevenue(Number(e.target.value)));
+            setHasInteracted(true);
+          }}
           className="mt-8 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600 dark:bg-slate-700"
         />
 
@@ -211,7 +220,10 @@ export default function PricingPage() {
               max={2000000}
               step={5000}
               value={monthlyRevenue}
-              onChange={(e) => setMonthlyRevenue(Number(e.target.value) || 0)}
+              onChange={(e) => {
+                setMonthlyRevenue(Number(e.target.value) || 0);
+                setHasInteracted(true);
+              }}
               onBlur={(e) => setMonthlyRevenue(Math.max(1000, Math.min(2000000, Number(e.target.value) || 1000)))}
               className="w-24 bg-transparent text-right text-sm font-semibold text-slate-700 focus:outline-none dark:text-slate-200"
               aria-label={t.revenueAriaLabel}
@@ -231,16 +243,20 @@ export default function PricingPage() {
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.plans.standard.name}</p>
-            <motion.p
-              key={`standard-${standardPrice}`}
-              initial={{ scale: 0.92, opacity: 0.6 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              className="mt-3 text-5xl font-extrabold text-slate-900 dark:text-white"
-            >
-              {formatEuro(standardPrice)}
-              <span className="text-xl font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
-            </motion.p>
+            {hasInteracted ? (
+              <motion.p
+                key={`standard-${standardPrice}`}
+                initial={{ scale: 0.92, opacity: 0.6 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="mt-3 text-5xl font-extrabold text-slate-900 dark:text-white"
+              >
+                {formatEuro(standardPrice)}
+                <span className="text-xl font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
+              </motion.p>
+            ) : (
+              <p className="mt-3 text-2xl font-semibold text-slate-400 dark:text-slate-500">{t.revealHint}</p>
+            )}
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.plans.standard.tagline}</p>
 
             <ul className="mt-6 space-y-2 text-left text-sm text-slate-600 dark:text-slate-400">
@@ -252,12 +268,14 @@ export default function PricingPage() {
               ))}
             </ul>
 
-            <div className="mt-6 rounded-2xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-800/40 dark:bg-brand-500/10">
-              <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">
-                {t.annualOfferPrefix} {formatEuro(standardAnnualPerMonth)}{t.annualOfferSuffix}
-              </p>
-              <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">{t.annualOfferNote}</p>
-            </div>
+            {hasInteracted && (
+              <div className="mt-6 rounded-2xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-800/40 dark:bg-brand-500/10">
+                <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">
+                  {t.annualOfferPrefix} {formatEuro(standardAnnualPerMonth)}{t.annualOfferSuffix}
+                </p>
+                <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">{t.annualOfferNote}</p>
+              </div>
+            )}
 
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -281,16 +299,20 @@ export default function PricingPage() {
 
           <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.plans.performance.name}</p>
-            <motion.p
-              key={`performance-${performancePrice}`}
-              initial={{ scale: 0.92, opacity: 0.6 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              className="mt-3 text-5xl font-extrabold text-slate-900 dark:text-white"
-            >
-              {formatEuro(performancePrice)}
-              <span className="text-xl font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
-            </motion.p>
+            {hasInteracted ? (
+              <motion.p
+                key={`performance-${performancePrice}`}
+                initial={{ scale: 0.92, opacity: 0.6 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="mt-3 text-5xl font-extrabold text-slate-900 dark:text-white"
+              >
+                {formatEuro(performancePrice)}
+                <span className="text-xl font-medium text-slate-400 dark:text-slate-500">{t.perMonth}</span>
+              </motion.p>
+            ) : (
+              <p className="mt-3 text-2xl font-semibold text-slate-400 dark:text-slate-500">{t.revealHint}</p>
+            )}
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.plans.performance.tagline}</p>
 
             <ul className="mt-6 space-y-2 text-left text-sm text-slate-600 dark:text-slate-400">

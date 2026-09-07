@@ -26,19 +26,21 @@ export interface PricingResult {
 // importées — jamais demandé en amont.
 //
 // Échelle continue plutôt que quelques gros paliers espacés : 60€ sous
-// 2 000€ de CA, puis +100€ tous les 2 000€ de CA supplémentaires, jusqu'au
-// plafond de 2 500€/mois atteint exactement à 50 000€ de CA (100 + 100×24)
-// — au-delà, jamais plus cher, quel que soit le CA. 1 500€ tombe pile à
-// 30 000€ de CA en route vers ce plafond. Voir lib/stripe.ts
-// (priceDataForAmount) pour comment Stripe facture un montant calculé à
-// la volée sans qu'un Price existe pour chacun d'entre eux à l'avance.
-// Toujours affiché automatiquement, jamais de devis/démo manuelle : un
-// gros compte doit rester self-serve comme les autres, sinon on retombe
-// dans un tunnel de vente qu'on a justement voulu éviter partout ailleurs
-// sur le produit.
+// 2 000€ de CA, puis 100€ jusqu'à 12 000€, puis +150€ tous les 10 000€ de
+// CA supplémentaires (un palier tous les 10 000€, pas tous les 2 000€ —
+// la progression doit rester douce même pour un compte à plusieurs
+// dizaines de milliers d'euros de CA), jusqu'au plafond de 2 500€/mois
+// atteint à 162 000€ de CA (100 + 150×16) — au-delà, jamais plus cher,
+// quel que soit le CA. Un compte à 30 000€ de CA paie 400€/mois, pas le
+// plafond. Voir lib/stripe.ts (priceDataForAmount) pour comment Stripe
+// facture un montant calculé à la volée sans qu'un Price existe pour
+// chacun d'entre eux à l'avance. Toujours affiché automatiquement, jamais
+// de devis/démo manuelle : un gros compte doit rester self-serve comme
+// les autres, sinon on retombe dans un tunnel de vente qu'on a justement
+// voulu éviter partout ailleurs sur le produit.
 export function calcPrice(revenue: number): number {
   if (revenue < 2000) return 60;
-  return Math.min(2500, 100 + 100 * Math.floor((revenue - 2000) / 2000));
+  return Math.min(2500, 100 + 150 * Math.floor((revenue - 2000) / 10000));
 }
 
 // Socle du plan Performance : 50€ de départ, +50€ tous les 3 000€ de CA
