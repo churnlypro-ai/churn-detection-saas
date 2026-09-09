@@ -77,6 +77,7 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
           ) : (
             <>
               {pathname !== '/pricing' && <Link href="/pricing" className={linkClass}>{t.pricing}</Link>}
+              {pathname !== '/blog' && <Link href="/blog" className={linkClass}>{t.blog}</Link>}
               <Link href="/login" className={linkClass}>{t.login}</Link>
               <Link
                 href="/signup"
@@ -132,6 +133,7 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
               ) : (
                 <>
                   {pathname !== '/pricing' && <Link href="/pricing" className={mobileLinkClass}>{t.pricing}</Link>}
+                  {pathname !== '/blog' && <Link href="/blog" className={mobileLinkClass}>{t.blog}</Link>}
                   <Link href="/login" className={mobileLinkClass}>{t.login}</Link>
                   <Link
                     href="/signup"

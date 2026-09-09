@@ -21,6 +21,7 @@ export const en: Dictionary = {
     settings: 'Settings',
     logout: 'Log out',
     pricing: 'Pricing',
+    blog: 'Blog',
     login: 'Log in',
     startFree: 'Start for free',
     openMenu: 'Open menu',

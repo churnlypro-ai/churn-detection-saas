@@ -19,6 +19,7 @@ export const fr = {
     settings: 'Réglages',
     logout: 'Déconnexion',
     pricing: 'Tarifs',
+    blog: 'Blog',
     login: 'Se connecter',
     startFree: 'Commencer gratuitement',
     openMenu: 'Ouvrir le menu',
