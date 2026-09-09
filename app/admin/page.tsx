@@ -177,6 +177,12 @@ export default function AdminOverview() {
           >
             Réservations de call →
           </Link>
+          <Link
+            href="/admin/affiliates"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Affiliation →
+          </Link>
         </div>
 
         <input

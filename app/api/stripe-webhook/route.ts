@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
 import { rewardReferrerForConversion } from '@/lib/referralRewards';
+import { recordAffiliateCommission } from '@/lib/affiliates';
 import { logAuditEvent } from '@/lib/auditLog';
 
 function mapStripeStatus(status: string): 'trialing' | 'active' | 'canceled' | 'past_due' {
@@ -240,6 +241,14 @@ export async function POST(req: NextRequest) {
             .from('performance_invoices')
             .update({ status: 'paid', updated_at: new Date().toISOString() })
             .eq('stripe_invoice_id', invoice.id);
+        }
+        // Indépendant du billing_mode : une commission d'affiliation
+        // s'applique à toute facture réellement payée par un client référé,
+        // Standard ou Performance — voir lib/affiliates.ts.
+        try {
+          await recordAffiliateCommission(supabaseAdmin, invoice);
+        } catch (err) {
+          console.error('[stripe-webhook] invoice.paid: affiliate commission failed', JSON.stringify({ invoiceId: invoice.id, err: err instanceof Error ? err.message : err }));
         }
         break;
       }

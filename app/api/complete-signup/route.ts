@@ -27,7 +27,7 @@ const MESSAGES = {
 // no account.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language, referredBy, utmSource, utmMedium, utmCampaign } = body ?? {};
+  const { email, password, companyName, businessDescription, clientCount, monthlyRevenue, industry, language, referredBy, affiliateCode, utmSource, utmMedium, utmCampaign } = body ?? {};
   const m = language === 'en' ? MESSAGES.en : MESSAGES.fr;
 
   if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
@@ -57,6 +57,20 @@ export async function POST(req: NextRequest) {
       .eq('referral_code', referredBy.trim())
       .maybeSingle();
     if (referrer) validatedReferredBy = referrer.referral_code;
+  }
+
+  // Même garde qu'au-dessus pour validatedReferredBy : un code d'affiliation
+  // inventé ou périmé (affilié mis en pause) ne bloque jamais l'inscription,
+  // juste ignoré silencieusement.
+  let validatedAffiliateCode: string | null = null;
+  if (typeof affiliateCode === 'string' && affiliateCode.trim()) {
+    const { data: affiliate } = await supabaseAdmin
+      .from('affiliates')
+      .select('referral_code')
+      .eq('referral_code', affiliateCode.trim())
+      .eq('status', 'active')
+      .maybeSingle();
+    if (affiliate) validatedAffiliateCode = affiliate.referral_code;
   }
 
   const { data: verification, error: verificationError } = await supabaseAdmin
@@ -104,6 +118,7 @@ export async function POST(req: NextRequest) {
       monthly_revenue: monthlyRevenue ?? null,
       industry: industry ?? null,
       business_description: businessDescription.trim(),
+      affiliate_referred_by: validatedAffiliateCode,
       // churn_rate n'est jamais fourni à l'inscription — Churnly le calcule
       // lui-même à partir de la première analyse réelle (voir /api/analyze).
     })
