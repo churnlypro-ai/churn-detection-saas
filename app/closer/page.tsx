@@ -6,12 +6,13 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   XCircle, Clock, CheckCircle2, CalendarDays, CalendarClock, Trash2,
-  Phone, PhoneOff, PhoneMissed, PhoneCall, TrendingUp, Users, BookOpen, ListChecks,
+  Phone, PhoneOff, PhoneMissed, PhoneCall, TrendingUp, Users, BookOpen, ListChecks, Lightbulb,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
 import { formatParisDateTime } from '@/lib/timezone';
+import { getApproachHint } from '@/lib/closerApproach';
 
 interface Booking {
   id: string;
@@ -262,7 +263,9 @@ export default function CloserPage() {
               </p>
             ) : (
               <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                {toCall.map((p) => (
+                {toCall.map((p) => {
+                  const hint = getApproachHint(p.sector);
+                  return (
                   <div key={p.id} className="px-6 py-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -278,6 +281,19 @@ export default function CloserPage() {
                         <Phone className="h-3.5 w-3.5" /> {p.phone}
                       </a>
                     </div>
+
+                    <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/50 p-3.5 dark:border-brand-500/20 dark:bg-brand-500/5">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 dark:text-brand-400">
+                        <Lightbulb className="h-3.5 w-3.5" /> Analyse & approche suggérée
+                      </div>
+                      <dl className="mt-2 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Profil : </dt><dd className="inline">{hint.profil}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Méthode : </dt><dd className="inline">{hint.angle}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Accroche : </dt><dd className="inline italic">&laquo;&nbsp;{hint.accroche}&nbsp;&raquo;</dd></div>
+                        <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Question à poser : </dt><dd className="inline italic">&laquo;&nbsp;{hint.question}&nbsp;&raquo;</dd></div>
+                      </dl>
+                    </div>
+
                     <input
                       type="text"
                       placeholder="Note (objection, contexte, à rappeler quand…)"
@@ -316,7 +332,8 @@ export default function CloserPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             {handledProspects.length > 0 && (
