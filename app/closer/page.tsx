@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { XCircle, Clock, CheckCircle2, CalendarDays, CalendarClock, Trash2 } from 'lucide-react';
+import { XCircle, Clock, CheckCircle2, CalendarDays, CalendarClock, Trash2, Phone, PhoneOff, PhoneMissed, PhoneCall } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
@@ -22,12 +22,37 @@ interface Booking {
   created_at: string;
 }
 
+type ProspectStatus = 'to_call' | 'interested' | 'not_interested' | 'no_answer' | 'callback';
+
+interface Prospect {
+  id: string;
+  name: string;
+  company_name: string;
+  phone: string;
+  sector: string | null;
+  status: ProspectStatus;
+  notes: string | null;
+  called_by: string | null;
+  called_at: string | null;
+  created_at: string;
+}
+
+const PROSPECT_STATUS_LABEL: Record<ProspectStatus, string> = {
+  to_call: 'À appeler',
+  interested: 'Intéressé',
+  not_interested: 'Pas intéressé',
+  no_answer: 'Ne répond pas',
+  callback: 'À rappeler',
+};
+
 export default function CloserPage() {
   const router = useRouter();
   const [user, setUser] = useState<{ id?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const [updatingProspectId, setUpdatingProspectId] = useState<string | null>(null);
 
   const [slotDrafts, setSlotDrafts] = useState<Record<string, string>>({});
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -46,6 +71,14 @@ export default function CloserPage() {
     }
   }, []);
 
+  const loadProspects = useCallback(async (authToken: string) => {
+    const res = await fetch('/api/closer/prospects', { headers: { Authorization: `Bearer ${authToken}` } });
+    if (res.ok) {
+      const result = await res.json();
+      setProspects(result.prospects ?? []);
+    }
+  }, []);
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) { router.replace('/login'); return; }
@@ -56,11 +89,26 @@ export default function CloserPage() {
         .then((r) => r.json()).catch(() => ({ isCloser: false }));
       if (!check.isCloser) { setForbidden(true); setLoading(false); return; }
 
-      await loadBookings(authToken);
+      await Promise.all([loadBookings(authToken), loadProspects(authToken)]);
       setLoading(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  async function handleUpdateProspectStatus(id: string, status: ProspectStatus) {
+    setUpdatingProspectId(id);
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch(`/api/closer/prospects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) await loadProspects(authToken);
+    } finally {
+      setUpdatingProspectId(null);
+    }
+  }
 
   async function handleConfirm(id: string) {
     const slot = (slotDrafts[id] ?? '').trim();
@@ -132,6 +180,98 @@ export default function CloserPage() {
             <CalendarClock className="h-4 w-4" /> Mes disponibilités
           </Link>
         </div>
+
+        {!loading && prospects.length > 0 && (() => {
+          const toCall = prospects.filter((p) => p.status === 'to_call');
+          const handled = prospects.filter((p) => p.status !== 'to_call');
+          return (
+            <div className="mb-8 rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <PhoneCall className="h-4 w-4 text-brand-500" />
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Prospects à appeler ({toCall.length} restants sur {prospects.length})
+                  </h2>
+                </div>
+              </div>
+              {toCall.length === 0 ? (
+                <p className="px-6 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+                  Tous les prospects ont été traités.
+                </p>
+              ) : (
+                <div className="divide-y divide-slate-50 dark:divide-slate-800">
+                  {toCall.map((p) => (
+                    <div key={p.id} className="px-6 py-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-900 dark:text-white">
+                            {p.name} <span className="text-slate-400">· {p.company_name}</span>
+                          </p>
+                          {p.sector && <p className="text-xs text-slate-400 dark:text-slate-500">{p.sector}</p>}
+                        </div>
+                        <a
+                          href={`tel:${p.phone.replace(/\s+/g, '')}`}
+                          className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+                        >
+                          <Phone className="h-3.5 w-3.5" /> {p.phone}
+                        </a>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => handleUpdateProspectStatus(p.id, 'interested')}
+                          disabled={updatingProspectId === p.id}
+                          className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60 dark:bg-emerald-500/10 dark:text-emerald-400"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Intéressé
+                        </button>
+                        <button
+                          onClick={() => handleUpdateProspectStatus(p.id, 'callback')}
+                          disabled={updatingProspectId === p.id}
+                          className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60 dark:bg-amber-500/10 dark:text-amber-400"
+                        >
+                          <Clock className="h-3.5 w-3.5" /> À rappeler
+                        </button>
+                        <button
+                          onClick={() => handleUpdateProspectStatus(p.id, 'no_answer')}
+                          disabled={updatingProspectId === p.id}
+                          className="flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-300"
+                        >
+                          <PhoneMissed className="h-3.5 w-3.5" /> Ne répond pas
+                        </button>
+                        <button
+                          onClick={() => handleUpdateProspectStatus(p.id, 'not_interested')}
+                          disabled={updatingProspectId === p.id}
+                          className="flex items-center gap-1.5 rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60 dark:bg-red-500/10 dark:text-red-400"
+                        >
+                          <PhoneOff className="h-3.5 w-3.5" /> Pas intéressé
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {handled.length > 0 && (
+                <details className="border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+                  <summary className="cursor-pointer text-xs font-semibold text-slate-400 dark:text-slate-500">
+                    Déjà traités ({handled.length})
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    {handled.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="min-w-0 truncate text-slate-600 dark:text-slate-300">
+                          {p.name} · {p.company_name}
+                        </span>
+                        <span className="flex-shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500">
+                          {PROSPECT_STATUS_LABEL[p.status]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          );
+        })()}
 
         {loading ? (
           <p className="text-sm text-slate-400">Chargement…</p>
