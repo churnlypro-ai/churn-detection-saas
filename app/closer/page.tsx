@@ -170,6 +170,31 @@ export default function CloserPage() {
     { label: 'RDV à venir', value: upcoming.length, icon: CalendarDays, color: 'text-amber-600 dark:text-amber-400' },
   ], [toCall.length, handledProspects.length, interestedCount, upcoming.length]);
 
+  // Même code couleur que les boutons de résultat plus bas (émeraude =
+  // positif, ambre = à rappeler, gris = pas répondu, rouge = négatif) pour
+  // que le closer reconnaisse instantanément la barre sans réapprendre un
+  // second code couleur.
+  const progressSegments = useMemo(() => {
+    const total = prospects.length;
+    const counts: Record<ProspectStatus, number> = {
+      to_call: toCall.length,
+      interested: interestedCount,
+      callback: prospects.filter((p) => p.status === 'callback').length,
+      no_answer: prospects.filter((p) => p.status === 'no_answer').length,
+      not_interested: prospects.filter((p) => p.status === 'not_interested').length,
+    };
+    return {
+      total,
+      segments: [
+        { status: 'interested' as const, label: 'Intéressé', count: counts.interested, bar: 'bg-emerald-500', dot: 'bg-emerald-500' },
+        { status: 'callback' as const, label: 'À rappeler', count: counts.callback, bar: 'bg-amber-500', dot: 'bg-amber-500' },
+        { status: 'no_answer' as const, label: 'Ne répond pas', count: counts.no_answer, bar: 'bg-slate-400', dot: 'bg-slate-400' },
+        { status: 'not_interested' as const, label: 'Pas intéressé', count: counts.not_interested, bar: 'bg-red-500', dot: 'bg-red-500' },
+        { status: 'to_call' as const, label: 'À appeler', count: counts.to_call, bar: 'bg-brand-300 dark:bg-brand-800', dot: 'bg-brand-300 dark:bg-brand-800' },
+      ],
+    };
+  }, [prospects, toCall.length, interestedCount]);
+
   if (forbidden) {
     return (
       <>
@@ -224,6 +249,37 @@ export default function CloserPage() {
                 <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{s.value}</p>
               </div>
             ))}
+          </div>
+        )}
+
+        {!loading && progressSegments.total > 0 && (
+          <div className="mb-6 rounded-2xl border border-slate-100 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400">Progression des appels</h2>
+              <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                {handledProspects.length}/{progressSegments.total} traités ({Math.round((handledProspects.length / progressSegments.total) * 100)}%)
+              </span>
+            </div>
+            <div className="mt-3 flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              {progressSegments.segments
+                .filter((seg) => seg.count > 0)
+                .map((seg) => (
+                  <div
+                    key={seg.status}
+                    className={`${seg.bar} rounded-full`}
+                    style={{ width: `${(seg.count / progressSegments.total) * 100}%` }}
+                    title={`${seg.label} : ${seg.count}`}
+                  />
+                ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+              {progressSegments.segments.map((seg) => (
+                <div key={seg.status} className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span className={`h-2 w-2 flex-shrink-0 rounded-full ${seg.dot}`} />
+                  {seg.label} <span className="font-semibold text-slate-700 dark:text-slate-200">{seg.count}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
