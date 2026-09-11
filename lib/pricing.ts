@@ -76,6 +76,17 @@ export const PERFORMANCE_FEE_RATE = 0.2;
 // réglage précis.
 export const CONTROL_GROUP_RATE = 0.03;
 
+// Sous ce seuil, l'écart mesuré (taux de résolution traité vs témoin) n'est
+// pas assez fiable pour être facturé — voir lib/performanceBilling.ts pour
+// le calcul complet (cumulatif depuis le début, pas mois par mois) et le
+// retour de Kevin qui a motivé ce seuil. Marge d'erreur (IC 95%, p≈0.3) :
+// ±28 points à 10 échantillons témoins, ±14 points à 40 — sous 40, le bruit
+// de mesure dépasse largement l'écart réel qu'on cherche à facturer (de
+// l'ordre de 15 points), et facturer uniquement quand l'écart mesuré sort
+// positif (jamais de correction quand il sort négatif) biaise systématiquement
+// le montant facturé à la hausse tant que l'échantillon reste petit.
+export const MIN_CONTROL_SAMPLES_FOR_BILLING = 40;
+
 // Taux de churn moyen utilisé uniquement à titre d'illustration sur les
 // pages publiques (calculateur pré-inscription) pour donner un ordre de
 // grandeur de perte potentielle — jamais présenté comme le vrai chiffre

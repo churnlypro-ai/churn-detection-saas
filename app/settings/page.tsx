@@ -152,7 +152,7 @@ export default function Settings() {
   const [analysisFrequencyStatus, setAnalysisFrequencyStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const analysisFrequencyRequestId = useRef(0);
   const [planMessage, setPlanMessage] = useState('');
-  const [performanceStats, setPerformanceStats] = useState<{ treatmentCount: number; controlCount: number; treatedResolvedCount: number; controlResolvedCount: number; incrementalRevenue: number; estimatedFee: number; feeRate: number } | null>(null);
+  const [performanceStats, setPerformanceStats] = useState<{ treatmentCount: number; controlCount: number; treatedResolvedCount: number; controlResolvedCount: number; incrementalRevenue: number; estimatedFee: number; feeRate: number; meetsMinimumSample: boolean } | null>(null);
   const [switchingBillingMode, setSwitchingBillingMode] = useState(false);
   const [billingModeMessage, setBillingModeMessage] = useState('');
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
@@ -1354,6 +1354,9 @@ export default function Settings() {
                       </div>
                     </div>
                     <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">{t.performanceBilling.sampleHint}</p>
+                    {!performanceStats.meetsMinimumSample && (
+                      <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{t.performanceBilling.belowMinimumSample}</p>
+                    )}
                   </>
                 )}
               </div>

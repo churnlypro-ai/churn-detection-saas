@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
 import { logAuditEvent } from '@/lib/auditLog';
 import { calcPerformanceBaseFee, PERFORMANCE_FEE_RATE } from '@/lib/pricing';
+import { computeCumulativePerformanceFee } from '@/lib/performanceBilling';
 
 async function requireUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -25,46 +26,40 @@ export async function GET(req: NextRequest) {
 
   const { data: profile } = await auth.supabaseAdmin
     .from('users')
-    .select('monthly_revenue')
+    .select('monthly_revenue, performance_variable_invoiced_cents')
     .eq('id', auth.userId)
     .maybeSingle();
   const baseFee = calcPerformanceBaseFee(Number(profile?.monthly_revenue) || 0);
 
+  // Tout l'historique, jamais filtré par facturation précédente — même
+  // requête que lib/performanceBilling.ts, voir son commentaire pour le
+  // pourquoi (cumul depuis le début, pas mois par mois).
   const { data: samples, error } = await auth.supabaseAdmin
     .from('churn_recovery_samples')
     .select('sample_group, revenue_monthly, resolved')
-    .eq('user_id', auth.userId)
-    .is('billed_at', null);
+    .eq('user_id', auth.userId);
 
   if (error) return NextResponse.json({ error: 'Chargement échoué.' }, { status: 500 });
 
-  const treatment = (samples ?? []).filter((s) => s.sample_group === 'treatment');
-  const control = (samples ?? []).filter((s) => s.sample_group === 'control');
-  const treatedResolvedCount = treatment.filter((s) => s.resolved).length;
-  const controlResolvedCount = control.filter((s) => s.resolved).length;
-
-  // Même calcul que computeIncrementalRevenue dans lib/performanceBilling.ts
-  // — pas de témoin mesurable ce mois-ci, pas d'incrément affirmé.
-  let incrementalRevenue = 0;
-  if (treatment.length > 0 && control.length > 0) {
-    const treatedRate = treatedResolvedCount / treatment.length;
-    const controlRate = controlResolvedCount / control.length;
-    const incrementalRate = Math.max(0, treatedRate - controlRate);
-    if (incrementalRate > 0) {
-      const treatedRevenue = treatment.reduce((sum, s) => sum + Number(s.revenue_monthly), 0);
-      incrementalRevenue = Math.round(incrementalRate * treatedRevenue * 100) / 100;
-    }
-  }
+  // Même calcul, exactement, que ce qui sera réellement facturé le 1er du
+  // mois — voir lib/performanceBilling.ts. Sous le seuil minimal
+  // d'échantillons témoins, amountDueNowCents vaut 0 : la mesure n'est pas
+  // encore assez fiable pour être affichée comme un montant à venir.
+  const alreadyInvoicedCents = profile?.performance_variable_invoiced_cents ?? 0;
+  const cumulative = computeCumulativePerformanceFee(samples ?? [], alreadyInvoicedCents);
+  const treatedResolvedCount = (samples ?? []).filter((s) => s.sample_group === 'treatment' && s.resolved).length;
+  const controlResolvedCount = (samples ?? []).filter((s) => s.sample_group === 'control' && s.resolved).length;
 
   return NextResponse.json({
-    treatmentCount: treatment.length,
-    controlCount: control.length,
+    treatmentCount: cumulative.treatmentCount,
+    controlCount: cumulative.controlCount,
     treatedResolvedCount,
     controlResolvedCount,
-    incrementalRevenue,
+    incrementalRevenue: cumulative.cumulativeIncrementalRevenue,
+    meetsMinimumSample: cumulative.meetsMinimumSample,
     // Le socle mensuel est toujours dû, contrairement au % de l'écart
     // mesuré — voir lib/performanceBilling.ts.
-    estimatedFee: baseFee + Math.round(incrementalRevenue * PERFORMANCE_FEE_RATE * 100) / 100,
+    estimatedFee: baseFee + cumulative.amountDueNowCents / 100,
     baseFee,
     feeRate: PERFORMANCE_FEE_RATE,
   });
