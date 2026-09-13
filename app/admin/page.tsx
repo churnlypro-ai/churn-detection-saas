@@ -183,6 +183,12 @@ export default function AdminOverview() {
           >
             Affiliation →
           </Link>
+          <Link
+            href="/admin/closer-prospects"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Import prospects cold call →
+          </Link>
         </div>
 
         <input
