@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const files: IncomingFile[] = Array.isArray(body?.files) ? body.files : [];
+  const assignedTo = typeof body?.assignedTo === 'string' && body.assignedTo.trim() ? body.assignedTo.trim() : null;
   if (files.length === 0) {
     return NextResponse.json({ error: 'Aucun fichier reçu.' }, { status: 400 });
   }
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
   const existingPhones = new Set((existingRows ?? []).map((r) => normalizePhone(r.phone)));
 
   const seenInBatch = new Set<string>();
-  const toInsert: { name: string; company_name: string; phone: string; sector: string | null }[] = [];
+  const toInsert: { name: string; company_name: string; phone: string; sector: string | null; assigned_to: string | null }[] = [];
   let skippedDuplicate = 0;
 
   for (const p of extracted) {
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
     seenInBatch.add(key);
-    toInsert.push(p);
+    toInsert.push({ ...p, assigned_to: assignedTo });
   }
 
   if (toInsert.length === 0) {

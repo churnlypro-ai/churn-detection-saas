@@ -8,14 +8,17 @@ export async function GET(req: NextRequest) {
 
   const supabaseAdmin = getSupabaseAdmin();
   const { data: userData } = await supabaseAdmin.auth.getUser(token);
-  if (!isCloserEmail(userData?.user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const closerEmail = userData?.user?.email;
+  if (!isCloserEmail(closerEmail)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // La liste est partagée entre tous les closers (comme call_bookings) : pas
-  // d'assignation par personne, premier arrivé premier appelé. to_call en
-  // premier pour que le prochain appel à passer soit toujours en haut.
+  // Chaque closer ne voit que ses propres prospects assignés (voir
+  // /admin/closer-prospects pour la répartition) — plus une file partagée.
+  // to_call en premier pour que le prochain appel à passer soit toujours en
+  // haut.
   const { data, error } = await supabaseAdmin
     .from('cold_call_prospects')
     .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, created_at')
+    .eq('assigned_to', closerEmail)
     .order('status', { ascending: true })
     .order('created_at', { ascending: true });
 
