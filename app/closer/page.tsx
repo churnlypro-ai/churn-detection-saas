@@ -60,6 +60,7 @@ export default function CloserPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [updatingProspectId, setUpdatingProspectId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [prospectError, setProspectError] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<Tab>('prospects');
 
   const [slotDrafts, setSlotDrafts] = useState<Record<string, string>>({});
@@ -105,6 +106,7 @@ export default function CloserPage() {
 
   async function handleUpdateProspectStatus(id: string, status: ProspectStatus) {
     setUpdatingProspectId(id);
+    setProspectError((prev) => ({ ...prev, [id]: '' }));
     try {
       const authToken = await getAuthToken();
       const notes = (noteDrafts[id] ?? '').trim();
@@ -113,10 +115,17 @@ export default function CloserPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ status, ...(notes ? { notes } : {}) }),
       });
+      const result = await res.json().catch(() => ({}));
       if (res.ok) {
         setNoteDrafts((prev) => ({ ...prev, [id]: '' }));
-        await loadProspects(authToken);
+      } else {
+        // File partagée : un autre closer a pu traiter ce prospect entre le
+        // chargement de la liste et ce clic (409, voir la route). On
+        // recharge dans tous les cas pour que la liste reflète la réalité —
+        // l'entrée obsolète disparaît d'elle-même.
+        setProspectError((prev) => ({ ...prev, [id]: result.error || 'Mise à jour échouée.' }));
       }
+      await loadProspects(authToken);
     } finally {
       setUpdatingProspectId(null);
     }
@@ -387,6 +396,7 @@ export default function CloserPage() {
                         <PhoneOff className="h-3.5 w-3.5" /> Pas intéressé
                       </button>
                     </div>
+                    {prospectError[p.id] && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{prospectError[p.id]}</p>}
                   </div>
                   );
                 })}

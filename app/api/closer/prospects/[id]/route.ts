@@ -19,12 +19,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Statut invalide.' }, { status: 400 });
   }
 
-  // Un prospect appartient à un seul closer (voir /admin/closer-prospects et
-  // la migration add_prospect_assignment) — sans ce filtre, n'importe quel
-  // closer authentifié pourrait modifier le statut d'un prospect assigné à
-  // un autre en devinant/rejouant son id, ce qui casserait exactement la
-  // séparation par closer voulue.
-  const { data, error } = await supabaseAdmin
+  // File partagée (voir /api/closer/prospects) : quand un closer marque un
+  // résultat, on exige que le prospect soit encore 'to_call' — sans ça, deux
+  // closers qui appellent la même personne en même temps pourraient
+  // s'écraser l'un l'autre (le second écrase le résultat du premier sans le
+  // savoir). Cette garde ne s'applique pas si on remet explicitement à
+  // 'to_call' (annulation), qui doit rester possible depuis n'importe quel
+  // statut.
+  let query = supabaseAdmin
     .from('cold_call_prospects')
     .update({
       status,
@@ -32,11 +34,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       called_by: status === 'to_call' ? null : closerEmail,
       called_at: status === 'to_call' ? null : new Date().toISOString(),
     })
-    .eq('id', params.id)
-    .eq('assigned_to', closerEmail)
-    .select('id');
+    .eq('id', params.id);
+  if (status !== 'to_call') query = query.eq('status', 'to_call');
+
+  const { data, error } = await query.select('id');
 
   if (error) return NextResponse.json({ error: 'Mise à jour échouée.' }, { status: 500 });
-  if (!data || data.length === 0) return NextResponse.json({ error: 'Ce prospect ne vous est pas assigné.' }, { status: 403 });
+  if (!data || data.length === 0) return NextResponse.json({ error: 'Ce prospect vient d\'être traité par un autre closer.' }, { status: 409 });
   return NextResponse.json({ success: true });
 }

@@ -11,14 +11,15 @@ export async function GET(req: NextRequest) {
   const closerEmail = userData?.user?.email;
   if (!isCloserEmail(closerEmail)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Chaque closer ne voit que ses propres prospects assignés (voir
-  // /admin/closer-prospects pour la répartition) — plus une file partagée.
+  // File partagée entre tous les closers : l'admin importe, n'importe quel
+  // closer appelle ce qui n'a pas encore été traité (voir la garde
+  // status='to_call' dans le PATCH de /api/closer/prospects/[id], qui
+  // empêche deux closers de marquer le même prospect en même temps).
   // to_call en premier pour que le prochain appel à passer soit toujours en
   // haut.
   const { data, error } = await supabaseAdmin
     .from('cold_call_prospects')
     .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, created_at')
-    .eq('assigned_to', closerEmail)
     .order('status', { ascending: true })
     .order('created_at', { ascending: true });
 
