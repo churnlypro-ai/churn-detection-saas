@@ -98,7 +98,19 @@ export async function POST(req: NextRequest) {
         locale: 'auto',
         managed_payments: { enabled: false },
       };
-      const session = await stripe.checkout.sessions.create(sessionParams);
+      // Le client Stripe (lib/stripe.ts) est épinglé sur l'API version
+      // 2025-03-31.basil pour tout le reste de l'app — antérieure à
+      // l'introduction de managed_payments (arrivé dans la lignée "dahlia").
+      // Sur l'ancienne version, ce champ est silencieusement ignoré à la
+      // création de session (pas d'erreur ici), mais le compte applique
+      // quand même son défaut Managed Payments au rendu de la page Checkout
+      // hébergée par Stripe, d'où l'erreur "Invalid mode: setup" vue
+      // côté client malgré ce override. On force donc une version d'API plus
+      // récente uniquement pour cet appel précis, sans toucher au client
+      // global (qui est utilisé par le reste de l'app — abonnements,
+      // factures, webhooks — et qu'on ne veut pas faire changer de
+      // comportement partout d'un coup).
+      const session = await stripe.checkout.sessions.create(sessionParams, { apiVersion: '2026-07-29.dahlia' });
       return NextResponse.json({ url: session.url });
     }
 
