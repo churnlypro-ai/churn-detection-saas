@@ -92,6 +92,10 @@ export async function POST(req: NextRequest) {
       const sessionParams: Stripe.Checkout.SessionCreateParams & { managed_payments?: { enabled: boolean } } = {
         customer: customerId,
         mode: 'setup',
+        // Requis par Stripe en mode 'setup' dès lors que payment_method_types
+        // n'est pas fixé — pas d'erreur sous l'ancienne API version, mais
+        // devient bloquant sous 2026-07-29.dahlia (voir override plus bas).
+        currency: 'eur',
         success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=cancelled`,
         metadata: { supabase_user_id: user.id, billing_mode: 'performance' },
