@@ -147,11 +147,16 @@ export async function runPerformanceBilling(
     const fee = baseFee + performanceFee;
 
     try {
+      // tax_behavior: 'inclusive' — même logique que priceDataForAmount
+      // (lib/stripe.ts) pour le plan Standard : les montants ci-dessous sont
+      // ce que le client paie au total, TVA comprise, pas un prix HT sur
+      // lequel Stripe rajouterait la TVA en plus.
       await stripe.invoiceItems.create({
         customer: user.stripe_customer_id,
         amount: Math.round(baseFee * 100),
         currency: 'eur',
         description: 'Churnly — socle mensuel',
+        tax_behavior: 'inclusive',
       });
 
       if (performanceFee > 0) {
@@ -160,6 +165,7 @@ export async function runPerformanceBilling(
           amount: cumulative.amountDueNowCents,
           currency: 'eur',
           description: `Churnly — ${PERFORMANCE_FEE_RATE * 100}% de l'écart cumulé mesuré vs groupe témoin (${formatEuro(cumulative.cumulativeIncrementalRevenue)} cumulés, ${cumulative.controlCount} témoins)`,
+          tax_behavior: 'inclusive',
         });
       }
 

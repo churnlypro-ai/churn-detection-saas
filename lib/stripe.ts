@@ -25,5 +25,11 @@ export function priceDataForAmount(amountEuros: number, productId: string): Stri
     product: productId,
     unit_amount: Math.round(amountEuros * 100),
     recurring: { interval: 'month' },
+    // Le montant affiché sur /pricing (calcPrice) est ce que le client paie
+    // au total, TVA comprise — pas un prix HT sur lequel Stripe rajoute la
+    // TVA en plus (ce qui ferait payer 20% de plus que le prix annoncé).
+    // 'inclusive' fait porter la TVA sur la marge de Churnly plutôt que sur
+    // la facture du client.
+    tax_behavior: 'inclusive',
   };
 }
