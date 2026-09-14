@@ -3,21 +3,23 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { isCloserEmail } from '@/lib/closer';
 import { sendCallBookingConfirmedEmail } from '@/lib/email';
 
-async function requireCloser(req: NextRequest) {
+async function requireCloser(req: NextRequest): Promise<{ supabaseAdmin: ReturnType<typeof getSupabaseAdmin>; closerEmail: string } | null> {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) return null;
   const supabaseAdmin = getSupabaseAdmin();
   const { data: userData } = await supabaseAdmin.auth.getUser(token);
-  if (!isCloserEmail(userData?.user?.email)) return null;
-  return supabaseAdmin;
+  const closerEmail = userData?.user?.email;
+  if (!isCloserEmail(closerEmail)) return null;
+  return { supabaseAdmin, closerEmail: closerEmail! };
 }
 
 // Le closer est le seul à valider une demande de call : il fixe le créneau
 // confirmé et le visiteur reçoit l'email avec la date exacte. Aucun email
 // de confirmation n'est envoyé avant cette validation (voir /api/call-bookings).
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabaseAdmin = await requireCloser(req);
-  if (!supabaseAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const auth = await requireCloser(req);
+  if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { supabaseAdmin, closerEmail } = auth;
 
   const body = await req.json().catch(() => ({}));
   const { confirmedSlot } = body ?? {};
@@ -27,11 +29,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { data: booking, error: fetchError } = await supabaseAdmin
     .from('call_bookings')
-    .select('name, email')
+    .select('name, email, closer_email')
     .eq('id', params.id)
     .maybeSingle();
 
   if (fetchError || !booking) return NextResponse.json({ error: 'Demande introuvable.' }, { status: 404 });
+  // Réservation attribuée à un autre closer précis — voir la migration
+  // add_closer_scoping_to_bookings. closer_email null reste géré par tous
+  // (repli volontaire, voir /api/call-bookings).
+  if (booking.closer_email && booking.closer_email !== closerEmail) {
+    return NextResponse.json({ error: 'Cette réservation ne vous est pas assignée.' }, { status: 403 });
+  }
 
   const { error: updateError } = await supabaseAdmin
     .from('call_bookings')
@@ -50,8 +58,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabaseAdmin = await requireCloser(req);
-  if (!supabaseAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const auth = await requireCloser(req);
+  if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { supabaseAdmin, closerEmail } = auth;
+
+  const { data: booking, error: fetchError } = await supabaseAdmin
+    .from('call_bookings')
+    .select('closer_email')
+    .eq('id', params.id)
+    .maybeSingle();
+  if (fetchError || !booking) return NextResponse.json({ error: 'Demande introuvable.' }, { status: 404 });
+  if (booking.closer_email && booking.closer_email !== closerEmail) {
+    return NextResponse.json({ error: 'Cette réservation ne vous est pas assignée.' }, { status: 403 });
+  }
 
   const { error } = await supabaseAdmin.from('call_bookings').update({ status: 'canceled' }).eq('id', params.id);
   if (error) return NextResponse.json({ error: 'Annulation échouée.' }, { status: 500 });

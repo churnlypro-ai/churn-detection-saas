@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { sendCallBookingReceivedEmail, sendCallBookingAdminNotifyEmail } from '@/lib/email';
+import { parisDayOfWeekAndTime } from '@/lib/timezone';
 
 const MESSAGES = {
   fr: {
@@ -39,6 +40,14 @@ export async function POST(req: NextRequest) {
   // /api/available-slots a pu être pris entre-temps par quelqu'un d'autre
   // (deux visiteurs sur le même créneau en même temps).
   let slotStartIso: string | null = null;
+  // Le visiteur ne choisit pas de closer, seulement un horaire — retrouvé
+  // ici à partir de quelle plage de closer_availability contient ce
+  // créneau (voir lib/timezone.ts et la migration
+  // add_closer_scoping_to_bookings), jamais envoyé par le client. Reste
+  // null si aucune plage ne correspond (ancienne réservation en texte
+  // libre, ou créneau à cheval sur un changement de planning) — la demande
+  // reste alors visible par tous les closers plutôt que de disparaître.
+  let closerEmail: string | null = null;
   if (typeof slotStart === 'string' && slotStart.trim()) {
     const parsed = new Date(slotStart);
     if (!Number.isNaN(parsed.getTime())) {
@@ -50,6 +59,14 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
       if (conflict) return NextResponse.json({ error: m.slotTaken }, { status: 409 });
       slotStartIso = parsed.toISOString();
+
+      const { dayOfWeek, time } = parisDayOfWeekAndTime(parsed);
+      const { data: windows } = await supabaseAdmin
+        .from('closer_availability')
+        .select('closer_email, start_time, end_time')
+        .eq('day_of_week', dayOfWeek);
+      const match = (windows ?? []).find((w) => w.start_time <= time && time < w.end_time);
+      if (match?.closer_email) closerEmail = match.closer_email;
     }
   }
 
@@ -59,6 +76,7 @@ export async function POST(req: NextRequest) {
     company_name: typeof companyName === 'string' && companyName.trim() ? companyName.trim() : null,
     availability: availability.trim(),
     slot_start: slotStartIso,
+    closer_email: closerEmail,
   });
 
   if (error) {
@@ -80,9 +98,14 @@ export async function POST(req: NextRequest) {
   // un problème — la ligne est déjà en base, consultable dans /admin/calls
   // et /closer.
   const emailLanguage = language === 'en' ? 'en' : 'fr';
+  // Le closer identifié ci-dessus est notifié seul plutôt que toute l'équipe
+  // — sinon Kendal reçoit une notif pour un call qui tombe sur le créneau
+  // d'Adam, et inversement. Repli sur tous les closers si aucun n'a pu être
+  // identifié (texte libre, créneau ambigu) : mieux vaut une notif en trop
+  // qu'une demande que personne ne voit passer.
   const notifyEmails = new Set([
     ...(process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim()).filter(Boolean),
-    ...(process.env.CLOSER_EMAILS || '').split(',').map((e) => e.trim()).filter(Boolean),
+    ...(closerEmail ? [closerEmail] : (process.env.CLOSER_EMAILS || '').split(',').map((e) => e.trim()).filter(Boolean)),
   ]);
   await Promise.allSettled([
     sendCallBookingReceivedEmail({ to: email.trim(), name: name.trim(), language: emailLanguage }),

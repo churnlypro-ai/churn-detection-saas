@@ -8,12 +8,18 @@ export async function GET(req: NextRequest) {
 
   const supabaseAdmin = getSupabaseAdmin();
   const { data: userData } = await supabaseAdmin.auth.getUser(token);
-  if (!isCloserEmail(userData?.user?.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const closerEmail = userData?.user?.email;
+  if (!isCloserEmail(closerEmail)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  // Un closer ne voit que ses propres réservations, plus celles qu'on n'a
+  // pas pu attribuer à un closer précis (texte libre, créneau ambigu — voir
+  // /api/call-bookings) : mieux vaut les montrer à tout le monde que les
+  // faire disparaître de toutes les vues.
   const { data, error } = await supabaseAdmin
     .from('call_bookings')
     .select('id, name, email, company_name, availability, status, confirmed_slot, slot_start, created_at')
     .neq('status', 'canceled')
+    .or(`closer_email.eq.${closerEmail},closer_email.is.null`)
     .order('slot_start', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
 

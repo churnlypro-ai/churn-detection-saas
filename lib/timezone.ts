@@ -34,6 +34,18 @@ export function dayOfWeekOfDateString(dateStr: string): number {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 }
 
+const WEEKDAY_INDEX: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+// Sens inverse de parisWallTimeToUtc — utilisé pour retrouver, à partir d'un
+// slot_start (instant UTC réel), quel jour/heure murale Europe/Paris il
+// représente, et donc quelle plage de closer_availability (day_of_week +
+// start_time/end_time) le contient (voir /api/call-bookings).
+export function parisDayOfWeekAndTime(date: Date): { dayOfWeek: number; time: string } {
+  const weekday = date.toLocaleString('en-US', { timeZone: CLOSER_TIMEZONE, weekday: 'short' });
+  const time = date.toLocaleString('en-GB', { timeZone: CLOSER_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false });
+  return { dayOfWeek: WEEKDAY_INDEX[weekday] ?? 0, time };
+}
+
 export function formatParisDateTime(date: Date, language: 'fr' | 'en' = 'fr'): string {
   return date.toLocaleString(language === 'en' ? 'en-US' : 'fr-FR', {
     timeZone: CLOSER_TIMEZONE,
