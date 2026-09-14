@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type Stripe from 'stripe';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe, priceDataForAmount } from '@/lib/stripe';
 import { calcPrice, calcManagerPrice } from '@/lib/pricing';
@@ -78,14 +79,26 @@ export async function POST(req: NextRequest) {
     // compte est activé par le webhook checkout.session.completed une fois
     // ce setup terminé (voir app/api/stripe-webhook).
     if (billingMode === 'performance') {
-      const session = await stripe.checkout.sessions.create({
+      // Managed Payments (activé par défaut sur le compte Stripe) ne
+      // supporte que mode: 'subscription' ou 'payment' — incompatible avec
+      // le mode 'setup' utilisé ici pour n'enregistrer qu'un moyen de
+      // paiement sans charge immédiate. Désactivé explicitement pour cette
+      // session précise, comme recommandé par l'erreur Stripe elle-même,
+      // plutôt que changer le réglage par défaut du compte (qui affecterait
+      // aussi le checkout Standard en mode 'subscription' plus bas). Le
+      // champ n'est pas encore dans les types de ce SDK Stripe — étendu ici
+      // sur une variable (pas un littéral inline) pour que la vérification
+      // des propriétés en trop de TypeScript ne s'applique pas.
+      const sessionParams: Stripe.Checkout.SessionCreateParams & { managed_payments?: { enabled: boolean } } = {
         customer: customerId,
         mode: 'setup',
         success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=cancelled`,
         metadata: { supabase_user_id: user.id, billing_mode: 'performance' },
         locale: 'auto',
-      });
+        managed_payments: { enabled: false },
+      };
+      const session = await stripe.checkout.sessions.create(sessionParams);
       return NextResponse.json({ url: session.url });
     }
 
