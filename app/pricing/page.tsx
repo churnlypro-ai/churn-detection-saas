@@ -11,8 +11,6 @@ import { calcPrice, calcPerformanceBaseFee, formatEuro } from '@/lib/pricing';
 import { Check, ChevronDown } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/LanguageContext';
 
-const DEFAULT_CLIENT_COUNT = 100;
-
 // La barre de CA n'est pas linéaire : le curseur va de 0 à SLIDER_MAX, et
 // son milieu (SLIDER_MID) correspond toujours à REVENUE_MID (50 000€) —
 // la moitié gauche du curseur ne couvre que REVENUE_MIN–REVENUE_MID (donc
@@ -91,7 +89,10 @@ export default function PricingPage() {
   // Le prix ne s'affiche qu'au premier geste du visiteur, quelle que soit
   // la position où il atterrit — jamais avant.
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  // Quel plan est en train de démarrer son paiement — pas un simple booléen
+  // partagé, sinon cliquer un plan désactive/anime aussi le bouton de
+  // l'autre alors qu'il n'a pas été choisi.
+  const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<'performance' | 'revenue_tier' | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
   const t = useTranslations('pricing');
   const tFooter = useTranslations('home').footer;
@@ -100,6 +101,23 @@ export default function PricingPage() {
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) setUser({ id: data.user.id, email: data.user.email });
     });
+  }, []);
+
+  // window.location.href = url (dans handleSubscribe) quitte la page sans
+  // jamais réinitialiser checkoutLoadingPlan — si l'utilisateur revient en
+  // arrière, le navigateur restaure la page depuis le bfcache avec cet état
+  // resté "en cours" pour toujours, bouton bloqué en spinner. pageshow avec
+  // persisted=true détecte précisément ce retour depuis le cache et
+  // réinitialise l'état.
+  useEffect(() => {
+    function handlePageShow(e: PageTransitionEvent) {
+      if (e.persisted) {
+        setCheckoutLoadingPlan(null);
+        setCheckoutError('');
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
 
   // Les deux prix sont calculés à partir de la même barre de CA, affichés
@@ -116,7 +134,7 @@ export default function PricingPage() {
       return;
     }
 
-    setCheckoutLoading(true);
+    setCheckoutLoadingPlan(billingMode);
     setCheckoutError('');
 
     try {
@@ -125,19 +143,16 @@ export default function PricingPage() {
 
       // Le socle facturé (les deux plans, voir lib/pricing.ts) est recalculé
       // côté serveur à partir du profil en base (voir
-      // /api/create-checkout-session et lib/performanceBilling.ts) — on
-      // enregistre donc la valeur de la barre sur le compte avant de payer,
-      // pour que le prix facturé corresponde bien à ce qui vient d'être
-      // affiché à l'écran, quel que soit le plan choisi.
-      await supabase
-        .from('users')
-        .update({ client_count: DEFAULT_CLIENT_COUNT, monthly_revenue: monthlyRevenue })
-        .eq('id', user.id);
-
+      // /api/create-checkout-session et lib/performanceBilling.ts) — la
+      // valeur de la barre est envoyée ici et persistée côté serveur, dans
+      // la même requête qui calcule le prix (voir le commentaire dans
+      // create-checkout-session/route.ts : un ancien write séparé, fait ici
+      // même côté navigateur, pouvait échouer silencieusement et laisser
+      // facturer un tarif périmé).
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ billingMode }),
+        body: JSON.stringify({ billingMode, monthlyRevenue }),
       });
 
       if (!response.ok) throw new Error(t.checkoutErrorStart);
@@ -146,7 +161,7 @@ export default function PricingPage() {
       window.location.href = url;
     } catch (err) {
       setCheckoutError(err instanceof Error ? err.message : t.checkoutErrorFallback);
-      setCheckoutLoading(false);
+      setCheckoutLoadingPlan(null);
     }
   }
 
@@ -274,10 +289,10 @@ export default function PricingPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleSubscribe('performance')}
-              disabled={checkoutLoading}
+              disabled={checkoutLoadingPlan !== null}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
             >
-              {checkoutLoading ? (
+              {checkoutLoadingPlan === 'performance' ? (
                 <>
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   {t.redirecting}
@@ -330,10 +345,10 @@ export default function PricingPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleSubscribe('revenue_tier')}
-              disabled={checkoutLoading}
+              disabled={checkoutLoadingPlan !== null}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
             >
-              {checkoutLoading ? (
+              {checkoutLoadingPlan === 'revenue_tier' ? (
                 <>
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   {t.redirecting}

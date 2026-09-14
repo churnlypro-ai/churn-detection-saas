@@ -17,30 +17,56 @@ export async function POST(req: NextRequest) {
   }
 
   const user = userData.user;
+
+  // Le plan (Standard vs Performance, voir lib/pricing.ts) est un vrai choix
+  // de l'utilisateur fait sur /pricing — jamais recalculé côté serveur. Rien
+  // à trafiquer ici : les deux plans facturent le même 20% mesuré via
+  // groupe témoin, seul le socle fixe diffère.
+  const body = await req.json().catch(() => ({}));
+  const billingMode = body?.billingMode === 'performance' ? 'performance' : 'revenue_tier';
+
+  // Le CA auto-déclaré par le client (barre sur /pricing) était jusqu'ici
+  // écrit par le navigateur (clé anon) dans un appel séparé, avant celui-ci,
+  // sans jamais vérifier que ça avait réussi — un échec silencieux (RLS,
+  // latence réseau) laissait cette route lire l'ancienne valeur en base et
+  // calculer un tarif complètement différent de celui affiché sur /pricing.
+  // Écrit maintenant ici, dans la même requête qui calcule le prix, avec le
+  // service role (donc jamais bloqué par les mêmes soucis que côté client)
+  // et une vraie vérification d'erreur avant de poursuivre. DEFAULT_CLIENT_COUNT
+  // (100) reste la valeur envoyée par /pricing, inchangée — voir
+  // app/pricing/page.tsx.
+  const rawMonthlyRevenue = Number(body?.monthlyRevenue);
+  if (Number.isFinite(rawMonthlyRevenue)) {
+    const monthlyRevenue = Math.max(0, Math.min(2_000_000, rawMonthlyRevenue));
+    const { error: revenueUpdateError } = await supabaseAdmin
+      .from('users')
+      .update({ client_count: 100, monthly_revenue: monthlyRevenue })
+      .eq('id', user.id);
+    if (revenueUpdateError) {
+      console.error('[create-checkout-session] failed to persist self-reported revenue', JSON.stringify({ userId: user.id, error: revenueUpdateError }));
+      return NextResponse.json({ error: 'Could not save your revenue before checkout.' }, { status: 500 });
+    }
+  }
+
+  // Le palier est calculé côté serveur à partir des données du profil en
+  // base (relu après l'écriture ci-dessus, donc jamais périmé), jamais à
+  // partir de ce que le client envoie directement dans le body — sinon
+  // n'importe qui pourrait appeler cette route avec un tier arbitraire (ex:
+  // "60") et payer moins cher que ce que son propre CA ne le justifie. Le CA
+  // lui-même reste auto-déclaré (comme la barre sur /pricing l'a toujours
+  // été), mais le tarif qui en découle passe toujours par calcPrice().
   const { data: profile } = await supabaseAdmin
     .from('users')
     .select('stripe_customer_id, industry, client_count, monthly_revenue, referred_by')
     .eq('id', user.id)
     .maybeSingle();
 
-  // Le palier est calculé côté serveur à partir des données du profil en
-  // base, jamais à partir de ce que le client envoie dans le body — sinon
-  // n'importe qui pourrait appeler cette route avec un tier arbitraire (ex:
-  // "60") et payer moins cher que ce que son propre CA ne le justifie.
   const p = profile as {
     industry?: string;
     client_count?: number | null;
     monthly_revenue?: number | null;
     referred_by?: string | null;
   } | null;
-
-  // Le plan (Standard vs Performance, voir lib/pricing.ts), en revanche, est
-  // un vrai choix de l'utilisateur fait sur /pricing — jamais recalculé côté
-  // serveur, contrairement au tier ci-dessus. Rien à trafiquer ici : les deux
-  // plans facturent le même 20% mesuré via groupe témoin, seul le socle fixe
-  // diffère.
-  const body = await req.json().catch(() => ({}));
-  const billingMode = body?.billingMode === 'performance' ? 'performance' : 'revenue_tier';
 
   try {
     const stripe = getStripe();
