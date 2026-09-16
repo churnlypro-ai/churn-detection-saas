@@ -231,6 +231,13 @@ export const fr = {
   },
   settings: {
     title: 'Paramètres',
+    tabs: {
+      profile: 'Profil',
+      billing: 'Facturation',
+      integrations: 'Intégrations',
+      team: 'Équipe',
+      security: 'Sécurité',
+    },
     onboardingBanner: {
       title: 'Bienvenue sur Churnly',
       body: 'Un dernier coup d\'œil sur vos infos avant de continuer — vous pourrez toujours les modifier plus tard.',

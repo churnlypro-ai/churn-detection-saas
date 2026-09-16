@@ -233,6 +233,13 @@ export const en: Dictionary = {
   },
   settings: {
     title: 'Settings',
+    tabs: {
+      profile: 'Profile',
+      billing: 'Billing',
+      integrations: 'Integrations',
+      team: 'Team',
+      security: 'Security',
+    },
     onboardingBanner: {
       title: 'Welcome to Churnly',
       body: 'One last look at your info before you continue — you can always change it later.',

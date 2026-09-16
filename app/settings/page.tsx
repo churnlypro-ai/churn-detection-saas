@@ -124,6 +124,7 @@ export default function Settings() {
   const [error, setError] = useState('');
   const [hexStatus, setHexStatus] = useState<HexagonStatus>('idle');
   const [onboarding, setOnboarding] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'billing' | 'integrations' | 'team' | 'security'>('profile');
 
   const [editClients, setEditClients] = useState(100);
   const [editRevenue, setEditRevenue] = useState(50000);
@@ -730,6 +731,14 @@ export default function Settings() {
   const currentPrice = calcPrice(editRevenue);
   const industryLabels = t.industries;
 
+  const tabs: { id: typeof activeTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'profile', label: t.tabs.profile, icon: Building2 },
+    { id: 'billing', label: t.tabs.billing, icon: Euro },
+    { id: 'integrations', label: t.tabs.integrations, icon: Link2 },
+    { id: 'team', label: t.tabs.team, icon: Users },
+    { id: 'security', label: t.tabs.security, icon: Key },
+  ];
+
   const staticInfo = [
     { label: t.infoLabels.company, value: profile?.company_name || '—', icon: Building2 },
     { label: t.infoLabels.clients, value: (profile?.client_count ?? 0).toString(), icon: Users },
@@ -776,6 +785,25 @@ export default function Settings() {
           </motion.div>
         )}
 
+        <div className="mb-8 flex flex-wrap gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
+          {tabs.map((tabDef) => (
+            <button
+              key={tabDef.id}
+              type="button"
+              onClick={() => setActiveTab(tabDef.id)}
+              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                activeTab === tabDef.id
+                  ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20'
+                  : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+              }`}
+            >
+              <tabDef.icon className="h-3.5 w-3.5" />
+              {tabDef.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'profile' && (
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <motion.div
             initial={{ opacity: 0, x: -24 }}
@@ -843,458 +871,6 @@ export default function Settings() {
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{planMessage}</p>
               )}
             </div>
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.passwordTitle}</h3>
-                <form onSubmit={handlePasswordChange} className="mt-4 flex flex-col gap-3">
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    placeholder={t.newPasswordPlaceholder}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
-                  >
-                    {t.updatePassword}
-                  </button>
-                </form>
-                {passwordStatus && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{passwordStatus}</p>}
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
-                  <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.stripeConnectTitle}</h3>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.stripeConnectDescription}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className={`flex items-center gap-1.5 text-xs font-semibold ${stripeConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    {stripeConnected ? t.stripeConnectedLabel : t.stripeNotConnectedLabel}
-                  </span>
-                  {stripeConnected ? (
-                    <button
-                      onClick={handleDisconnectStripe}
-                      disabled={stripeStatus === 'disconnecting'}
-                      className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                      {stripeStatus === 'disconnecting' ? t.stripeDisconnecting : t.stripeDisconnectButton}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleConnectStripe}
-                      disabled={stripeStatus === 'connecting'}
-                      className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                    >
-                      {stripeStatus === 'connecting' ? t.stripeConnecting : t.stripeConnectButton}
-                    </button>
-                  )}
-                </div>
-                {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
-                {stripeConnected && (
-                  <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      {t.analysisFrequency.label}
-                    </label>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t.analysisFrequency.description}</p>
-                    <select
-                      value={analysisFrequency}
-                      onChange={(e) => handleAnalysisFrequencyChange(e.target.value)}
-                      disabled={analysisFrequencyStatus === 'saving'}
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
-                    >
-                      <option value="daily">{t.analysisFrequency.daily}</option>
-                      <option value="weekly">{t.analysisFrequency.weekly}</option>
-                      <option value="monthly">{t.analysisFrequency.monthly}</option>
-                      <option value="manual">{t.analysisFrequency.manual}</option>
-                    </select>
-                    {analysisFrequencyStatus === 'error' && (
-                      <p className="mt-2 text-xs text-red-600 dark:text-red-400">{t.analysisFrequency.error}</p>
-                    )}
-                  </div>
-                )}
-                {!stripeConnected && (
-                  <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.analysisFrequency.csvNote}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
-                  <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.paddleConnectTitle}</h3>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.paddleConnectDescription}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className={`flex items-center gap-1.5 text-xs font-semibold ${paddleConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    {paddleConnected ? t.paddleConnectedLabel : t.paddleNotConnectedLabel}
-                  </span>
-                  {paddleConnected ? (
-                    <button
-                      onClick={handleDisconnectPaddle}
-                      disabled={paddleStatus === 'disconnecting'}
-                      className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                      {paddleStatus === 'disconnecting' ? t.paddleDisconnecting : t.paddleDisconnectButton}
-                    </button>
-                  ) : paddleStatus !== 'entering' && paddleStatus !== 'connecting' ? (
-                    <button
-                      onClick={() => setPaddleStatus('entering')}
-                      className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                    >
-                      {t.paddleConnectButton}
-                    </button>
-                  ) : null}
-                </div>
-                {paddleMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{paddleMessage}</p>}
-                {(paddleStatus === 'entering' || paddleStatus === 'connecting') && (
-                  <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                      {t.paddleApiKeyLabel}
-                      <input
-                        type="password"
-                        value={paddleApiKey}
-                        onChange={(e) => setPaddleApiKey(e.target.value)}
-                        placeholder={t.paddleApiKeyPlaceholder}
-                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                      />
-                    </label>
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                      {t.paddleEnvironmentLabel}
-                      <select
-                        value={paddleEnvironment}
-                        onChange={(e) => setPaddleEnvironment(e.target.value === 'sandbox' ? 'sandbox' : 'production')}
-                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                      >
-                        <option value="production">{t.paddleEnvironmentProduction}</option>
-                        <option value="sandbox">{t.paddleEnvironmentSandbox}</option>
-                      </select>
-                    </label>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => { setPaddleStatus('idle'); setPaddleMessage(''); setPaddleApiKey(''); }}
-                        className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                      >
-                        {t.paddleCancel}
-                      </button>
-                      <button
-                        onClick={handleSubmitPaddle}
-                        disabled={!paddleApiKey || paddleStatus === 'connecting'}
-                        className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                      >
-                        {paddleStatus === 'connecting' ? t.paddleConnecting : t.paddleSubmit}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
-                  <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.lemonSqueezyConnectTitle}</h3>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.lemonSqueezyConnectDescription}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className={`flex items-center gap-1.5 text-xs font-semibold ${lsConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    {lsConnected ? t.lemonSqueezyConnectedLabel : t.lemonSqueezyNotConnectedLabel}
-                  </span>
-                  {lsConnected ? (
-                    <button
-                      onClick={handleDisconnectLemonSqueezy}
-                      disabled={lsStatus === 'disconnecting'}
-                      className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                      {lsStatus === 'disconnecting' ? t.lemonSqueezyDisconnecting : t.lemonSqueezyDisconnectButton}
-                    </button>
-                  ) : lsStatus !== 'entering' && lsStatus !== 'connecting' ? (
-                    <button
-                      onClick={() => setLsStatus('entering')}
-                      className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                    >
-                      {t.lemonSqueezyConnectButton}
-                    </button>
-                  ) : null}
-                </div>
-                {lsMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{lsMessage}</p>}
-                {(lsStatus === 'entering' || lsStatus === 'connecting') && (
-                  <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                      {t.lemonSqueezyApiKeyLabel}
-                      <input
-                        type="password"
-                        value={lsApiKey}
-                        onChange={(e) => setLsApiKey(e.target.value)}
-                        placeholder={t.lemonSqueezyApiKeyPlaceholder}
-                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                      />
-                    </label>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => { setLsStatus('idle'); setLsMessage(''); setLsApiKey(''); }}
-                        className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                      >
-                        {t.lemonSqueezyCancel}
-                      </button>
-                      <button
-                        onClick={handleSubmitLemonSqueezy}
-                        disabled={!lsApiKey || lsStatus === 'connecting'}
-                        className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                      >
-                        {lsStatus === 'connecting' ? t.lemonSqueezyConnecting : t.lemonSqueezySubmit}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
-                  <Users className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.team.title}</h3>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.team.description}</p>
-
-                {teamMembers.length > 0 && (
-                  <ul className="mt-4 space-y-2">
-                    {teamMembers.map((member) => {
-                      const isExpired = member.status === 'pending' && new Date(member.expires_at).getTime() < Date.now();
-                      const statusLabel = member.status === 'accepted'
-                        ? t.team.statusAccepted
-                        : isExpired
-                          ? t.team.statusExpired
-                          : member.email_status === 'failed'
-                            ? t.team.statusEmailFailed
-                            : t.team.statusPending;
-                      const statusClass = member.status === 'accepted'
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : isExpired || member.email_status === 'failed'
-                          ? 'text-amber-600 dark:text-amber-400'
-                          : 'text-slate-500 dark:text-slate-400';
-                      return (
-                        <li key={member.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-slate-900 dark:text-white">{member.invited_email}</p>
-                            <p className={`text-xs ${statusClass}`}>{statusLabel}</p>
-                          </div>
-                          <div className="flex flex-shrink-0 items-center gap-1">
-                            {member.status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => handleCopyInviteLink(member)}
-                                  className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                                  aria-label={t.team.copyLinkButton}
-                                  title={copiedId === member.id ? t.team.linkCopied : t.team.copyLinkButton}
-                                >
-                                  <Copy className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleResendInvite(member)}
-                                  disabled={resendingId === member.id}
-                                  className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 disabled:opacity-60 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                                  aria-label={t.team.resendButton}
-                                  title={t.team.resendButton}
-                                >
-                                  <RefreshCw className={`h-3.5 w-3.5 ${resendingId === member.id ? 'animate-spin' : ''}`} />
-                                </button>
-                              </>
-                            )}
-                            <button
-                              onClick={() => handleRemoveMember(member.id)}
-                              className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                              aria-label={t.team.removeButton}
-                              title={t.team.removeButton}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-
-                <form onSubmit={handleInviteMember} className="mt-4 flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="email"
-                    required
-                    placeholder={t.team.emailPlaceholder}
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    disabled={inviteStatus === 'sending'}
-                    className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                  >
-                    {inviteStatus === 'sending' ? t.team.inviting : t.team.inviteButton}
-                  </button>
-                </form>
-                {inviteMessage && (
-                  <p className={`mt-2 text-sm ${inviteStatus === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>{inviteMessage}</p>
-                )}
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
-                  <Key className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.apiKeys.title}</h3>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.apiKeys.description}</p>
-
-                {newApiKey && (
-                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/40 dark:bg-amber-500/10">
-                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">{t.apiKeys.newKeyWarning}</p>
-                    <code className="mt-1.5 block break-all rounded-lg bg-white px-2.5 py-2 text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{newApiKey}</code>
-                  </div>
-                )}
-
-                {apiKeys.length > 0 && (
-                  <ul className="mt-4 space-y-2">
-                    {apiKeys.map((key) => (
-                      <li key={key.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
-                        <div>
-                          <code className="font-medium text-slate-900 dark:text-white">{key.key_prefix}…</code>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {key.last_used_at ? t.apiKeys.lastUsed(new Date(key.last_used_at).toLocaleDateString()) : t.apiKeys.neverUsed}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRevokeApiKey(key.id)}
-                          className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                          aria-label={t.apiKeys.revokeButton}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <button
-                  onClick={handleCreateApiKey}
-                  disabled={creatingKey}
-                  className="mt-4 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                >
-                  {creatingKey ? t.apiKeys.creating : t.apiKeys.createButton}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
-                  <Webhook className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.webhooks.title}</h3>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.webhooks.description}</p>
-
-                {webhooks.length > 0 && (
-                  <ul className="mt-4 space-y-2">
-                    {webhooks.map((webhook) => (
-                      <li key={webhook.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
-                        <span className="truncate font-medium text-slate-900 dark:text-white">{webhook.url}</span>
-                        <button
-                          onClick={() => handleRemoveWebhook(webhook.id)}
-                          className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                          aria-label={t.webhooks.removeButton}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <form onSubmit={handleAddWebhook} className="mt-4 flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="url"
-                    required
-                    placeholder={t.webhooks.urlPlaceholder}
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    disabled={webhookStatus === 'sending'}
-                    className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
-                  >
-                    {webhookStatus === 'sending' ? t.webhooks.adding : t.webhooks.addButton}
-                  </button>
-                </form>
-                {webhookMessage && (
-                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{webhookMessage}</p>
-                )}
-              </div>
-
-              {referralCode && (
-                <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <div className="flex items-center gap-2">
-                    <Gift className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.referral.title}</h3>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.referral.description}</p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <code className="flex-1 truncate rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
-                      {typeof window !== 'undefined' ? `${window.location.origin}/signup?ref=${referralCode}` : ''}
-                    </code>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(`${window.location.origin}/signup?ref=${referralCode}`)}
-                      className="shrink-0 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                      {t.referral.copyButton}
-                    </button>
-                  </div>
-                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.referral.countLabel(referralCount)}</p>
-                  {referralPayingCount > 0 && (
-                    <div className="mt-3 rounded-xl bg-slate-50 px-3.5 py-2.5 dark:bg-slate-800/60">
-                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{t.referral.payingLabel(referralPayingCount)}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {auditLog.length > 0 && (
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
-                  <ScrollText className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.auditLog.title}</h3>
-                </div>
-                <ul className="mt-3 space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
-                  {auditLog.map((entry) => (
-                    <li key={entry.id} className="flex items-start justify-between gap-3 border-b border-slate-50 pb-2.5 last:border-0 last:pb-0 dark:border-slate-800">
-                      <span>{auditActionLabel(entry, t.auditLog.actions)}</span>
-                      <span className="shrink-0 text-slate-400 dark:text-slate-500">
-                        {new Date(entry.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <button
-              onClick={handleLogout}
-              className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              {t.logout}
-            </button>
           </motion.div>
 
           <motion.div
@@ -1332,55 +908,6 @@ export default function Settings() {
               </p>
             </div>
 
-            {!isLocked && profile?.billing_mode === 'performance' && (
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-6 shadow-sm dark:border-emerald-800/40 dark:bg-emerald-500/5">
-                <div className="mb-2 flex items-center gap-2">
-                  <Percent className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{t.performanceBilling.title}</h3>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.active}</p>
-                {performanceStats && (
-                  <>
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.sampleLabel}</p>
-                        <p className="text-lg font-bold text-slate-900 dark:text-white">
-                          {performanceStats.treatedResolvedCount}/{performanceStats.treatmentCount} · {performanceStats.controlResolvedCount}/{performanceStats.controlCount}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.nextInvoiceLabel}</p>
-                        <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(performanceStats.estimatedFee)}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">{t.performanceBilling.sampleHint}</p>
-                    {!performanceStats.meetsMinimumSample && (
-                      <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{t.performanceBilling.belowMinimumSample}</p>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {!isLocked && profile?.billing_mode !== 'performance' && (
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="mb-2 flex items-center gap-2">
-                  <Percent className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t.performanceBilling.title}</h3>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.pitch}</p>
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{t.performanceBilling.controlGroupDisclosure}</p>
-                <button
-                  onClick={handleSwitchBillingMode}
-                  disabled={switchingBillingMode}
-                  className="mt-3 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                  {switchingBillingMode ? t.performanceBilling.switching : t.performanceBilling.switchButton}
-                </button>
-                {billingModeMessage && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{billingModeMessage}</p>}
-              </div>
-            )}
-
             <div className="relative flex flex-col items-center justify-center">
               <div className="relative h-[320px] w-full overflow-hidden rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
                 <MagicHexagon
@@ -1412,6 +939,520 @@ export default function Settings() {
             </div>
           </motion.div>
         </div>
+        )}
+
+        {activeTab === 'billing' && (
+        <div className="max-w-3xl space-y-6">
+          {!isLocked && profile?.billing_mode === 'performance' && (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-6 shadow-sm dark:border-emerald-800/40 dark:bg-emerald-500/5">
+              <div className="mb-2 flex items-center gap-2">
+                <Percent className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{t.performanceBilling.title}</h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.active}</p>
+              {performanceStats && (
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.sampleLabel}</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">
+                        {performanceStats.treatedResolvedCount}/{performanceStats.treatmentCount} · {performanceStats.controlResolvedCount}/{performanceStats.controlCount}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t.performanceBilling.nextInvoiceLabel}</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">{formatEuro(performanceStats.estimatedFee)}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">{t.performanceBilling.sampleHint}</p>
+                  {!performanceStats.meetsMinimumSample && (
+                    <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{t.performanceBilling.belowMinimumSample}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {!isLocked && profile?.billing_mode !== 'performance' && (
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="mb-2 flex items-center gap-2">
+                <Percent className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t.performanceBilling.title}</h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t.performanceBilling.pitch}</p>
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{t.performanceBilling.controlGroupDisclosure}</p>
+              <button
+                onClick={handleSwitchBillingMode}
+                disabled={switchingBillingMode}
+                className="mt-3 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                {switchingBillingMode ? t.performanceBilling.switching : t.performanceBilling.switchButton}
+              </button>
+              {billingModeMessage && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{billingModeMessage}</p>}
+            </div>
+          )}
+
+          {referralCode && (
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Gift className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.referral.title}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.referral.description}</p>
+              <div className="mt-3 flex items-center gap-2">
+                <code className="flex-1 truncate rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/signup?ref=${referralCode}` : ''}
+                </code>
+                <button
+                  onClick={() => navigator.clipboard.writeText(`${window.location.origin}/signup?ref=${referralCode}`)}
+                  className="shrink-0 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  {t.referral.copyButton}
+                </button>
+              </div>
+              <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t.referral.countLabel(referralCount)}</p>
+              {referralPayingCount > 0 && (
+                <div className="mt-3 rounded-xl bg-slate-50 px-3.5 py-2.5 dark:bg-slate-800/60">
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{t.referral.payingLabel(referralPayingCount)}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {auditLog.length > 0 && (
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <ScrollText className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.auditLog.title}</h3>
+              </div>
+              <ul className="mt-3 space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                {auditLog.map((entry) => (
+                  <li key={entry.id} className="flex items-start justify-between gap-3 border-b border-slate-50 pb-2.5 last:border-0 last:pb-0 dark:border-slate-800">
+                    <span>{auditActionLabel(entry, t.auditLog.actions)}</span>
+                    <span className="shrink-0 text-slate-400 dark:text-slate-500">
+                      {new Date(entry.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        )}
+
+        {activeTab === 'integrations' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.stripeConnectTitle}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.stripeConnectDescription}</p>
+              <div className="mt-4 flex items-center justify-between">
+                <span className={`flex items-center gap-1.5 text-xs font-semibold ${stripeConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {stripeConnected ? t.stripeConnectedLabel : t.stripeNotConnectedLabel}
+                </span>
+                {stripeConnected ? (
+                  <button
+                    onClick={handleDisconnectStripe}
+                    disabled={stripeStatus === 'disconnecting'}
+                    className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {stripeStatus === 'disconnecting' ? t.stripeDisconnecting : t.stripeDisconnectButton}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectStripe}
+                    disabled={stripeStatus === 'connecting'}
+                    className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                  >
+                    {stripeStatus === 'connecting' ? t.stripeConnecting : t.stripeConnectButton}
+                  </button>
+                )}
+              </div>
+              {stripeMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stripeMessage}</p>}
+              {stripeConnected && (
+                <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {t.analysisFrequency.label}
+                  </label>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t.analysisFrequency.description}</p>
+                  <select
+                    value={analysisFrequency}
+                    onChange={(e) => handleAnalysisFrequencyChange(e.target.value)}
+                    disabled={analysisFrequencyStatus === 'saving'}
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
+                  >
+                    <option value="daily">{t.analysisFrequency.daily}</option>
+                    <option value="weekly">{t.analysisFrequency.weekly}</option>
+                    <option value="monthly">{t.analysisFrequency.monthly}</option>
+                    <option value="manual">{t.analysisFrequency.manual}</option>
+                  </select>
+                  {analysisFrequencyStatus === 'error' && (
+                    <p className="mt-2 text-xs text-red-600 dark:text-red-400">{t.analysisFrequency.error}</p>
+                  )}
+                </div>
+              )}
+              {!stripeConnected && (
+                <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t.analysisFrequency.csvNote}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.paddleConnectTitle}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.paddleConnectDescription}</p>
+              <div className="mt-4 flex items-center justify-between">
+                <span className={`flex items-center gap-1.5 text-xs font-semibold ${paddleConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {paddleConnected ? t.paddleConnectedLabel : t.paddleNotConnectedLabel}
+                </span>
+                {paddleConnected ? (
+                  <button
+                    onClick={handleDisconnectPaddle}
+                    disabled={paddleStatus === 'disconnecting'}
+                    className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {paddleStatus === 'disconnecting' ? t.paddleDisconnecting : t.paddleDisconnectButton}
+                  </button>
+                ) : paddleStatus !== 'entering' && paddleStatus !== 'connecting' ? (
+                  <button
+                    onClick={() => setPaddleStatus('entering')}
+                    className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                  >
+                    {t.paddleConnectButton}
+                  </button>
+                ) : null}
+              </div>
+              {paddleMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{paddleMessage}</p>}
+              {(paddleStatus === 'entering' || paddleStatus === 'connecting') && (
+                <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    {t.paddleApiKeyLabel}
+                    <input
+                      type="password"
+                      value={paddleApiKey}
+                      onChange={(e) => setPaddleApiKey(e.target.value)}
+                      placeholder={t.paddleApiKeyPlaceholder}
+                      className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    />
+                  </label>
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    {t.paddleEnvironmentLabel}
+                    <select
+                      value={paddleEnvironment}
+                      onChange={(e) => setPaddleEnvironment(e.target.value === 'sandbox' ? 'sandbox' : 'production')}
+                      className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    >
+                      <option value="production">{t.paddleEnvironmentProduction}</option>
+                      <option value="sandbox">{t.paddleEnvironmentSandbox}</option>
+                    </select>
+                  </label>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => { setPaddleStatus('idle'); setPaddleMessage(''); setPaddleApiKey(''); }}
+                      className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      {t.paddleCancel}
+                    </button>
+                    <button
+                      onClick={handleSubmitPaddle}
+                      disabled={!paddleApiKey || paddleStatus === 'connecting'}
+                      className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                    >
+                      {paddleStatus === 'connecting' ? t.paddleConnecting : t.paddleSubmit}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.lemonSqueezyConnectTitle}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.lemonSqueezyConnectDescription}</p>
+              <div className="mt-4 flex items-center justify-between">
+                <span className={`flex items-center gap-1.5 text-xs font-semibold ${lsConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {lsConnected ? t.lemonSqueezyConnectedLabel : t.lemonSqueezyNotConnectedLabel}
+                </span>
+                {lsConnected ? (
+                  <button
+                    onClick={handleDisconnectLemonSqueezy}
+                    disabled={lsStatus === 'disconnecting'}
+                    className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {lsStatus === 'disconnecting' ? t.lemonSqueezyDisconnecting : t.lemonSqueezyDisconnectButton}
+                  </button>
+                ) : lsStatus !== 'entering' && lsStatus !== 'connecting' ? (
+                  <button
+                    onClick={() => setLsStatus('entering')}
+                    className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                  >
+                    {t.lemonSqueezyConnectButton}
+                  </button>
+                ) : null}
+              </div>
+              {lsMessage && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{lsMessage}</p>}
+              {(lsStatus === 'entering' || lsStatus === 'connecting') && (
+                <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    {t.lemonSqueezyApiKeyLabel}
+                    <input
+                      type="password"
+                      value={lsApiKey}
+                      onChange={(e) => setLsApiKey(e.target.value)}
+                      placeholder={t.lemonSqueezyApiKeyPlaceholder}
+                      className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    />
+                  </label>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => { setLsStatus('idle'); setLsMessage(''); setLsApiKey(''); }}
+                      className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      {t.lemonSqueezyCancel}
+                    </button>
+                    <button
+                      onClick={handleSubmitLemonSqueezy}
+                      disabled={!lsApiKey || lsStatus === 'connecting'}
+                      className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                    >
+                      {lsStatus === 'connecting' ? t.lemonSqueezyConnecting : t.lemonSqueezySubmit}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2">
+                <Webhook className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.webhooks.title}</h3>
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.webhooks.description}</p>
+
+              {webhooks.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {webhooks.map((webhook) => (
+                    <li key={webhook.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                      <span className="truncate font-medium text-slate-900 dark:text-white">{webhook.url}</span>
+                      <button
+                        onClick={() => handleRemoveWebhook(webhook.id)}
+                        className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                        aria-label={t.webhooks.removeButton}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <form onSubmit={handleAddWebhook} className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="url"
+                  required
+                  placeholder={t.webhooks.urlPlaceholder}
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={webhookStatus === 'sending'}
+                  className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+                >
+                  {webhookStatus === 'sending' ? t.webhooks.adding : t.webhooks.addButton}
+                </button>
+              </form>
+              {webhookMessage && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{webhookMessage}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center gap-2">
+              <Key className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.apiKeys.title}</h3>
+            </div>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.apiKeys.description}</p>
+
+            {newApiKey && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/40 dark:bg-amber-500/10">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">{t.apiKeys.newKeyWarning}</p>
+                <code className="mt-1.5 block break-all rounded-lg bg-white px-2.5 py-2 text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{newApiKey}</code>
+              </div>
+            )}
+
+            {apiKeys.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {apiKeys.map((key) => (
+                  <li key={key.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                    <div>
+                      <code className="font-medium text-slate-900 dark:text-white">{key.key_prefix}…</code>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {key.last_used_at ? t.apiKeys.lastUsed(new Date(key.last_used_at).toLocaleDateString()) : t.apiKeys.neverUsed}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleRevokeApiKey(key.id)}
+                      className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                      aria-label={t.apiKeys.revokeButton}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <button
+              onClick={handleCreateApiKey}
+              disabled={creatingKey}
+              className="mt-4 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+            >
+              {creatingKey ? t.apiKeys.creating : t.apiKeys.createButton}
+            </button>
+          </div>
+        </div>
+        )}
+
+        {activeTab === 'team' && (
+        <div className="max-w-2xl">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.team.title}</h3>
+            </div>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t.team.description}</p>
+
+            {teamMembers.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {teamMembers.map((member) => {
+                  const isExpired = member.status === 'pending' && new Date(member.expires_at).getTime() < Date.now();
+                  const statusLabel = member.status === 'accepted'
+                    ? t.team.statusAccepted
+                    : isExpired
+                      ? t.team.statusExpired
+                      : member.email_status === 'failed'
+                        ? t.team.statusEmailFailed
+                        : t.team.statusPending;
+                  const statusClass = member.status === 'accepted'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : isExpired || member.email_status === 'failed'
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-slate-500 dark:text-slate-400';
+                  return (
+                    <li key={member.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800/60">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-900 dark:text-white">{member.invited_email}</p>
+                        <p className={`text-xs ${statusClass}`}>{statusLabel}</p>
+                      </div>
+                      <div className="flex flex-shrink-0 items-center gap-1">
+                        {member.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleCopyInviteLink(member)}
+                              className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                              aria-label={t.team.copyLinkButton}
+                              title={copiedId === member.id ? t.team.linkCopied : t.team.copyLinkButton}
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleResendInvite(member)}
+                              disabled={resendingId === member.id}
+                              className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 disabled:opacity-60 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                              aria-label={t.team.resendButton}
+                              title={t.team.resendButton}
+                            >
+                              <RefreshCw className={`h-3.5 w-3.5 ${resendingId === member.id ? 'animate-spin' : ''}`} />
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                          aria-label={t.team.removeButton}
+                          title={t.team.removeButton}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            <form onSubmit={handleInviteMember} className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <input
+                type="email"
+                required
+                placeholder={t.team.emailPlaceholder}
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+              <button
+                type="submit"
+                disabled={inviteStatus === 'sending'}
+                className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60 dark:hover:bg-brand-500"
+              >
+                {inviteStatus === 'sending' ? t.team.inviting : t.team.inviteButton}
+              </button>
+            </form>
+            {inviteMessage && (
+              <p className={`mt-2 text-sm ${inviteStatus === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>{inviteMessage}</p>
+            )}
+          </div>
+        </div>
+        )}
+
+        {activeTab === 'security' && (
+        <div className="max-w-2xl space-y-6">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t.passwordTitle}</h3>
+            <form onSubmit={handlePasswordChange} className="mt-4 flex flex-col gap-3">
+              <input
+                type="password"
+                required
+                minLength={8}
+                placeholder={t.newPasswordPlaceholder}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+              <button
+                type="submit"
+                className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+              >
+                {t.updatePassword}
+              </button>
+            </form>
+            {passwordStatus && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{passwordStatus}</p>}
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            {t.logout}
+          </button>
+        </div>
+        )}
       </main>
 
       <AnimatePresence>
