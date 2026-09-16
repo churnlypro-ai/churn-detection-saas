@@ -78,6 +78,9 @@ export default function ImpactPage() {
     });
   }, [router]);
 
+  const clients = Number(profile?.client_count ?? 100);
+  const revenue = Number(profile?.monthly_revenue ?? 50000);
+
   async function handleSubscribe() {
     setCheckoutLoading(true);
     setCheckoutError('');
@@ -86,11 +89,20 @@ export default function ImpactPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
-      // Le palier facturé est calculé côté serveur à partir du profil en
-      // base (voir /api/create-checkout-session) — pas besoin de l'envoyer.
+      // Le palier facturé est recalculé côté serveur à partir du profil en
+      // base (voir /api/create-checkout-session), mais ce profil peut avoir
+      // monthly_revenue à NULL (ex: compte créé sans jamais passer par le
+      // formulaire d'onboarding /signup) — le serveur retombe alors sur 0€,
+      // alors que cette page affiche un prix basé sur le défaut ci-dessus
+      // (50000€ assumés). Sans l'envoyer ici, le prix facturé peut être
+      // complètement différent du prix affiché et cliqué par l'utilisateur.
+      // On envoie donc la même valeur "revenue" qui a servi à calculer le
+      // prix affiché ; le serveur la persiste puis calcule le tarif dessus
+      // (même mécanisme que /pricing, voir create-checkout-session/route.ts).
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ monthlyRevenue: revenue }),
       });
 
       if (!response.ok) throw new Error(t.checkoutErrorStart);
@@ -102,9 +114,6 @@ export default function ImpactPage() {
       setCheckoutLoading(false);
     }
   }
-
-  const clients = Number(profile?.client_count ?? 100);
-  const revenue = Number(profile?.monthly_revenue ?? 50000);
   // Pas encore d'analyse à ce stade la plupart du temps : le churn_rate réel
   // n'existe qu'une fois de vraies données importées (voir /api/analyze).
   // En attendant, on illustre avec une moyenne sectorielle assumée.
