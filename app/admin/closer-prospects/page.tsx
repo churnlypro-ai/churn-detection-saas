@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { XCircle, ArrowLeft, Upload } from 'lucide-react';
+import { XCircle, ArrowLeft, Upload, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 
@@ -47,6 +47,30 @@ const STATUS_BADGE: Record<ProspectStatus, string> = {
   not_interested: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',
 };
 
+const INPUT_CLASS = 'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white';
+
+interface EditDraft {
+  name: string;
+  companyName: string;
+  phone: string;
+  sector: string;
+  status: ProspectStatus;
+  calledBy: string;
+  notes: string;
+}
+
+function toDraft(p: Prospect): EditDraft {
+  return {
+    name: p.name,
+    companyName: p.company_name,
+    phone: p.phone,
+    sector: p.sector ?? '',
+    status: p.status,
+    calledBy: p.called_by ?? '',
+    notes: p.notes ?? '',
+  };
+}
+
 export default function AdminCloserProspectsPage() {
   const router = useRouter();
   const [user, setUser] = useState<{ id?: string; email?: string } | null>(null);
@@ -60,6 +84,17 @@ export default function AdminCloserProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [counts, setCounts] = useState<Counts | null>(null);
   const [statusFilter, setStatusFilter] = useState<ProspectStatus | 'all'>('all');
+
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addDraft, setAddDraft] = useState<EditDraft>({ name: '', companyName: '', phone: '', sector: '', status: 'to_call', calledBy: '', notes: '' });
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState('');
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const getAuthToken = useCallback(async (): Promise<string> => {
     const { data } = await supabase.auth.getSession();
@@ -137,6 +172,92 @@ export default function AdminCloserProspectsPage() {
     }
   }
 
+  async function handleAddProspect(e: React.FormEvent) {
+    e.preventDefault();
+    setAdding(true);
+    setAddError('');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/closer-prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          name: addDraft.name,
+          companyName: addDraft.companyName,
+          phone: addDraft.phone,
+          sector: addDraft.sector || null,
+          status: addDraft.status,
+          notes: addDraft.notes || null,
+          calledBy: addDraft.calledBy || null,
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Ajout échoué.');
+      setAddDraft({ name: '', companyName: '', phone: '', sector: '', status: 'to_call', calledBy: '', notes: '' });
+      setShowAddForm(false);
+      await loadProspects(authToken);
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Ajout échoué.');
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  function startEdit(p: Prospect) {
+    setEditingId(p.id);
+    setEditDraft(toDraft(p));
+    setEditError('');
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft(null);
+    setEditError('');
+  }
+
+  async function saveEdit(id: string) {
+    if (!editDraft) return;
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch(`/api/admin/closer-prospects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          name: editDraft.name,
+          companyName: editDraft.companyName,
+          phone: editDraft.phone,
+          sector: editDraft.sector || null,
+          status: editDraft.status,
+          calledBy: editDraft.calledBy || null,
+          notes: editDraft.notes || null,
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Modification échouée.');
+      setEditingId(null);
+      setEditDraft(null);
+      await loadProspects(authToken);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Modification échouée.');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm('Supprimer ce prospect définitivement ?')) return;
+    setDeletingId(id);
+    try {
+      const authToken = await getAuthToken();
+      await fetch(`/api/admin/closer-prospects/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
+      await loadProspects(authToken);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   if (forbidden) {
     return (
       <>
@@ -154,7 +275,7 @@ export default function AdminCloserProspectsPage() {
   return (
     <>
       <Navigation user={user} />
-      <main className="mx-auto max-w-5xl px-6 py-12">
+      <main className="mx-auto max-w-6xl px-6 py-12">
         <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
           <ArrowLeft className="h-3.5 w-3.5" /> Admin
         </Link>
@@ -196,6 +317,39 @@ export default function AdminCloserProspectsPage() {
               </label>
               {importError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{importError}</p>}
               {importResult && <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">{importResult}</p>}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <button
+                type="button"
+                onClick={() => setShowAddForm((v) => !v)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-brand-600 dark:text-brand-400"
+              >
+                <Plus className="h-4 w-4" /> Ajouter un prospect manuellement
+              </button>
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                Pour un appel fait hors liste (ex: un closer a appelé quelqu&apos;un qui n&apos;était pas importé) — tu peux directement lui donner un résultat plutôt que &laquo;&nbsp;à appeler&nbsp;&raquo;.
+              </p>
+              {showAddForm && (
+                <form onSubmit={handleAddProspect} className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <input required placeholder="Nom" value={addDraft.name} onChange={(e) => setAddDraft((d) => ({ ...d, name: e.target.value }))} className={INPUT_CLASS} />
+                  <input required placeholder="Entreprise" value={addDraft.companyName} onChange={(e) => setAddDraft((d) => ({ ...d, companyName: e.target.value }))} className={INPUT_CLASS} />
+                  <input required placeholder="Téléphone" value={addDraft.phone} onChange={(e) => setAddDraft((d) => ({ ...d, phone: e.target.value }))} className={INPUT_CLASS} />
+                  <input placeholder="Secteur (optionnel)" value={addDraft.sector} onChange={(e) => setAddDraft((d) => ({ ...d, sector: e.target.value }))} className={INPUT_CLASS} />
+                  <select value={addDraft.status} onChange={(e) => setAddDraft((d) => ({ ...d, status: e.target.value as ProspectStatus }))} className={INPUT_CLASS}>
+                    {(Object.keys(STATUS_LABEL) as ProspectStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                  </select>
+                  <input placeholder="Appelé par (email, si déjà appelé)" value={addDraft.calledBy} onChange={(e) => setAddDraft((d) => ({ ...d, calledBy: e.target.value }))} className={INPUT_CLASS} />
+                  <input placeholder="Notes (optionnel)" value={addDraft.notes} onChange={(e) => setAddDraft((d) => ({ ...d, notes: e.target.value }))} className={`${INPUT_CLASS} sm:col-span-2`} />
+                  <div className="sm:col-span-2 flex items-center gap-2">
+                    <button type="submit" disabled={adding} className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60">
+                      {adding ? 'Ajout…' : 'Ajouter'}
+                    </button>
+                    <button type="button" onClick={() => setShowAddForm(false)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Annuler</button>
+                  </div>
+                  {addError && <p className="text-xs text-red-600 dark:text-red-400 sm:col-span-2">{addError}</p>}
+                </form>
+              )}
             </div>
 
             {counts && (
@@ -240,27 +394,70 @@ export default function AdminCloserProspectsPage() {
                         <th className="px-4 py-3">Appelé par</th>
                         <th className="px-4 py-3">Appelé le</th>
                         <th className="px-4 py-3">Notes</th>
+                        <th className="px-4 py-3"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                      {filtered.map((p) => (
-                        <tr key={p.id}>
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.name}</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.company_name}</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.phone}</td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.sector || '—'}</td>
-                          <td className="px-4 py-3">
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[p.status]}`}>
-                              {STATUS_LABEL[p.status]}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.called_by || '—'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">
-                            {p.called_at ? new Date(p.called_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
-                          </td>
-                          <td className="max-w-xs truncate px-4 py-3 text-slate-500 dark:text-slate-400" title={p.notes ?? ''}>{p.notes || '—'}</td>
-                        </tr>
-                      ))}
+                      {filtered.map((p) => {
+                        const isEditing = editingId === p.id && editDraft;
+                        if (isEditing && editDraft) {
+                          return (
+                            <tr key={p.id} className="bg-brand-50/30 dark:bg-brand-500/5">
+                              <td className="px-4 py-2"><input value={editDraft.name} onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })} className={INPUT_CLASS} /></td>
+                              <td className="px-4 py-2"><input value={editDraft.companyName} onChange={(e) => setEditDraft({ ...editDraft, companyName: e.target.value })} className={INPUT_CLASS} /></td>
+                              <td className="px-4 py-2"><input value={editDraft.phone} onChange={(e) => setEditDraft({ ...editDraft, phone: e.target.value })} className={INPUT_CLASS} /></td>
+                              <td className="px-4 py-2"><input value={editDraft.sector} onChange={(e) => setEditDraft({ ...editDraft, sector: e.target.value })} className={INPUT_CLASS} /></td>
+                              <td className="px-4 py-2">
+                                <select value={editDraft.status} onChange={(e) => setEditDraft({ ...editDraft, status: e.target.value as ProspectStatus })} className={INPUT_CLASS}>
+                                  {(Object.keys(STATUS_LABEL) as ProspectStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                                </select>
+                              </td>
+                              <td className="px-4 py-2"><input value={editDraft.calledBy} onChange={(e) => setEditDraft({ ...editDraft, calledBy: e.target.value })} className={INPUT_CLASS} /></td>
+                              <td className="px-4 py-2 text-xs text-slate-400">—</td>
+                              <td className="px-4 py-2"><input value={editDraft.notes} onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })} className={INPUT_CLASS} /></td>
+                              <td className="px-4 py-2">
+                                <div className="flex items-center gap-1.5">
+                                  <button onClick={() => saveEdit(p.id)} disabled={savingEdit} aria-label="Enregistrer" className="text-emerald-600 hover:text-emerald-700 disabled:opacity-60">
+                                    <Check className="h-4 w-4" />
+                                  </button>
+                                  <button onClick={cancelEdit} aria-label="Annuler" className="text-slate-400 hover:text-slate-600">
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                {editError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{editError}</p>}
+                              </td>
+                            </tr>
+                          );
+                        }
+                        return (
+                          <tr key={p.id}>
+                            <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.name}</td>
+                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.company_name}</td>
+                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.phone}</td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.sector || '—'}</td>
+                            <td className="px-4 py-3">
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[p.status]}`}>
+                                {STATUS_LABEL[p.status]}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.called_by || '—'}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">
+                              {p.called_at ? new Date(p.called_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                            </td>
+                            <td className="max-w-xs truncate px-4 py-3 text-slate-500 dark:text-slate-400" title={p.notes ?? ''}>{p.notes || '—'}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <button onClick={() => startEdit(p)} aria-label="Éditer" className="text-slate-400 hover:text-brand-600 dark:hover:text-brand-400">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} aria-label="Supprimer" className="text-slate-400 hover:text-red-500 disabled:opacity-60">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
