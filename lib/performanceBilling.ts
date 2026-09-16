@@ -38,6 +38,16 @@ export interface CumulativePerformanceFee {
   meetsMinimumSample: boolean;
 }
 
+// Taux mesuré sur TOUS les comptes Performance cumulés (pas un seul compte)
+// — voir fetchGlobalControlStats. Sert de référence fiable pour les petits
+// comptes qui n'accumuleront jamais 40 témoins à eux seuls (voir le
+// commentaire de computeCumulativePerformanceFee).
+export interface GlobalControlStats {
+  treatedRate: number;
+  controlRate: number;
+  controlCount: number;
+}
+
 // Calcule l'écart traité vs témoin sur TOUT l'historique du compte, jamais
 // mois par mois — voir la migration 20260911000000 et le retour de Kevin :
 // avec un petit groupe témoin, l'écart mesuré un mois donné est très bruité
@@ -46,15 +56,29 @@ export interface CumulativePerformanceFee {
 // facturé à la hausse de façon systématique, pas juste par malchance
 // ponctuelle.
 //
+// Un compte avec peu de clients à risque par mois n'atteint jamais 40
+// témoins à lui seul (à 3% de tirage, il faut ~40 clients à risque/mois
+// pour y arriver en un an) — sous l'ancienne version, ça voulait dire ne
+// jamais être facturé sur ce volet, indéfiniment. Le taux est donc
+// maintenant un mélange (shrinkage bayésien) entre le taux propre au compte
+// et le taux global mesuré sur TOUS les comptes Performance cumulés — ce
+// global atteint 40+ témoins bien plus vite puisqu'il les additionne sur
+// l'ensemble de la clientèle. Le poids du taux propre au compte grandit
+// avec son nombre de témoins (control.length / (control.length + MIN)) :
+// un compte à 0 témoin démarre sur le taux global (fiable dès que Churnly
+// dans son ensemble a atteint le seuil), un compte à 40+ témoins est
+// facturé quasiment sur son propre taux, comme avant.
+//
 // Deux garde-fous, tous les deux nécessaires :
-// 1. Le plancher à zéro (Math.max(0, ...)) s'applique au taux CUMULATIF, pas
-//    à chaque mois séparément — l'ampleur du biais qu'il introduit se réduit
-//    à mesure que l'échantillon grandit, contrairement à un plancher mensuel
-//    répété qui accumule le biais mois après mois.
-// 2. En dessous de MIN_CONTROL_SAMPLES_FOR_BILLING échantillons témoins
-//    cumulés, le montant dû est forcé à zéro — la mesure n'est simplement
-//    pas assez fiable pour justifier une facture, quel que soit le résultat
-//    du calcul.
+// 1. Le plancher à zéro (Math.max(0, ...)) s'applique au taux mélangé
+//    CUMULATIF, pas à chaque mois séparément — l'ampleur du biais qu'il
+//    introduit se réduit à mesure que l'échantillon (propre + global)
+//    grandit, contrairement à un plancher mensuel répété qui accumule le
+//    biais mois après mois.
+// 2. En dessous de MIN_CONTROL_SAMPLES_FOR_BILLING témoins cumulés au
+//    niveau GLOBAL (tous comptes confondus, pas ce compte précis), le
+//    montant dû est forcé à zéro pour tout le monde — la mesure n'est
+//    simplement pas encore assez fiable, même comme référence partagée.
 //
 // alreadyInvoicedCents doit toujours refléter le cumul RÉELLEMENT facturé à
 // ce jour (users.performance_variable_invoiced_cents) : le montant dû
@@ -63,22 +87,27 @@ export interface CumulativePerformanceFee {
 export function computeCumulativePerformanceFee(
   samples: RecoverySample[],
   alreadyInvoicedCents: number,
+  global: GlobalControlStats,
 ): CumulativePerformanceFee {
   const treatment = samples.filter((s) => s.sample_group === 'treatment');
   const control = samples.filter((s) => s.sample_group === 'control');
 
+  const accountTreatedRate = treatment.length > 0 ? treatment.filter((s) => s.resolved).length / treatment.length : 0;
+  const accountControlRate = control.length > 0 ? control.filter((s) => s.resolved).length / control.length : 0;
+  const accountRawIncrementalRate = accountTreatedRate - accountControlRate;
+  const globalRawIncrementalRate = global.treatedRate - global.controlRate;
+
+  const weight = control.length / (control.length + MIN_CONTROL_SAMPLES_FOR_BILLING);
+  const blendedRawRate = weight * accountRawIncrementalRate + (1 - weight) * globalRawIncrementalRate;
+  const incrementalRate = Math.max(0, blendedRawRate);
+
   let cumulativeIncrementalRevenue = 0;
-  if (treatment.length > 0 && control.length > 0) {
-    const treatedRate = treatment.filter((s) => s.resolved).length / treatment.length;
-    const controlRate = control.filter((s) => s.resolved).length / control.length;
-    const incrementalRate = Math.max(0, treatedRate - controlRate);
-    if (incrementalRate > 0) {
-      const treatedRevenue = treatment.reduce((sum, s) => sum + Number(s.revenue_monthly), 0);
-      cumulativeIncrementalRevenue = Math.round(incrementalRate * treatedRevenue * 100) / 100;
-    }
+  if (incrementalRate > 0) {
+    const treatedRevenue = treatment.reduce((sum, s) => sum + Number(s.revenue_monthly), 0);
+    cumulativeIncrementalRevenue = Math.round(incrementalRate * treatedRevenue * 100) / 100;
   }
 
-  const meetsMinimumSample = control.length >= MIN_CONTROL_SAMPLES_FOR_BILLING;
+  const meetsMinimumSample = global.controlCount >= MIN_CONTROL_SAMPLES_FOR_BILLING;
   const cumulativeDueCents = meetsMinimumSample
     ? Math.round(cumulativeIncrementalRevenue * PERFORMANCE_FEE_RATE * 100)
     : 0;
@@ -90,6 +119,31 @@ export function computeCumulativePerformanceFee(
     cumulativeDueCents,
     amountDueNowCents: Math.max(0, cumulativeDueCents - alreadyInvoicedCents),
     meetsMinimumSample,
+  };
+}
+
+// Une seule requête, réutilisée pour tous les comptes d'un même passage de
+// facturation (voir runPerformanceBilling) — inutile de la refaire par
+// compte, le résultat est identique pour tout le monde dans un même run.
+// churn_recovery_samples n'est peuplée que pour les comptes déjà en mode
+// performance (voir lib/analysis.ts), donc aucun filtre supplémentaire n'est
+// nécessaire ici.
+export async function fetchGlobalControlStats(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+): Promise<GlobalControlStats> {
+  const { data, error } = await supabaseAdmin
+    .from('churn_recovery_samples')
+    .select('sample_group, resolved');
+
+  if (error || !data) return { treatedRate: 0, controlRate: 0, controlCount: 0 };
+
+  const treatment = data.filter((s) => s.sample_group === 'treatment');
+  const control = data.filter((s) => s.sample_group === 'control');
+
+  return {
+    treatedRate: treatment.length > 0 ? treatment.filter((s) => s.resolved).length / treatment.length : 0,
+    controlRate: control.length > 0 ? control.filter((s) => s.resolved).length / control.length : 0,
+    controlCount: control.length,
   };
 }
 
@@ -115,6 +169,7 @@ export async function runPerformanceBilling(
 
   const stripe = getStripe();
   const results: PerformanceBillingResult[] = [];
+  const globalStats = await fetchGlobalControlStats(supabaseAdmin);
 
   for (const user of (users ?? []) as PerformanceUser[]) {
     if (!user.stripe_customer_id) {
@@ -141,7 +196,7 @@ export async function runPerformanceBilling(
 
     const sampleRows = (samples ?? []) as RecoverySample[];
     const alreadyInvoicedCents = user.performance_variable_invoiced_cents ?? 0;
-    const cumulative = computeCumulativePerformanceFee(sampleRows, alreadyInvoicedCents);
+    const cumulative = computeCumulativePerformanceFee(sampleRows, alreadyInvoicedCents, globalStats);
     const performanceFee = cumulative.amountDueNowCents / 100;
     const baseFee = calcPerformanceBaseFee(Number(user.monthly_revenue) || 0);
     const fee = baseFee + performanceFee;

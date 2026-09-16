@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { getStripe } from '@/lib/stripe';
 import { logAuditEvent } from '@/lib/auditLog';
 import { calcPerformanceBaseFee, PERFORMANCE_FEE_RATE } from '@/lib/pricing';
-import { computeCumulativePerformanceFee } from '@/lib/performanceBilling';
+import { computeCumulativePerformanceFee, fetchGlobalControlStats } from '@/lib/performanceBilling';
 
 async function requireUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -46,7 +46,8 @@ export async function GET(req: NextRequest) {
   // d'échantillons témoins, amountDueNowCents vaut 0 : la mesure n'est pas
   // encore assez fiable pour être affichée comme un montant à venir.
   const alreadyInvoicedCents = profile?.performance_variable_invoiced_cents ?? 0;
-  const cumulative = computeCumulativePerformanceFee(samples ?? [], alreadyInvoicedCents);
+  const globalStats = await fetchGlobalControlStats(auth.supabaseAdmin);
+  const cumulative = computeCumulativePerformanceFee(samples ?? [], alreadyInvoicedCents, globalStats);
   const treatedResolvedCount = (samples ?? []).filter((s) => s.sample_group === 'treatment' && s.resolved).length;
   const controlResolvedCount = (samples ?? []).filter((s) => s.sample_group === 'control' && s.resolved).length;
 
