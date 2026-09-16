@@ -54,6 +54,14 @@ export default function AnimatedHero() {
 
     const nodeCount = 26;
     const nodes: THREE.Mesh[] = [];
+    // Centre autour duquel chaque point dérive (mouvement organique propre à
+    // chaque point, indépendant des autres) plutôt qu'une position figée
+    // qui ne bouge qu'en bloc avec la rotation du groupe entier.
+    const nodeCenters: THREE.Vector3[] = [];
+    // Amplitude et vitesse de dérive propres à chaque point (des valeurs
+    // toutes identiques donneraient un mouvement qui reste synchronisé et
+    // donc visuellement figé malgré le bougé).
+    const nodeDrift: { amp: THREE.Vector3; speed: THREE.Vector3; phase: THREE.Vector3 }[] = [];
     const nodeGeometry = new THREE.IcosahedronGeometry(0.09, 1);
     const nodeMaterial = new THREE.MeshBasicMaterial({ color: 0xd97706 });
 
@@ -62,31 +70,78 @@ export default function AnimatedHero() {
       const radius = 3.2 + Math.random() * 1.4;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-      mesh.position.set(
+      const pos = new THREE.Vector3(
         radius * Math.sin(phi) * Math.cos(theta),
         radius * Math.sin(phi) * Math.sin(theta),
         radius * Math.cos(phi),
       );
+      // Le texte du hero occupe la colonne centrale de l'écran, mais "quel
+      // x évite le centre" dépend de la distance à la caméra (position z=9,
+      // fov 45°) : un point plus loin (z très négatif, donc distance à la
+      // caméra plus grande) reste comprimé près du centre à l'écran même
+      // avec un x nettement plus grand qu'un point proche — projection
+      // perspective oblige. La marge nécessaire est donc calculée à partir
+      // de la vraie formule de projection plutôt qu'un seuil fixe, sous
+      // peine de ne dégager que les points les plus proches et de laisser
+      // les points plus lointains empiéter sur le texte quand même.
+      const ndcHalfWidthClearance = 0.5; // un peu plus que la largeur du bloc de texte en NDC
+      // La hauteur de la section hero n'est pas 900px (elle s'ajuste à son
+      // contenu) — utiliser le vrai ratio du canvas ici, pas une valeur
+      // arbitraire, sous peine de sous-estimer la marge nécessaire (ratio
+      // trop bas = facteur de perspective trop petit = points pas assez
+      // repoussés pour vraiment dégager le texte à l'écran).
+      const perspectiveFactor = Math.tan((45 * Math.PI) / 180 / 2) * (width / height); // tan(fovY/2) * aspect
+      const cameraDistanceZ = 9;
+      const distanceToCamera = cameraDistanceZ - pos.z;
+      const requiredX = ndcHalfWidthClearance * perspectiveFactor * distanceToCamera;
+      if (Math.abs(pos.x) < requiredX) {
+        const side = pos.x >= 0 ? 1 : -1;
+        pos.x = side * (requiredX + Math.random() * 0.5);
+      }
+      mesh.position.copy(pos);
       group.add(mesh);
       nodes.push(mesh);
+      nodeCenters.push(pos.clone());
+      nodeDrift.push({
+        amp: new THREE.Vector3(0.15 + Math.random() * 0.2, 0.35 + Math.random() * 0.35, 0.3 + Math.random() * 0.3),
+        speed: new THREE.Vector3(0.12 + Math.random() * 0.18, 0.1 + Math.random() * 0.2, 0.1 + Math.random() * 0.15),
+        phase: new THREE.Vector3(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2),
+      });
     }
 
-    const linePositions: number[] = [];
-    for (let i = 0; i < nodes.length; i += 1) {
-      for (let j = i + 1; j < nodes.length; j += 1) {
-        if (nodes[i].position.distanceTo(nodes[j].position) < 2.2) {
-          linePositions.push(
-            nodes[i].position.x, nodes[i].position.y, nodes[i].position.z,
-            nodes[j].position.x, nodes[j].position.y, nodes[j].position.z,
-          );
-        }
-      }
-    }
     const lineGeometry = new THREE.BufferGeometry();
-    lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
     const lineMaterial = new THREE.LineBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.5 });
     const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
     group.add(lines);
+    const maxLinePairs = (nodeCount * (nodeCount - 1)) / 2;
+    const linePositionArray = new Float32Array(maxLinePairs * 2 * 3);
+    lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositionArray, 3));
+    lineGeometry.setDrawRange(0, 0);
+
+    // Recalculée chaque frame à partir des positions courantes (voir
+    // renderFrame) : comme les points dérivent maintenant individuellement,
+    // les traits doivent se faire et se défaire en direct plutôt que rester
+    // figés sur les distances calculées une seule fois au montage.
+    function updateLines() {
+      let vertexCount = 0;
+      for (let i = 0; i < nodes.length; i += 1) {
+        for (let j = i + 1; j < nodes.length; j += 1) {
+          if (nodes[i].position.distanceTo(nodes[j].position) < 2.2) {
+            const base = vertexCount * 3;
+            linePositionArray[base] = nodes[i].position.x;
+            linePositionArray[base + 1] = nodes[i].position.y;
+            linePositionArray[base + 2] = nodes[i].position.z;
+            linePositionArray[base + 3] = nodes[j].position.x;
+            linePositionArray[base + 4] = nodes[j].position.y;
+            linePositionArray[base + 5] = nodes[j].position.z;
+            vertexCount += 2;
+          }
+        }
+      }
+      lineGeometry.attributes.position.needsUpdate = true;
+      lineGeometry.setDrawRange(0, vertexCount);
+    }
+    updateLines();
 
     let frameId: number | null = null;
     let isVisible = true;
@@ -96,8 +151,23 @@ export default function AnimatedHero() {
 
     function renderFrame() {
       const t = clock.getElapsedTime();
-      group.rotation.y = t * 0.12;
-      group.rotation.x = Math.sin(t * 0.15) * 0.15;
+      // Rotation d'ensemble beaucoup plus douce qu'avant : la dérive de
+      // chaque point ci-dessous porte maintenant l'essentiel du mouvement,
+      // celle-ci ne sert plus qu'à un léger effet de parallaxe.
+      group.rotation.y = t * 0.04;
+      group.rotation.x = Math.sin(t * 0.08) * 0.06;
+
+      for (let i = 0; i < nodes.length; i += 1) {
+        const center = nodeCenters[i];
+        const d = nodeDrift[i];
+        nodes[i].position.set(
+          center.x + Math.sin(t * d.speed.x + d.phase.x) * d.amp.x,
+          center.y + Math.sin(t * d.speed.y + d.phase.y) * d.amp.y,
+          center.z + Math.sin(t * d.speed.z + d.phase.z) * d.amp.z,
+        );
+      }
+      updateLines();
+
       renderer.render(scene, camera);
       frameId = requestAnimationFrame(renderFrame);
     }
