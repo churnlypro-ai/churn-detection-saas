@@ -169,15 +169,20 @@ export default function CloserPage() {
   const past = confirmed.filter((b) => b.slot_start && new Date(b.slot_start).getTime() < now);
 
   const toCall = prospects.filter((p) => p.status === 'to_call');
-  const handledProspects = prospects.filter((p) => p.status !== 'to_call');
+  // À part de "Déjà traités" : ces prospects doivent encore être appelés,
+  // pas juste consultés — ils ont donc leur propre section avec les mêmes
+  // actions que "à appeler", pas la liste figée du dessous.
+  const callback = prospects.filter((p) => p.status === 'callback');
+  const handledProspects = prospects.filter((p) => p.status !== 'to_call' && p.status !== 'callback');
   const interestedCount = prospects.filter((p) => p.status === 'interested').length;
 
   const stats = useMemo(() => [
     { label: 'À appeler', value: toCall.length, icon: PhoneCall, color: 'text-brand-600 dark:text-brand-400' },
+    { label: 'À rappeler', value: callback.length, icon: Clock, color: 'text-amber-600 dark:text-amber-400' },
     { label: 'Appelés', value: handledProspects.length, icon: ListChecks, color: 'text-slate-600 dark:text-slate-300' },
     { label: 'Intéressés', value: interestedCount, icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400' },
     { label: 'RDV à venir', value: upcoming.length, icon: CalendarDays, color: 'text-amber-600 dark:text-amber-400' },
-  ], [toCall.length, handledProspects.length, interestedCount, upcoming.length]);
+  ], [toCall.length, callback.length, handledProspects.length, interestedCount, upcoming.length]);
 
   // Même code couleur que les boutons de résultat plus bas (émeraude =
   // positif, ambre = à rappeler, gris = pas répondu, rouge = négatif) pour
@@ -218,7 +223,7 @@ export default function CloserPage() {
   }
 
   const tabs: { id: Tab; label: string; icon: typeof PhoneCall; count?: number }[] = [
-    { id: 'prospects', label: 'Prospects à appeler', icon: PhoneCall, count: toCall.length },
+    { id: 'prospects', label: 'Prospects à appeler', icon: PhoneCall, count: toCall.length + callback.length },
     { id: 'rdv', label: 'Mes rendez-vous', icon: CalendarDays, count: pending.length + upcoming.length },
     { id: 'argumentaire', label: 'Argumentaire & pricing', icon: BookOpen },
   ];
@@ -248,7 +253,7 @@ export default function CloserPage() {
         </div>
 
         {!loading && (
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
             {stats.map((s) => (
               <div key={s.label} className="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex items-center gap-1.5">
@@ -316,116 +321,143 @@ export default function CloserPage() {
 
         {loading && <p className="text-sm text-slate-400">Chargement…</p>}
 
-        {!loading && tab === 'prospects' && (
-          <div className="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            {prospects.length === 0 ? (
-              <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
-                Aucun prospect chargé pour l&apos;instant.
-              </p>
-            ) : toCall.length === 0 ? (
-              <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
-                Tous les prospects ont été traités.
-              </p>
-            ) : (
-              <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                {toCall.map((p) => {
-                  const hint = getApproachHint(p.sector);
-                  return (
-                  <div key={p.id} className="px-6 py-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-medium text-slate-900 dark:text-white">
-                          {p.name} <span className="text-slate-400">· {p.company_name}</span>
-                        </p>
-                        {p.sector && <p className="text-xs text-slate-400 dark:text-slate-500">{p.sector}</p>}
-                      </div>
-                      <a
-                        href={`tel:${p.phone.replace(/\s+/g, '')}`}
-                        className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-                      >
-                        <Phone className="h-3.5 w-3.5" /> {p.phone}
-                      </a>
-                    </div>
-
-                    <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/50 p-3.5 dark:border-brand-500/20 dark:bg-brand-500/5">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 dark:text-brand-400">
-                        <Lightbulb className="h-3.5 w-3.5" /> Analyse & approche suggérée
-                      </div>
-                      <dl className="mt-2 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
-                        <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Profil : </dt><dd className="inline">{hint.profil}</dd></div>
-                        <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Méthode : </dt><dd className="inline">{hint.angle}</dd></div>
-                        <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Accroche : </dt><dd className="inline italic">&laquo;&nbsp;{hint.accroche}&nbsp;&raquo;</dd></div>
-                        <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Question à poser : </dt><dd className="inline italic">&laquo;&nbsp;{hint.question}&nbsp;&raquo;</dd></div>
-                      </dl>
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Note (objection, contexte, à rappeler quand…)"
-                      value={noteDrafts[p.id] ?? ''}
-                      onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                      className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                    />
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => handleUpdateProspectStatus(p.id, 'interested')}
-                        disabled={updatingProspectId === p.id}
-                        className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60 dark:bg-emerald-500/10 dark:text-emerald-400"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Intéressé
-                      </button>
-                      <button
-                        onClick={() => handleUpdateProspectStatus(p.id, 'callback')}
-                        disabled={updatingProspectId === p.id}
-                        className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60 dark:bg-amber-500/10 dark:text-amber-400"
-                      >
-                        <Clock className="h-3.5 w-3.5" /> À rappeler
-                      </button>
-                      <button
-                        onClick={() => handleUpdateProspectStatus(p.id, 'no_answer')}
-                        disabled={updatingProspectId === p.id}
-                        className="flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-300"
-                      >
-                        <PhoneMissed className="h-3.5 w-3.5" /> Ne répond pas
-                      </button>
-                      <button
-                        onClick={() => handleUpdateProspectStatus(p.id, 'not_interested')}
-                        disabled={updatingProspectId === p.id}
-                        className="flex items-center gap-1.5 rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60 dark:bg-red-500/10 dark:text-red-400"
-                      >
-                        <PhoneOff className="h-3.5 w-3.5" /> Pas intéressé
-                      </button>
-                    </div>
-                    {prospectError[p.id] && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{prospectError[p.id]}</p>}
+        {!loading && tab === 'prospects' && (() => {
+          function renderProspectCard(p: Prospect) {
+            const hint = getApproachHint(p.sector);
+            return (
+              <div key={p.id} className="px-6 py-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      {p.name} <span className="text-slate-400">· {p.company_name}</span>
+                    </p>
+                    {p.sector && <p className="text-xs text-slate-400 dark:text-slate-500">{p.sector}</p>}
                   </div>
-                  );
-                })}
-              </div>
-            )}
-            {handledProspects.length > 0 && (
-              <details className="border-t border-slate-100 px-6 py-4 dark:border-slate-800">
-                <summary className="cursor-pointer text-xs font-semibold text-slate-400 dark:text-slate-500">
-                  Déjà traités ({handledProspects.length})
-                </summary>
-                <div className="mt-3 space-y-3">
-                  {handledProspects.map((p) => (
-                    <div key={p.id} className="text-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="min-w-0 truncate text-slate-600 dark:text-slate-300">
-                          {p.name} · {p.company_name}
-                        </span>
-                        <span className="flex-shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500">
-                          {PROSPECT_STATUS_LABEL[p.status]}
-                        </span>
-                      </div>
-                      {p.notes && <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{p.notes}</p>}
-                    </div>
-                  ))}
+                  <a
+                    href={`tel:${p.phone.replace(/\s+/g, '')}`}
+                    className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+                  >
+                    <Phone className="h-3.5 w-3.5" /> {p.phone}
+                  </a>
                 </div>
-              </details>
-            )}
-          </div>
-        )}
+
+                <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/50 p-3.5 dark:border-brand-500/20 dark:bg-brand-500/5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 dark:text-brand-400">
+                    <Lightbulb className="h-3.5 w-3.5" /> Analyse & approche suggérée
+                  </div>
+                  <dl className="mt-2 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Profil : </dt><dd className="inline">{hint.profil}</dd></div>
+                    <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Méthode : </dt><dd className="inline">{hint.angle}</dd></div>
+                    <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Accroche : </dt><dd className="inline italic">&laquo;&nbsp;{hint.accroche}&nbsp;&raquo;</dd></div>
+                    <div><dt className="inline font-medium text-slate-500 dark:text-slate-400">Question à poser : </dt><dd className="inline italic">&laquo;&nbsp;{hint.question}&nbsp;&raquo;</dd></div>
+                  </dl>
+                </div>
+
+                {p.notes && (
+                  <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                    <span className="font-medium text-slate-600 dark:text-slate-300">Note précédente : </span>{p.notes}
+                  </p>
+                )}
+
+                <input
+                  type="text"
+                  placeholder="Note (objection, contexte, à rappeler quand…)"
+                  value={noteDrafts[p.id] ?? ''}
+                  onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                  className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => handleUpdateProspectStatus(p.id, 'interested')}
+                    disabled={updatingProspectId === p.id}
+                    className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60 dark:bg-emerald-500/10 dark:text-emerald-400"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Intéressé
+                  </button>
+                  <button
+                    onClick={() => handleUpdateProspectStatus(p.id, 'callback')}
+                    disabled={updatingProspectId === p.id}
+                    className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60 dark:bg-amber-500/10 dark:text-amber-400"
+                  >
+                    <Clock className="h-3.5 w-3.5" /> À rappeler
+                  </button>
+                  <button
+                    onClick={() => handleUpdateProspectStatus(p.id, 'no_answer')}
+                    disabled={updatingProspectId === p.id}
+                    className="flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    <PhoneMissed className="h-3.5 w-3.5" /> Ne répond pas
+                  </button>
+                  <button
+                    onClick={() => handleUpdateProspectStatus(p.id, 'not_interested')}
+                    disabled={updatingProspectId === p.id}
+                    className="flex items-center gap-1.5 rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60 dark:bg-red-500/10 dark:text-red-400"
+                  >
+                    <PhoneOff className="h-3.5 w-3.5" /> Pas intéressé
+                  </button>
+                </div>
+                {prospectError[p.id] && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{prospectError[p.id]}</p>}
+              </div>
+            );
+          }
+
+          return (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                {prospects.length === 0 ? (
+                  <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+                    Aucun prospect chargé pour l&apos;instant.
+                  </p>
+                ) : toCall.length === 0 ? (
+                  <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+                    Plus rien de nouveau à appeler pour l&apos;instant.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-50 dark:divide-slate-800">
+                    {toCall.map(renderProspectCard)}
+                  </div>
+                )}
+              </div>
+
+              {callback.length > 0 && (
+                <div className="rounded-2xl border border-amber-200 bg-white shadow-sm dark:border-amber-800/40 dark:bg-slate-900">
+                  <div className="flex items-center gap-2 border-b border-amber-100 px-6 py-4 dark:border-amber-800/30">
+                    <Clock className="h-4 w-4 text-amber-500" />
+                    <h2 className="text-sm font-semibold text-slate-900 dark:text-white">À rappeler ({callback.length})</h2>
+                  </div>
+                  <div className="divide-y divide-slate-50 dark:divide-slate-800">
+                    {callback.map(renderProspectCard)}
+                  </div>
+                </div>
+              )}
+
+              {handledProspects.length > 0 && (
+                <div className="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                  <details className="px-6 py-4">
+                    <summary className="cursor-pointer text-xs font-semibold text-slate-400 dark:text-slate-500">
+                      Déjà traités ({handledProspects.length})
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      {handledProspects.map((p) => (
+                        <div key={p.id} className="text-sm">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="min-w-0 truncate text-slate-600 dark:text-slate-300">
+                              {p.name} · {p.company_name}
+                            </span>
+                            <span className="flex-shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500">
+                              {PROSPECT_STATUS_LABEL[p.status]}
+                            </span>
+                          </div>
+                          {p.notes && <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{p.notes}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {!loading && tab === 'rdv' && (
           bookings.length === 0 ? (
