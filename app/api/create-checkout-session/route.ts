@@ -48,6 +48,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Même garde-fou que ci-dessus, pour le palier "manager" (voir
+  // calcManagerPrice) qui dépend de client_count plutôt que de
+  // monthly_revenue : app/signup/page.tsx appelle cette route juste après
+  // /api/complete-signup, dont l'écriture de client_count est best-effort
+  // (erreur seulement loguée, jamais renvoyée à l'appelant — voir son
+  // commentaire). Un échec silencieux de cette écriture précédente laissait
+  // client_count à NULL ici, donc calcManagerPrice(0) = 60€ facturés alors
+  // que la page affichait le vrai palier (ex: 250€ pour 3 modèles). Écrit
+  // ici aussi, dans la même requête qui calcule le prix, avec une vraie
+  // vérification d'erreur — même mécanisme que monthlyRevenue au-dessus.
+  const rawClientCount = Number(body?.clientCount);
+  if (Number.isFinite(rawClientCount)) {
+    const clientCount = Math.max(0, Math.min(10_000, Math.round(rawClientCount)));
+    const { error: clientCountUpdateError } = await supabaseAdmin
+      .from('users')
+      .update({ client_count: clientCount })
+      .eq('id', user.id);
+    if (clientCountUpdateError) {
+      console.error('[create-checkout-session] failed to persist client count', JSON.stringify({ userId: user.id, error: clientCountUpdateError }));
+      return NextResponse.json({ error: 'Could not save your client count before checkout.' }, { status: 500 });
+    }
+  }
+
   // Le palier est calculé côté serveur à partir des données du profil en
   // base (relu après l'écriture ci-dessus, donc jamais périmé), jamais à
   // partir de ce que le client envoie directement dans le body — sinon

@@ -252,10 +252,17 @@ function SignupContent() {
         }
         try {
           const tier = String(calcManagerPrice(clientCount));
+          // clientCount est renvoyé ici (en plus de /api/complete-signup, qui
+          // vient de l'écrire en base) car cette écriture précédente est
+          // best-effort côté complete-signup — voir le commentaire dans
+          // create-checkout-session/route.ts. Sans ça, un échec silencieux
+          // de ce premier write ferait facturer un palier différent de celui
+          // affiché sur cette page (calcManagerPrice(0) au lieu du vrai
+          // nombre de modèles choisi).
           const response = await fetch('/api/create-checkout-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ tier }),
+            body: JSON.stringify({ tier, clientCount }),
           });
           if (!response.ok) throw new Error(t.errors.checkoutStartFailed);
           const { url } = await response.json();
