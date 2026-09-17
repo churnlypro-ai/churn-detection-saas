@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
@@ -10,7 +11,7 @@ import RetentionDraftsPanel from '@/components/RetentionDraftsPanel';
 import { EASE_OUT } from '@/lib/animations';
 import {
   AlertTriangle, Lock, X, Mail, Gift, GraduationCap, Zap, Check, TrendingDown, Users, Euro,
-  BarChart3, Clock, Sparkles, ShieldCheck, Target, ChevronDown, Info, Download, Printer,
+  BarChart3, Clock, Sparkles, ShieldCheck, Target, ChevronDown, Info, Download, Printer, Star,
 } from 'lucide-react';
 import { formatEuro as formatEuroShared } from '@/lib/pricing';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
@@ -672,6 +673,9 @@ export default function Dashboard() {
 
   const [activating, setActivating] = useState(false);
   const [activationDelayed, setActivationDelayed] = useState(false);
+  // null tant que non vérifié, pour ne jamais afficher la bannière "laisser
+  // un avis" avant de savoir si ce client en a déjà soumis un.
+  const [hasTestimonial, setHasTestimonial] = useState<boolean | null>(null);
   const t = useTranslations('dashboard');
   const { localeTag } = useLanguage();
 
@@ -818,6 +822,13 @@ export default function Dashboard() {
       setProfile(profileData);
       await loadData(resolvedAccountId);
       setLoading(false);
+
+      // Best-effort, jamais bloquant : sert uniquement à décider si la
+      // bannière "laisser un avis" ci-dessous doit s'afficher.
+      fetch('/api/testimonials/mine', { headers: authHeader })
+        .then((r) => r.json())
+        .then((result) => setHasTestimonial(!!result.testimonial))
+        .catch(() => {});
 
       const params = new URLSearchParams(window.location.search);
       // Voir la note dans app/settings/page.tsx : un membre d'équipe qui
@@ -1258,6 +1269,28 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
+          </motion.div>
+        )}
+
+        {status === 'active' && hasTestimonial === false && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative z-10 flex flex-col items-start gap-3 rounded-2xl border border-brand-100 bg-brand-50/40 px-5 py-4 dark:border-brand-800/40 dark:bg-brand-500/5 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                <Star className="h-4 w-4" />
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t.testimonialInvite.text}</p>
+            </div>
+            <Link
+              href="/avis"
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+            >
+              {t.testimonialInvite.cta}
+            </Link>
           </motion.div>
         )}
 

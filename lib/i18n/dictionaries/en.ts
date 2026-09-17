@@ -602,6 +602,10 @@ export const en: Dictionary = {
       standardNote: 'This analysis uses our standard model. Subscribe to unlock Churnly\'s Premium analysis, more precise.',
       upgradeCta: 'Upgrade to Premium',
     },
+    testimonialInvite: {
+      text: 'Is Churnly helping you keep your customers? Two minutes to leave a review — it goes on our homepage once checked.',
+      cta: 'Leave a review',
+    },
     revenueProjectionTitle: 'Revenue projection',
     riskDistributionTitle: 'Risk distribution',
     riskBuckets: ['Stable', 'Watch', 'At risk', 'Critical'],

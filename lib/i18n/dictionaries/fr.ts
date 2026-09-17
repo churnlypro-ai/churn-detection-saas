@@ -600,6 +600,10 @@ export const fr = {
       standardNote: 'Cette analyse utilise notre modèle standard. Abonnez-vous pour débloquer l\'analyse Premium Churnly, plus précise.',
       upgradeCta: 'Passer en Premium',
     },
+    testimonialInvite: {
+      text: 'Churnly vous aide à retenir vos clients ? Deux minutes pour laisser un avis — il apparaît sur notre page d\'accueil une fois relu.',
+      cta: 'Laisser un avis',
+    },
     revenueProjectionTitle: 'Projection de revenu',
     riskDistributionTitle: 'Distribution du risque',
     riskBuckets: ['Stable', 'Surveiller', 'Risque', 'Critique'],
