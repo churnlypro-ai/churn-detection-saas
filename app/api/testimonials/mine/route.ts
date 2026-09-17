@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Voir app/avis/page.tsx : permet d'afficher le bon état (formulaire vide,
-// "en attente de relecture", "déjà en ligne", ou "non retenu, modifiable")
-// selon ce que ce client a déjà soumis, sans jamais exposer les avis des
-// autres utilisateurs (contrairement à GET /api/testimonials qui ne renvoie
-// que les avis approuvés, tous comptes confondus).
+// Voir app/avis/page.tsx : permet d'afficher le bon état (formulaire vide ou
+// "déjà en ligne, modifiable") selon ce que ce client a déjà soumis, sans
+// jamais exposer les avis des autres utilisateurs (contrairement à GET
+// /api/testimonials qui ne renvoie que les avis approuvés, tous comptes
+// confondus). Sans token (visiteur anonyme, voir la note TEMPORAIRE dans
+// /api/testimonials POST) : toujours "pas d'avis existant" plutôt qu'une
+// erreur — un anonyme n'a de toute façon aucun avis à retrouver.
 export async function GET(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) {
-    return NextResponse.json({ error: 'Missing authorization token' }, { status: 401 });
+    return NextResponse.json({ testimonial: null });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
