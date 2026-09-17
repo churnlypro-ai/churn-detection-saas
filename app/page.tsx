@@ -434,6 +434,22 @@ function TestimonialsSection({ items }: { items: Testimonial[] }) {
             <TestimonialCard key={item.id} item={item} i={i} />
           ))}
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }}
+          className="mt-12 text-center"
+        >
+          <Link
+            href="/avis"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-brand-700"
+          >
+            <Star className="h-4 w-4" />
+            {t.addReviewCta}
+          </Link>
+        </motion.div>
       </div>
     </section>
   );

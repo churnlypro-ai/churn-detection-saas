@@ -95,8 +95,9 @@ export const fr = {
     testimonials: {
       eyebrow: 'Ils en parlent',
       title: 'Ce que nos clients en disent',
-      subtitle: 'Des vrais dirigeants, des vrais retours — modérés avant publication.',
+      subtitle: 'Des vrais dirigeants, des vrais retours.',
       ratingSummary: (avg: string, count: number) => `${avg} ★ · basé sur ${count} avis`,
+      addReviewCta: 'Laisser un avis',
     },
     toc: {
       reality: 'Le constat',

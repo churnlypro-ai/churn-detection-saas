@@ -97,8 +97,9 @@ export const en: Dictionary = {
     testimonials: {
       eyebrow: 'What they say',
       title: 'What our customers say',
-      subtitle: 'Real founders, real feedback — moderated before publishing.',
+      subtitle: 'Real founders, real feedback.',
       ratingSummary: (avg: string, count: number) => `${avg} ★ · based on ${count} review${count === 1 ? '' : 's'}`,
+      addReviewCta: 'Leave a review',
     },
     toc: {
       reality: 'The reality',
