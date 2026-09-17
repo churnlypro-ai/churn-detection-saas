@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
 import { EASE_OUT } from '@/lib/animations';
-import { Star, Check, Clock, Pencil, ArrowRight } from 'lucide-react';
+import { Star, Check, Pencil, ArrowRight } from 'lucide-react';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
 
 interface Testimonial {
@@ -140,7 +140,7 @@ export default function AvisPage() {
         role_title: roleTitle || null,
         rating,
         content,
-        status: 'pending',
+        status: 'approved',
       }));
       setEditing(false);
       setJustSubmitted(true);
@@ -191,24 +191,12 @@ export default function AvisPage() {
               transition={{ duration: 0.5, ease: EASE_OUT }}
               className="mt-10 rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900"
             >
-              <div
-                className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
-                  mine.status === 'approved'
-                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
-                    : mine.status === 'pending'
-                      ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400'
-                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                }`}
-              >
-                {mine.status === 'approved' ? <Check className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                <Check className="h-7 w-7" />
               </div>
 
-              <h2 className="mt-5 text-lg font-semibold text-slate-900 dark:text-white">
-                {mine.status === 'approved' ? t.approvedTitle : mine.status === 'pending' ? t.pendingTitle : t.rejectedTitle}
-              </h2>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {mine.status === 'approved' ? t.approvedBody : mine.status === 'pending' ? t.pendingBody : t.rejectedBody}
-              </p>
+              <h2 className="mt-5 text-lg font-semibold text-slate-900 dark:text-white">{t.approvedTitle}</h2>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.approvedBody}</p>
 
               <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-left dark:bg-slate-800/60">
                 <div className="mb-2 flex items-center gap-1">
@@ -324,7 +312,7 @@ export default function AvisPage() {
                   </button>
                 )}
               </div>
-              <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">{t.moderationNote}</p>
+              <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">{t.publishNote}</p>
             </motion.form>
           )}
         </AnimatePresence>

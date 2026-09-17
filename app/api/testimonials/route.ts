@@ -18,10 +18,11 @@ const MESSAGES = {
   },
 } as const;
 
-// Public : uniquement les avis approuvés, affichés sur la page d'accueil
-// (voir la section témoignages dans app/page.tsx). Jamais les avis pending
-// ou rejected — ce serait afficher un avis pas encore relu, ou explicitement
-// écarté, comme s'il était public.
+// Public : les avis affichés sur la page d'accueil (voir la section
+// témoignages dans app/page.tsx). Publiés immédiatement à la soumission —
+// pas d'étape de relecture (voir la note dans POST ci-dessous) — donc ce
+// filtre sur 'approved' ne fait plus qu'écarter un éventuel avis que
+// l'admin voudrait un jour dépublier sans le supprimer.
 export async function GET() {
   const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
@@ -36,11 +37,14 @@ export async function GET() {
 }
 
 // Soumission (et re-soumission) d'un avis par un client connecté — voir
-// app/avis/page.tsx. Une seule ligne par compte (user_id unique en base) :
-// upsert plutôt qu'insert, pour que modifier un avis déjà envoyé mette à
-// jour la même ligne au lieu d'en créer une deuxième. Repasse toujours le
-// statut à 'pending', y compris pour un avis déjà approuvé — une modif doit
-// repasser par la relecture d'un admin avant de rester visible publiquement.
+// app/avis/page.tsx. Publié immédiatement (status 'approved' direct, pas de
+// relecture admin requise). Une seule ligne par compte : un index unique
+// partiel sur user_id (voir la migration 20260917010000) empêche un même
+// client de créer plusieurs lignes, donc on sélectionne d'abord une ligne
+// existante puis on l'UPDATE, plutôt qu'un upsert Postgres classique — un
+// upsert avec ON CONFLICT ne matche pas un index unique PARTIEL (il ne
+// s'applique qu'aux lignes où user_id n'est pas NULL, pour laisser les avis
+// ajoutés à la main par un admin, sans compte, coexister sans contrainte).
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) {
@@ -76,27 +80,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: m.invalidRating }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data: existing } = await supabaseAdmin
     .from('testimonials')
-    .upsert(
-      {
-        user_id: userData.user.id,
-        author_name: authorName,
-        company_name: companyName || null,
-        role_title: roleTitle || null,
-        rating,
-        content,
-        status: 'pending',
-        updated_at: new Date().toISOString(),
-        reviewed_at: null,
-      },
-      { onConflict: 'user_id' },
-    )
-    .select('id, status')
-    .single();
+    .select('id')
+    .eq('user_id', userData.user.id)
+    .maybeSingle();
+
+  const row = {
+    user_id: userData.user.id,
+    author_name: authorName,
+    company_name: companyName || null,
+    role_title: roleTitle || null,
+    rating,
+    content,
+    status: 'approved',
+    updated_at: new Date().toISOString(),
+    reviewed_at: new Date().toISOString(),
+  };
+
+  const { data, error } = existing
+    ? await supabaseAdmin.from('testimonials').update(row).eq('id', existing.id).select('id, status').single()
+    : await supabaseAdmin.from('testimonials').insert(row).select('id, status').single();
 
   if (error) {
-    console.error('[testimonials] upsert failed', JSON.stringify({ userId: userData.user.id, error }));
+    console.error('[testimonials] save failed', JSON.stringify({ userId: userData.user.id, error }));
     return NextResponse.json({ error: m.saveFailed }, { status: 500 });
   }
 
