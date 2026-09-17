@@ -13,7 +13,7 @@ import FadeLine from '@/components/FadeLine';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -355,6 +355,90 @@ function CaseStudiesSection() {
   );
 }
 
+interface Testimonial {
+  id: string;
+  author_name: string;
+  company_name: string | null;
+  role_title: string | null;
+  rating: number;
+  content: string;
+}
+
+function TestimonialCard({ item, i }: { item: Testimonial; i: number }) {
+  const initial = item.author_name.trim().charAt(0).toUpperCase() || '?';
+  const subtitle = [item.role_title, item.company_name].filter(Boolean).join(' · ');
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.6, ease: EASE_OUT, delay: (i % 3) * 0.12 }}
+      whileHover={{ y: -6, transition: { duration: 0.2 } }}
+      className="relative flex h-full flex-col rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow hover:shadow-lg dark:border-slate-800 dark:bg-slate-950"
+    >
+      <Quote className="h-8 w-8 text-brand-100 dark:text-brand-900" strokeWidth={2.5} />
+      <div className="mt-3 flex items-center gap-1">
+        {Array.from({ length: 5 }).map((_, s) => (
+          <Star
+            key={s}
+            className={`h-3.5 w-3.5 ${s < item.rating ? 'fill-brand-500 text-brand-500 dark:fill-brand-400 dark:text-brand-400' : 'text-slate-200 dark:text-slate-800'}`}
+          />
+        ))}
+      </div>
+      <p className="mt-4 flex-1 text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
+        &ldquo;{item.content}&rdquo;
+      </p>
+      <div className="mt-6 flex items-center gap-3 border-t border-slate-50 pt-5 dark:border-slate-900">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white dark:from-brand-400 dark:to-brand-600">
+          {initial}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{item.author_name}</p>
+          {subtitle && <p className="truncate text-xs text-slate-500 dark:text-slate-500">{subtitle}</p>}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function TestimonialsSection({ items }: { items: Testimonial[] }) {
+  const t = useTranslations('home').testimonials;
+  const avg = items.reduce((sum, it) => sum + it.rating, 0) / items.length;
+
+  return (
+    <section id="avis" className="relative overflow-hidden bg-slate-50 px-6 py-28 dark:bg-slate-900">
+      <div className="mx-auto max-w-5xl">
+        <div className="text-center">
+          <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
+            {t.eyebrow}
+          </motion.p>
+          <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+            {t.title}
+          </motion.h2>
+          <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+            {t.subtitle}
+          </motion.p>
+          <motion.div
+            {...reveal}
+            transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }}
+            className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm dark:bg-slate-950 dark:text-slate-200"
+          >
+            <Star className="h-4 w-4 fill-brand-500 text-brand-500 dark:fill-brand-400 dark:text-brand-400" />
+            {t.ratingSummary(avg.toFixed(1), items.length)}
+          </motion.div>
+        </div>
+
+        <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {items.slice(0, 9).map((item, i) => (
+            <TestimonialCard key={item.id} item={item} i={i} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CTASection() {
   const ctaRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ctaRef, offset: ['start end', 'end start'] });
@@ -437,6 +521,14 @@ export default function Home() {
   const tToc = useTranslations('home').toc;
   const tFooter = useTranslations('home').footer;
 
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  useEffect(() => {
+    fetch('/api/testimonials')
+      .then((r) => (r.ok ? r.json() : { testimonials: [] }))
+      .then((result) => setTestimonials(result.testimonials ?? []))
+      .catch(() => setTestimonials([]));
+  }, []);
+
   const TOC_ITEMS = [
     { id: 'constat', label: tToc.reality },
     { id: 'churn', label: tToc.churn },
@@ -444,6 +536,7 @@ export default function Home() {
     { id: 'tarif', label: tToc.pricing },
     { id: 'comment-ca-marche', label: tToc.howItWorks },
     { id: 'cas-reels', label: tToc.caseStudies },
+    ...(testimonials.length > 0 ? [{ id: 'avis', label: tToc.testimonials }] : []),
   ];
 
   return (
@@ -474,6 +567,12 @@ export default function Home() {
         <CaseStudiesSection />
         <SectionDivider />
         <CTASection />
+        {testimonials.length > 0 && (
+          <>
+            <SectionDivider />
+            <TestimonialsSection items={testimonials} />
+          </>
+        )}
       </main>
 
       <footer className="relative bg-white py-10 dark:bg-slate-950">

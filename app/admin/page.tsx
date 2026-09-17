@@ -189,6 +189,12 @@ export default function AdminOverview() {
           >
             Import prospects cold call →
           </Link>
+          <Link
+            href="/admin/testimonials"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Avis clients →
+          </Link>
         </div>
 
         <input

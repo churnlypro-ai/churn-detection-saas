@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase';
+
+const MESSAGES = {
+  fr: {
+    missingFields: 'Merci de remplir votre nom et votre avis.',
+    contentTooShort: 'Votre avis doit contenir au moins 20 caractères.',
+    contentTooLong: 'Votre avis est limité à 600 caractères.',
+    invalidRating: 'La note doit être entre 1 et 5 étoiles.',
+    saveFailed: 'Impossible d\'enregistrer votre avis pour le moment.',
+  },
+  en: {
+    missingFields: 'Please fill in your name and your review.',
+    contentTooShort: 'Your review must be at least 20 characters.',
+    contentTooLong: 'Your review is limited to 600 characters.',
+    invalidRating: 'The rating must be between 1 and 5 stars.',
+    saveFailed: 'Could not save your review right now.',
+  },
+} as const;
+
+// Public : uniquement les avis approuvés, affichés sur la page d'accueil
+// (voir la section témoignages dans app/page.tsx). Jamais les avis pending
+// ou rejected — ce serait afficher un avis pas encore relu, ou explicitement
+// écarté, comme s'il était public.
+export async function GET() {
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
+    .from('testimonials')
+    .select('id, author_name, company_name, role_title, rating, content, created_at')
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(24);
+
+  if (error) return NextResponse.json({ error: 'Chargement échoué.' }, { status: 500 });
+  return NextResponse.json({ testimonials: data ?? [] });
+}
+
+// Soumission (et re-soumission) d'un avis par un client connecté — voir
+// app/avis/page.tsx. Une seule ligne par compte (user_id unique en base) :
+// upsert plutôt qu'insert, pour que modifier un avis déjà envoyé mette à
+// jour la même ligne au lieu d'en créer une deuxième. Repasse toujours le
+// statut à 'pending', y compris pour un avis déjà approuvé — une modif doit
+// repasser par la relecture d'un admin avant de rester visible publiquement.
+export async function POST(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '');
+  if (!token) {
+    return NextResponse.json({ error: 'Missing authorization token' }, { status: 401 });
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const language = body?.language === 'en' ? 'en' : 'fr';
+  const m = MESSAGES[language];
+
+  const authorName = typeof body?.authorName === 'string' ? body.authorName.trim() : '';
+  const companyName = typeof body?.companyName === 'string' ? body.companyName.trim() : '';
+  const roleTitle = typeof body?.roleTitle === 'string' ? body.roleTitle.trim() : '';
+  const content = typeof body?.content === 'string' ? body.content.trim() : '';
+  const rating = Number(body?.rating);
+
+  if (!authorName || !content) {
+    return NextResponse.json({ error: m.missingFields }, { status: 400 });
+  }
+  if (content.length < 20) {
+    return NextResponse.json({ error: m.contentTooShort }, { status: 400 });
+  }
+  if (content.length > 600) {
+    return NextResponse.json({ error: m.contentTooLong }, { status: 400 });
+  }
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return NextResponse.json({ error: m.invalidRating }, { status: 400 });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('testimonials')
+    .upsert(
+      {
+        user_id: userData.user.id,
+        author_name: authorName,
+        company_name: companyName || null,
+        role_title: roleTitle || null,
+        rating,
+        content,
+        status: 'pending',
+        updated_at: new Date().toISOString(),
+        reviewed_at: null,
+      },
+      { onConflict: 'user_id' },
+    )
+    .select('id, status')
+    .single();
+
+  if (error) {
+    console.error('[testimonials] upsert failed', JSON.stringify({ userId: userData.user.id, error }));
+    return NextResponse.json({ error: m.saveFailed }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, testimonial: data });
+}
