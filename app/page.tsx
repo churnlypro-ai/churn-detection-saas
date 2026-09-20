@@ -48,9 +48,19 @@ function CountUp({ end, duration = 1.5, prefix = '', suffix = '' }: { end: numbe
     requestAnimationFrame(tick);
   }, [inView, end, duration]);
 
+  // Le compteur part de 0 et n'anime qu'après hydratation côté client (voir
+  // useEffect ci-dessus) — le HTML rendu côté serveur, lui, ne contient donc
+  // que "0" tant que le JS n'a pas tourné. Invisible pour un visiteur normal
+  // (l'animation est quasi instantanée), mais un crawler ou un outil qui ne
+  // fait que lire le HTML brut (moteur de recherche, résumé IA, `curl`) voit
+  // littéralement "0%" au lieu de "90%" — la vraie statistique disparaît de
+  // ce que ces outils indexent. Le span visible (animé) reste inchangé pour
+  // l'œil, mais un second span sr-only porte toujours la valeur finale
+  // réelle, présente dans le HTML dès le premier rendu serveur.
   return (
     <span ref={ref}>
-      {prefix}{count.toLocaleString(localeTag)}{suffix}
+      <span aria-hidden="true">{prefix}{count.toLocaleString(localeTag)}{suffix}</span>
+      <span className="sr-only">{prefix}{end.toLocaleString(localeTag)}{suffix}</span>
     </span>
   );
 }
