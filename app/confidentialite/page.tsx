@@ -6,7 +6,7 @@ import FadeLine from '@/components/FadeLine';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const CONTACT_EMAIL = 'contact@churnly.fr';
-const LAST_UPDATED = { fr: '17 août 2026', en: 'August 17, 2026' };
+const LAST_UPDATED = { fr: '20 septembre 2026', en: 'September 20, 2026' };
 
 interface Section {
   title: string;
@@ -22,7 +22,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '1. Responsable du traitement',
         body: [
-          `Churnly est responsable du traitement des données décrites dans cette politique. Pour toute question, vous pouvez nous contacter à ${CONTACT_EMAIL}.`,
+          `Churnly est responsable du traitement des données décrites dans cette politique. Pour toute question, vous pouvez nous contacter à ${CONTACT_EMAIL}. L'identité complète de l'éditeur figure dans nos mentions légales.`,
         ],
       },
       {
@@ -103,19 +103,21 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         title: '10. Vos droits',
         body: [
           {
-            intro: "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de portabilité et d'opposition sur vos données. Vous pouvez :",
+            intro: "Conformément au RGPD, vous disposez des droits suivants sur vos données : accès, rectification, effacement, limitation du traitement, portabilité, opposition, et retrait de votre consentement à tout moment lorsque le traitement en repose (par exemple les cookies de mesure d'audience, voir section 11). Vous pouvez :",
             items: [
               'Modifier vos informations de compte directement depuis /settings.',
               "Supprimer les données clients importées à tout moment depuis votre tableau de bord.",
+              "Retirer votre consentement aux cookies non essentiels à tout moment depuis notre politique de cookies.",
               `Nous contacter à ${CONTACT_EMAIL} pour toute autre demande, y compris la suppression complète de votre compte.`,
             ],
           },
+          "Vous disposez également du droit d'introduire une réclamation auprès de la Commission Nationale de l'Informatique et des Libertés (CNIL) — www.cnil.fr — si vous estimez que le traitement de vos données ne respecte pas la réglementation applicable.",
         ],
       },
       {
         title: '11. Cookies',
         body: [
-          "Churnly utilise uniquement des cookies techniques strictement nécessaires au fonctionnement du service (authentification, préférence de langue, mode sombre). Aucun cookie publicitaire ou de traçage tiers n'est utilisé.",
+          "Churnly dépose des cookies et technologies équivalentes strictement nécessaires au fonctionnement du service (authentification, préférence de langue, mode sombre), qui ne nécessitent pas votre consentement. Lorsque nous l'activons, un cookie de mesure d'audience (Google Analytics) n'est déposé qu'après votre consentement explicite, recueilli via le bandeau affiché à votre première visite — vous pouvez le refuser ou le retirer à tout moment. Le détail complet est disponible dans notre politique de cookies.",
         ],
       },
       {
@@ -138,7 +140,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '1. Data controller',
         body: [
-          `Churnly is the controller for the processing described in this policy. For any question, you can reach us at ${CONTACT_EMAIL}.`,
+          `Churnly is the controller for the processing described in this policy. For any question, you can reach us at ${CONTACT_EMAIL}. The publisher's full legal identity is listed in our legal notice.`,
         ],
       },
       {
@@ -219,19 +221,21 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         title: '10. Your rights',
         body: [
           {
-            intro: 'Under GDPR, you have the right to access, rectify, erase, port, and object to the processing of your data. You can:',
+            intro: 'Under GDPR, you have the following rights over your data: access, rectification, erasure, restriction of processing, portability, objection, and withdrawing your consent at any time where processing relies on it (for example audience-measurement cookies, see section 11). You can:',
             items: [
               'Update your account information directly from /settings.',
               'Delete imported customer data at any time from your dashboard.',
+              'Withdraw your consent to non-essential cookies at any time from our cookie policy.',
               `Contact us at ${CONTACT_EMAIL} for any other request, including full account deletion.`,
             ],
           },
+          'You also have the right to lodge a complaint with the French data protection authority (CNIL) — www.cnil.fr — if you believe our processing of your data does not comply with applicable regulations.',
         ],
       },
       {
         title: '11. Cookies',
         body: [
-          'Churnly only uses technical cookies strictly necessary for the service to function (authentication, language preference, dark mode). No advertising or third-party tracking cookies are used.',
+          'Churnly sets cookies and equivalent technologies strictly necessary for the service to function (authentication, language preference, dark mode), which do not require your consent. When enabled, an audience-measurement cookie (Google Analytics) is only set after your explicit consent, collected via the banner shown on your first visit — you can refuse or withdraw it at any time. Full details are available in our cookie policy.',
         ],
       },
       {

@@ -13,6 +13,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/pricing`, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${BASE_URL}/blog`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${BASE_URL}/signup`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE_URL}/confidentialite`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE_URL}/conditions`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE_URL}/politique-cookies`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE_URL}/remboursement`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE_URL}/mentions-legales`, changeFrequency: 'yearly', priority: 0.3 },
   ];
 
   const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({

@@ -1,0 +1,30 @@
+# Churnly
+
+> Churnly is churn-risk analysis software for SaaS businesses, agencies, and other subscription-based companies. It detects customers likely to cancel and drafts the retention email/action ready to send, based on a company's own Stripe or CSV customer data.
+
+## What it does
+
+- Imports customer data via a read-only Stripe connection or a CSV upload.
+- Scores each customer's churn risk with an AI model (Anthropic Claude), based on payment status, renewal date, usage/support signals.
+- Generates a ready-to-send retention email/offer for each at-risk customer.
+- Pricing is based on the customer's declared monthly revenue (continuous scale, capped at 2,500€/month), or a percentage of measured recovered revenue under the performance-billing plan (50€ base + 20% of proven recovery, measured via a control group).
+
+## Key pages
+
+- Homepage: https://churnly.fr/
+- Pricing: https://churnly.fr/pricing
+- Blog: https://churnly.fr/blog
+- Sign up: https://churnly.fr/signup
+- Customer reviews: https://churnly.fr/avis
+
+## Legal
+
+- Privacy policy: https://churnly.fr/confidentialite
+- Terms of use: https://churnly.fr/conditions
+- Cookie policy: https://churnly.fr/politique-cookies
+- Refund policy: https://churnly.fr/remboursement
+- Legal notice: https://churnly.fr/mentions-legales
+
+## Contact
+
+contact@churnly.fr

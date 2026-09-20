@@ -5,6 +5,12 @@ export const en: Dictionary = {
     themeToggle: 'Toggle theme',
     languageToggle: 'Change language',
     tocLabel: 'Page contents',
+    cookieConsent: {
+      text: 'We use cookies strictly necessary for Churnly to work, and — only if you accept — audience-measurement cookies to understand how the site is used.',
+      learnMore: 'Learn more',
+      accept: 'Accept all',
+      reject: 'Reject non-essential cookies',
+    },
     tierNames: {
       Starter: 'Starter',
       Croissance: 'Growth',
@@ -113,6 +119,9 @@ export const en: Dictionary = {
     footer: {
       privacy: 'Privacy',
       terms: 'Terms',
+      cookies: 'Cookies',
+      refund: 'Refunds',
+      legalNotice: 'Legal Notice',
       contact: 'Contact',
     },
   },

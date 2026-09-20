@@ -3,6 +3,12 @@ export const fr = {
     themeToggle: 'Changer de thème',
     languageToggle: 'Changer de langue',
     tocLabel: 'Sommaire de la page',
+    cookieConsent: {
+      text: 'Nous utilisons des cookies strictement nécessaires au fonctionnement de Churnly, et — seulement si vous l\'acceptez — des cookies de mesure d\'audience pour comprendre comment le site est utilisé.',
+      learnMore: 'En savoir plus',
+      accept: 'Tout accepter',
+      reject: 'Refuser les cookies non essentiels',
+    },
     tierNames: {
       Starter: 'Starter',
       Croissance: 'Croissance',
@@ -111,6 +117,9 @@ export const fr = {
     footer: {
       privacy: 'Confidentialité',
       terms: 'Conditions',
+      cookies: 'Cookies',
+      refund: 'Remboursement',
+      legalNotice: 'Mentions légales',
       contact: 'Contact',
     },
   },
