@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('cold_call_prospects')
-    .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, created_at')
+    .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, assigned_to, created_at')
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: 'Lecture échouée.' }, { status: 500 });
@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     callback: prospects.filter((p) => p.status === 'callback').length,
     no_answer: prospects.filter((p) => p.status === 'no_answer').length,
     not_interested: prospects.filter((p) => p.status === 'not_interested').length,
+    unassigned: prospects.filter((p) => p.status === 'to_call' && !p.assigned_to).length,
   };
 
   return NextResponse.json({ prospects, counts });
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
   const status = typeof body?.status === 'string' && VALID_STATUSES.has(body.status) ? body.status : 'to_call';
   const notes = typeof body?.notes === 'string' && body.notes.trim() ? body.notes.trim() : null;
   const calledBy = typeof body?.calledBy === 'string' && body.calledBy.trim() ? body.calledBy.trim() : null;
+  const assignedTo = typeof body?.assignedTo === 'string' && body.assignedTo.trim() ? body.assignedTo.trim().toLowerCase() : null;
 
   if (!name || !companyName) {
     return NextResponse.json({ error: 'Nom et entreprise requis.' }, { status: 400 });
@@ -75,8 +77,9 @@ export async function POST(req: NextRequest) {
       notes,
       called_by: status === 'to_call' ? null : calledBy,
       called_at: status === 'to_call' ? null : new Date().toISOString(),
+      assigned_to: assignedTo,
     })
-    .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, created_at')
+    .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, assigned_to, created_at')
     .single();
 
   if (error) return NextResponse.json({ error: 'Ajout échoué.' }, { status: 500 });

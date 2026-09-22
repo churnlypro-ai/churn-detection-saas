@@ -19,6 +19,7 @@ interface Prospect {
   notes: string | null;
   called_by: string | null;
   called_at: string | null;
+  assigned_to: string | null;
   created_at: string;
 }
 
@@ -29,6 +30,7 @@ interface Counts {
   callback: number;
   no_answer: number;
   not_interested: number;
+  unassigned: number;
 }
 
 const STATUS_LABEL: Record<ProspectStatus, string> = {
@@ -57,6 +59,7 @@ interface EditDraft {
   status: ProspectStatus;
   calledBy: string;
   notes: string;
+  assignedTo: string;
 }
 
 function toDraft(p: Prospect): EditDraft {
@@ -68,6 +71,7 @@ function toDraft(p: Prospect): EditDraft {
     status: p.status,
     calledBy: p.called_by ?? '',
     notes: p.notes ?? '',
+    assignedTo: p.assigned_to ?? '',
   };
 }
 
@@ -84,11 +88,18 @@ export default function AdminCloserProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [counts, setCounts] = useState<Counts | null>(null);
   const [statusFilter, setStatusFilter] = useState<ProspectStatus | 'all'>('all');
+  const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addDraft, setAddDraft] = useState<EditDraft>({ name: '', companyName: '', phone: '', sector: '', status: 'to_call', calledBy: '', notes: '' });
+  const [addDraft, setAddDraft] = useState<EditDraft>({ name: '', companyName: '', phone: '', sector: '', status: 'to_call', calledBy: '', notes: '', assignedTo: '' });
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
+
+  const [assignEmail, setAssignEmail] = useState('');
+  const [assignCount, setAssignCount] = useState('25');
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState('');
+  const [assignResult, setAssignResult] = useState('');
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
@@ -189,11 +200,12 @@ export default function AdminCloserProspectsPage() {
           status: addDraft.status,
           notes: addDraft.notes || null,
           calledBy: addDraft.calledBy || null,
+          assignedTo: addDraft.assignedTo || null,
         }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(result.error || 'Ajout échoué.');
-      setAddDraft({ name: '', companyName: '', phone: '', sector: '', status: 'to_call', calledBy: '', notes: '' });
+      setAddDraft({ name: '', companyName: '', phone: '', sector: '', status: 'to_call', calledBy: '', notes: '', assignedTo: '' });
       setShowAddForm(false);
       await loadProspects(authToken);
     } catch (err) {
@@ -232,6 +244,7 @@ export default function AdminCloserProspectsPage() {
           status: editDraft.status,
           calledBy: editDraft.calledBy || null,
           notes: editDraft.notes || null,
+          assignedTo: editDraft.assignedTo || null,
         }),
       });
       const result = await res.json().catch(() => ({}));
@@ -258,6 +271,29 @@ export default function AdminCloserProspectsPage() {
     }
   }
 
+  async function handleAssignBatch(e: React.FormEvent) {
+    e.preventDefault();
+    setAssigning(true);
+    setAssignError('');
+    setAssignResult('');
+    try {
+      const authToken = await getAuthToken();
+      const res = await fetch('/api/admin/closer-prospects/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ assignee: assignEmail, count: Number(assignCount) }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || 'Assignation échouée.');
+      setAssignResult(result.message || `${result.assigned} prospect${result.assigned !== 1 ? 's' : ''} assigné${result.assigned !== 1 ? 's' : ''} à ${assignEmail}.`);
+      await loadProspects(authToken);
+    } catch (err) {
+      setAssignError(err instanceof Error ? err.message : 'Assignation échouée.');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
   if (forbidden) {
     return (
       <>
@@ -270,7 +306,15 @@ export default function AdminCloserProspectsPage() {
     );
   }
 
-  const filtered = statusFilter === 'all' ? prospects : prospects.filter((p) => p.status === statusFilter);
+  const assignees = Array.from(new Set(prospects.map((p) => p.assigned_to).filter((a): a is string => !!a))).sort();
+
+  const filtered = prospects
+    .filter((p) => statusFilter === 'all' || p.status === statusFilter)
+    .filter((p) => {
+      if (assignedToFilter === 'all') return true;
+      if (assignedToFilter === 'unassigned') return !p.assigned_to;
+      return p.assigned_to === assignedToFilter;
+    });
 
   return (
     <>
@@ -282,7 +326,7 @@ export default function AdminCloserProspectsPage() {
 
         <h1 className="mt-4 mb-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Prospects (cold call)</h1>
         <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">
-          File partagée entre tous les closers sur <Link href="/closer" className="text-brand-600 hover:underline dark:text-brand-400">/closer</Link> — tu importes ici, n&apos;importe quel closer appelle ce qui n&apos;a pas encore été traité.
+          Chaque closer sur <Link href="/closer" className="text-brand-600 hover:underline dark:text-brand-400">/closer</Link> ne voit que son propre lot — tu importes ici, puis tu assignes des lots (ex: 25 chacun) pour que deux personnes n&apos;appellent jamais le même prospect. Filtre par &laquo;&nbsp;Assigné à&nbsp;&raquo; ci-dessous pour voir/éditer un lot en particulier.
         </p>
 
         {!loading && (
@@ -340,6 +384,7 @@ export default function AdminCloserProspectsPage() {
                     {(Object.keys(STATUS_LABEL) as ProspectStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                   </select>
                   <input placeholder="Appelé par (email, si déjà appelé)" value={addDraft.calledBy} onChange={(e) => setAddDraft((d) => ({ ...d, calledBy: e.target.value }))} className={INPUT_CLASS} />
+                  <input placeholder="Assigné à (email du closer, optionnel)" value={addDraft.assignedTo} onChange={(e) => setAddDraft((d) => ({ ...d, assignedTo: e.target.value }))} className={INPUT_CLASS} />
                   <input placeholder="Notes (optionnel)" value={addDraft.notes} onChange={(e) => setAddDraft((d) => ({ ...d, notes: e.target.value }))} className={`${INPUT_CLASS} sm:col-span-2`} />
                   <div className="sm:col-span-2 flex items-center gap-2">
                     <button type="submit" disabled={adding} className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60">
@@ -350,6 +395,42 @@ export default function AdminCloserProspectsPage() {
                   {addError && <p className="text-xs text-red-600 dark:text-red-400 sm:col-span-2">{addError}</p>}
                 </form>
               )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="mb-1 flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-500" />
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Assigner un lot</h2>
+              </div>
+              <p className="mb-4 text-xs text-slate-400 dark:text-slate-500">
+                Prend les N prospects &laquo;&nbsp;à appeler&nbsp;&raquo; les plus anciens qui ne sont pas encore assignés, et les donne à cet email (ex: 25 à Kendal, 25 à Adam, 25 pour toi).
+                {counts ? ` ${counts.unassigned} non assigné${counts.unassigned !== 1 ? 's' : ''} actuellement.` : ''}
+              </p>
+              <form onSubmit={handleAssignBatch} className="flex flex-wrap items-center gap-2.5">
+                <input
+                  required
+                  type="email"
+                  placeholder="Email du closer"
+                  value={assignEmail}
+                  onChange={(e) => setAssignEmail(e.target.value)}
+                  className={`${INPUT_CLASS} max-w-xs`}
+                />
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  max={500}
+                  placeholder="Nombre"
+                  value={assignCount}
+                  onChange={(e) => setAssignCount(e.target.value)}
+                  className={`${INPUT_CLASS} w-24`}
+                />
+                <button type="submit" disabled={assigning} className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60">
+                  {assigning ? 'Assignation…' : 'Assigner'}
+                </button>
+              </form>
+              {assignError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{assignError}</p>}
+              {assignResult && <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">{assignResult}</p>}
             </div>
 
             {counts && (
@@ -378,6 +459,21 @@ export default function AdminCloserProspectsPage() {
               </div>
             )}
 
+            {assignees.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-slate-400 dark:text-slate-500">Assigné à</label>
+                <select
+                  value={assignedToFilter}
+                  onChange={(e) => setAssignedToFilter(e.target.value)}
+                  className={`${INPUT_CLASS} w-auto`}
+                >
+                  <option value="all">Tous</option>
+                  <option value="unassigned">Non assigné</option>
+                  {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+            )}
+
             <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
               {filtered.length === 0 ? (
                 <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">Aucun prospect.</p>
@@ -391,6 +487,7 @@ export default function AdminCloserProspectsPage() {
                         <th className="px-4 py-3">Téléphone</th>
                         <th className="px-4 py-3">Secteur</th>
                         <th className="px-4 py-3">Statut</th>
+                        <th className="px-4 py-3">Assigné à</th>
                         <th className="px-4 py-3">Appelé par</th>
                         <th className="px-4 py-3">Appelé le</th>
                         <th className="px-4 py-3">Notes</th>
@@ -412,6 +509,7 @@ export default function AdminCloserProspectsPage() {
                                   {(Object.keys(STATUS_LABEL) as ProspectStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                                 </select>
                               </td>
+                              <td className="px-4 py-2"><input placeholder="email du closer" value={editDraft.assignedTo} onChange={(e) => setEditDraft({ ...editDraft, assignedTo: e.target.value })} className={INPUT_CLASS} /></td>
                               <td className="px-4 py-2"><input value={editDraft.calledBy} onChange={(e) => setEditDraft({ ...editDraft, calledBy: e.target.value })} className={INPUT_CLASS} /></td>
                               <td className="px-4 py-2 text-xs text-slate-400">—</td>
                               <td className="px-4 py-2"><input value={editDraft.notes} onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })} className={INPUT_CLASS} /></td>
@@ -440,6 +538,7 @@ export default function AdminCloserProspectsPage() {
                                 {STATUS_LABEL[p.status]}
                               </span>
                             </td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.assigned_to || '—'}</td>
                             <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.called_by || '—'}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">
                               {p.called_at ? new Date(p.called_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}

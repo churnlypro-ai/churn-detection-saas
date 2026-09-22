@@ -53,6 +53,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body?.calledBy !== undefined) {
     update.called_by = typeof body.calledBy === 'string' && body.calledBy.trim() ? body.calledBy.trim() : null;
   }
+  if (body?.assignedTo !== undefined) {
+    update.assigned_to = typeof body.assignedTo === 'string' && body.assignedTo.trim() ? body.assignedTo.trim().toLowerCase() : null;
+  }
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'Aucune modification fournie.' }, { status: 400 });
@@ -62,7 +65,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .from('cold_call_prospects')
     .update(update)
     .eq('id', params.id)
-    .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, created_at')
+    .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, assigned_to, created_at')
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: 'Modification échouée.' }, { status: 500 });
