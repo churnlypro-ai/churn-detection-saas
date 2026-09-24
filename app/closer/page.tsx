@@ -58,6 +58,7 @@ export default function CloserPage() {
   const [forbidden, setForbidden] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [prospects, setProspects] = useState<Prospect[]>([]);
+  const [prospectsLoadError, setProspectsLoadError] = useState('');
   const [updatingProspectId, setUpdatingProspectId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [prospectError, setProspectError] = useState<Record<string, string>>({});
@@ -85,6 +86,14 @@ export default function CloserPage() {
     if (res.ok) {
       const result = await res.json();
       setProspects(result.prospects ?? []);
+      setProspectsLoadError('');
+    } else {
+      // Distingue "rien ne t'est assigné" (tableau vide, res.ok) d'une vraie
+      // panne technique (ex: la migration assigned_to pas encore passée en
+      // base) — sans ça les deux cas rendaient le même écran vide, ce qui a
+      // fait perdre du temps à diagnostiquer pourquoi Adam ne voyait rien.
+      setProspects([]);
+      setProspectsLoadError(`Erreur technique (code ${res.status}) — le chargement des prospects a échoué. Préviens l'admin.`);
     }
   }, []);
 
@@ -403,12 +412,17 @@ export default function CloserPage() {
 
           return (
             <div className="space-y-6">
+              {prospectsLoadError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-700 dark:border-red-800/40 dark:bg-red-500/10 dark:text-red-400">
+                  {prospectsLoadError}
+                </div>
+              )}
               <div className="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                {prospects.length === 0 ? (
+                {prospects.length === 0 && !prospectsLoadError ? (
                   <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
-                    Aucun prospect chargé pour l&apos;instant.
+                    Aucun prospect ne t&apos;est encore assigné — demande à l&apos;admin de t&apos;assigner un lot depuis /admin/closer-prospects.
                   </p>
-                ) : toCall.length === 0 ? (
+                ) : prospects.length === 0 ? null : toCall.length === 0 ? (
                   <p className="px-6 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                     Plus rien de nouveau à appeler pour l&apos;instant.
                   </p>
