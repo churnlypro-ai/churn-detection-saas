@@ -326,7 +326,7 @@ export default function AdminCloserProspectsPage() {
 
         <h1 className="mt-4 mb-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Prospects (cold call)</h1>
         <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">
-          Chaque closer sur <Link href="/closer" className="text-brand-600 hover:underline dark:text-brand-400">/closer</Link> ne voit que son propre lot — tu importes ici, puis tu assignes des lots (ex: 25 chacun) pour que deux personnes n&apos;appellent jamais le même prospect. Filtre par &laquo;&nbsp;Assigné à&nbsp;&raquo; ci-dessous pour voir/éditer un lot en particulier.
+          File partagée entre tous les closers sur <Link href="/closer" className="text-brand-600 hover:underline dark:text-brand-400">/closer</Link> — tu importes ici, n&apos;importe quel closer appelle ce qui n&apos;a pas encore été traité. L&apos;assignation ci-dessous est optionnelle (ex: pour te réserver un lot précis) — elle ne conditionne plus ce qu&apos;un closer voit.
         </p>
 
         {!loading && (
@@ -403,7 +403,7 @@ export default function AdminCloserProspectsPage() {
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Assigner un lot</h2>
               </div>
               <p className="mb-4 text-xs text-slate-400 dark:text-slate-500">
-                Prend les N prospects &laquo;&nbsp;à appeler&nbsp;&raquo; les plus anciens qui ne sont pas encore assignés, et les donne à cet email (ex: 25 à Kendal, 25 à Adam, 25 pour toi).
+                Optionnel — n&apos;importe quel closer voit toute la file de toute façon. Sert juste à noter qui doit prioriser quoi. Prend les N prospects &laquo;&nbsp;à appeler&nbsp;&raquo; les plus anciens qui ne sont pas encore assignés, et les donne à cet email.
                 {counts ? ` ${counts.unassigned} non assigné${counts.unassigned !== 1 ? 's' : ''} actuellement.` : ''}
               </p>
               <form onSubmit={handleAssignBatch} className="flex flex-wrap items-center gap-2.5">

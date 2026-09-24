@@ -11,21 +11,17 @@ export async function GET(req: NextRequest) {
   const closerEmail = userData?.user?.email;
   if (!isCloserEmail(closerEmail)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Chaque closer ne voit que son propre lot (voir assigned_to, migration
-  // 20260922000000) — l'admin répartit la file depuis /admin/closer-prospects
-  // pour que deux closers n'appellent jamais le même prospect le même jour.
+  // File partagée entre tous les closers — n'importe qui peut voir et
+  // appeler n'importe quel prospect 'to_call'. assigned_to (migration
+  // 20260922000000) reste en base et éditable depuis /admin/closer-prospects
+  // pour un usage ponctuel, mais ne filtre plus ce que voit un closer ici.
   // La garde status='to_call' dans le PATCH de /api/closer/prospects/[id]
-  // reste en place par sécurité, mais ne devrait plus jamais se déclencher
-  // entre deux closers différents puisqu'ils ne partagent plus de lignes.
+  // évite que deux closers marquent le même prospect en même temps.
   // to_call en premier pour que le prochain appel à passer soit toujours en
   // haut.
-  // assigned_to est toujours stocké en minuscules (voir POST /assign et le
-  // PATCH admin) — comparé ici en minuscules aussi pour ne pas dépendre de
-  // la casse exacte renvoyée par Supabase Auth pour cet email.
   const { data, error } = await supabaseAdmin
     .from('cold_call_prospects')
     .select('id, name, company_name, phone, sector, status, notes, called_by, called_at, created_at')
-    .eq('assigned_to', closerEmail?.toLowerCase())
     .order('status', { ascending: true })
     .order('created_at', { ascending: true });
 
