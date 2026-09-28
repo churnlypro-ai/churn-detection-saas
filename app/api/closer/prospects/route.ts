@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isCloserEmail } from '@/lib/closer';
+import { getSectorPriority } from '@/lib/prospectPriority';
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -27,9 +28,15 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: 'Lecture échouée.' }, { status: 500 });
 
+  // À statut égal, les prospects les plus qualifiés (secteur le plus
+  // pertinent pour Churnly, voir lib/prospectPriority) remontent en haut —
+  // personne n'est masqué, juste réordonné pour que les meilleurs appels
+  // soient passés en premier, pour tous les closers.
   const prospects = (data ?? []).sort((a, b) => {
     if (a.status === 'to_call' && b.status !== 'to_call') return -1;
     if (a.status !== 'to_call' && b.status === 'to_call') return 1;
+    const priorityDiff = getSectorPriority(b.sector) - getSectorPriority(a.sector);
+    if (priorityDiff !== 0) return priorityDiff;
     return 0;
   });
 
