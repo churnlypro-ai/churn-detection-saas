@@ -13,7 +13,7 @@ import FadeLine from '@/components/FadeLine';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -113,6 +113,60 @@ function RealitySection() {
             />
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+// Vidéo hook 30-40s (problème → solution Churnly, voix off + motion
+// design) placée juste au-dessus de RealitySection ("La réalité
+// opérationnelle") — muette par défaut à l'arrivée sur la page (requis
+// pour que les navigateurs autorisent l'autoplay), avec un bouton pour
+// activer le son manuellement, même pattern que les vidéos hero
+// autoplay muettes vues ailleurs (ex: insyder.io).
+// Dépose le fichier final (celui recalé par Cowork sur la voix
+// ElevenLabs) dans public/videos/hook.mp4 pour qu'elle apparaisse ici —
+// tant que ce fichier n'existe pas, la section reste en place mais la
+// vidéo ne charge pas (404 silencieux, pas d'erreur de build).
+function HookVideoSection() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [soundOn, setSoundOn] = useState(false);
+
+  function toggleSound() {
+    const video = videoRef.current;
+    if (!video) return;
+    const next = !soundOn;
+    video.muted = !next;
+    setSoundOn(next);
+  }
+
+  return (
+    <section className="relative overflow-hidden bg-white px-6 py-20 dark:bg-slate-950">
+      <div className="mx-auto max-w-5xl">
+        <motion.div
+          {...reveal}
+          className="relative overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800"
+        >
+          <video
+            ref={videoRef}
+            className="block aspect-video w-full object-cover"
+            src="/videos/hook.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+          />
+          <button
+            type="button"
+            onClick={toggleSound}
+            aria-label={soundOn ? 'Couper le son' : 'Activer le son'}
+            className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-black/75"
+          >
+            {soundOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            {soundOn ? 'Couper le son' : 'Activer le son'}
+          </button>
+        </motion.div>
       </div>
     </section>
   );
@@ -574,6 +628,9 @@ export default function Home() {
           <AnimatedHero />
         </motion.div>
 
+        <SectionDivider />
+
+        <HookVideoSection />
         <SectionDivider />
 
         <RealitySection />
