@@ -118,16 +118,17 @@ function RealitySection() {
   );
 }
 
-// Vidéo hook 30-40s (problème → solution Churnly, voix off + motion
-// design) placée juste au-dessus de RealitySection ("La réalité
-// opérationnelle") — muette par défaut à l'arrivée sur la page (requis
-// pour que les navigateurs autorisent l'autoplay), avec un bouton pour
-// activer le son manuellement, même pattern que les vidéos hero
-// autoplay muettes vues ailleurs (ex: insyder.io).
-// Dépose le fichier final (celui recalé par Cowork sur la voix
-// ElevenLabs) dans public/videos/hook.mp4 pour qu'elle apparaisse ici —
-// tant que ce fichier n'existe pas, la section reste en place mais la
-// vidéo ne charge pas (404 silencieux, pas d'erreur de build).
+// Vidéo hook (problème → solution Churnly, voix off + motion design)
+// placée juste au-dessus de RealitySection ("La réalité opérationnelle")
+// — muette par défaut à l'arrivée sur la page (requis pour que les
+// navigateurs autorisent l'autoplay), avec un bouton pour activer le son
+// manuellement, même pattern que les vidéos hero autoplay muettes vues
+// ailleurs (ex: insyder.io).
+// Fichier actuel : public/videos/hook.mp4 — version 9:16 (format
+// réseaux sociaux), posée ici temporairement en attendant la version
+// recomposée en 16:9 pour le site. D'où le format vertical contraint
+// (max-w-sm) plutôt que plein largeur : une vidéo 9:16 étirée en pleine
+// largeur serait très écrasée/cropée.
 function HookVideoSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [soundOn, setSoundOn] = useState(false);
@@ -145,11 +146,11 @@ function HookVideoSection() {
       <div className="mx-auto max-w-5xl">
         <motion.div
           {...reveal}
-          className="relative overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800"
+          className="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800"
         >
           <video
             ref={videoRef}
-            className="block aspect-video w-full object-cover"
+            className="block aspect-[9/16] w-full object-cover"
             src="/videos/hook.mp4"
             autoPlay
             loop
