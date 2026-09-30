@@ -428,6 +428,75 @@ interface Testimonial {
   content: string;
 }
 
+// Bande défilante horizontale, même mécanique que SignalMarquee
+// (components/SignalMarquee.tsx) — translateX en boucle sur une liste
+// dupliquée, pause au survol — mais ici chaque carte est un lien vers
+// /avis plutôt qu'un détail qui s'ouvre sur place : un avis complet mérite
+// sa propre page, pas un extrait replié.
+function TestimonialsMarquee({ items }: { items: Testimonial[] }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const posRef = useRef(0);
+  const pausedRef = useRef(false);
+  const visibleRef = useRef(true);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let last = performance.now();
+    let raf = 0;
+    const SPEED = 26; // px/s — lent, la bande est un fond qu'on parcourt, pas un carrousel à suivre
+
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => { visibleRef.current = entries[0]?.isIntersecting ?? true; },
+      { threshold: 0.01 },
+    );
+    intersectionObserver.observe(track);
+
+    function frame(now: number) {
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+
+      if (!pausedRef.current && visibleRef.current && track) {
+        const halfWidth = track.scrollWidth / 2;
+        posRef.current -= SPEED * dt;
+        // Liste dupliquée (2x items) : à mi-parcours, on revient exactement
+        // au même visuel, donc la boucle est invisible.
+        if (posRef.current <= -halfWidth) posRef.current += halfWidth;
+        track.style.transform = `translateX(${posRef.current}px)`;
+      }
+
+      raf = requestAnimationFrame(frame);
+    }
+
+    raf = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(raf);
+      intersectionObserver.disconnect();
+    };
+  }, []);
+
+  return (
+    <div
+      className="relative mt-16 overflow-hidden"
+      onMouseEnter={() => { pausedRef.current = true; }}
+      onMouseLeave={() => { pausedRef.current = false; }}
+    >
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-slate-50 to-transparent dark:from-slate-900 sm:w-32" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-slate-50 to-transparent dark:from-slate-900 sm:w-32" />
+
+      <div ref={trackRef} className="flex w-max gap-6 will-change-transform">
+        {[...items, ...items].map((item, i) => (
+          <Link key={`${item.id}-${i}`} href="/avis" className="block w-80 flex-shrink-0">
+            <TestimonialCard item={item} i={i} />
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TestimonialCard({ item, i }: { item: Testimonial; i: number }) {
   const initial = item.author_name.trim().charAt(0).toUpperCase() || '?';
   const subtitle = [item.role_title, item.company_name].filter(Boolean).join(' · ');
@@ -493,11 +562,7 @@ function TestimonialsSection({ items }: { items: Testimonial[] }) {
           </motion.div>
         </div>
 
-        <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {items.slice(0, 9).map((item, i) => (
-            <TestimonialCard key={item.id} item={item} i={i} />
-          ))}
-        </div>
+        <TestimonialsMarquee items={items} />
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

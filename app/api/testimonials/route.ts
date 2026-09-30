@@ -38,31 +38,21 @@ export async function GET() {
 
 // Soumission (et re-soumission) d'un avis — voir app/avis/page.tsx. Publié
 // immédiatement (status 'approved' direct, pas de relecture admin requise).
-//
-// TEMPORAIRE (demande explicite du 17/09, "pour ce soir" — à revenir en
-// arrière dans les jours qui suivent) : le token d'auth est optionnel. Un
-// visiteur sans compte peut soumettre un avis directement (user_id NULL,
-// jamais dédupliqué contre un autre anonyme). Un client connecté garde le
-// comportement normal : une seule ligne par compte, un index unique partiel
-// sur user_id (voir la migration 20260917010000) empêche un même client de
-// créer plusieurs lignes, donc on sélectionne d'abord une ligne existante
-// puis on l'UPDATE plutôt qu'un upsert Postgres classique — un upsert avec
-// ON CONFLICT ne matche pas un index unique PARTIEL (il ne s'applique qu'aux
-// lignes où user_id n'est pas NULL, pour laisser les avis ajoutés à la main
-// par un admin, ou par un visiteur anonyme le temps de ce soir, coexister
-// sans contrainte).
+// Un compte est requis : une seule ligne par client (user_id unique, voir la
+// migration 20260917000000) — on sélectionne d'abord une ligne existante puis
+// on l'UPDATE plutôt qu'un upsert Postgres classique, pour rester cohérent
+// avec l'index unique partiel qui laisse par ailleurs coexister les avis
+// ajoutés à la main par un admin (user_id NULL, migration 20260917010000).
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
-  const supabaseAdmin = getSupabaseAdmin();
+  if (!token) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-  let userId: string | null = null;
-  if (token) {
-    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError || !userData?.user) {
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-    }
-    userId = userData.user.id;
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   }
+  const userId = userData.user.id;
 
   const body = await req.json().catch(() => ({}));
   const language = body?.language === 'en' ? 'en' : 'fr';
@@ -87,9 +77,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: m.invalidRating }, { status: 400 });
   }
 
-  const existing = userId
-    ? (await supabaseAdmin.from('testimonials').select('id').eq('user_id', userId).maybeSingle()).data
-    : null;
+  const { data: existing } = await supabaseAdmin.from('testimonials').select('id').eq('user_id', userId).maybeSingle();
 
   const row = {
     user_id: userId,
