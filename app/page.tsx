@@ -146,7 +146,7 @@ function HookVideoSection() {
       <div className="mx-auto max-w-5xl">
         <motion.div
           {...reveal}
-          className="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800"
+          className="relative mx-auto w-full max-w-xs overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800 sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl"
         >
           <video
             ref={videoRef}
