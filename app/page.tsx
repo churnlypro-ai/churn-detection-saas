@@ -138,6 +138,12 @@ function HookVideoSection() {
   // quasi immédiatement au montage, léger flash possible sur desktop au
   // tout premier chargement, acceptable ici.
   const [isDesktop, setIsDesktop] = useState(false);
+  // Distingue une pause manuelle (bouton/clic) d'une pause automatique
+  // liée au scroll — seule la première doit empêcher la reprise
+  // automatique quand la vidéo revient dans le viewport. Le son (muted
+  // + soundOn) n'est jamais touché par ce mécanisme : si l'utilisateur
+  // l'a activé, il reste activé même après une sortie/retour de champ.
+  const manuallyPausedRef = useRef(false);
 
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 768px)');
@@ -145,10 +151,35 @@ function HookVideoSection() {
     function handleChange(e: MediaQueryListEvent) {
       setIsDesktop(e.matches);
       setSoundOn(false);
+      manuallyPausedRef.current = false;
     }
     mql.addEventListener('change', handleChange);
     return () => mql.removeEventListener('change', handleChange);
   }, []);
+
+  const src = isDesktop ? '/videos/hook-16x9.mp4' : '/videos/hook-9x16.mp4';
+
+  // Remise en pause dès que la vidéo sort du viewport (scroll trop bas ou
+  // retour trop haut) — l'utilisateur est passé à autre chose. Reprend
+  // automatiquement si elle revient dans le viewport, sauf si la pause
+  // précédente était volontaire (bouton/clic).
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          if (!video.paused) video.pause();
+        } else if (video.paused && !manuallyPausedRef.current) {
+          video.play();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [src]);
 
   function toggleSound() {
     const video = videoRef.current;
@@ -161,11 +192,14 @@ function HookVideoSection() {
   function togglePlay() {
     const video = videoRef.current;
     if (!video) return;
-    if (video.paused) video.play();
-    else video.pause();
+    if (video.paused) {
+      manuallyPausedRef.current = false;
+      video.play();
+    } else {
+      manuallyPausedRef.current = true;
+      video.pause();
+    }
   }
-
-  const src = isDesktop ? '/videos/hook-16x9.mp4' : '/videos/hook-9x16.mp4';
 
   return (
     <section className="relative overflow-hidden bg-white px-6 py-20 dark:bg-slate-950">
