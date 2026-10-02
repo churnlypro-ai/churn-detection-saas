@@ -124,14 +124,30 @@ function RealitySection() {
 // navigateurs autorisent l'autoplay), avec un bouton pour activer le son
 // manuellement, même pattern que les vidéos hero autoplay muettes vues
 // ailleurs (ex: insyder.io).
-// Fichier actuel : public/videos/hook.mp4 — version finale (v3), export
-// 9:16 (format réseaux sociaux). Affichée ici dans un cadre large 16:9
-// (object-cover) plutôt que dans son format vertical d'origine — demande
-// explicite de l'utilisateur pour matcher la présentation vue sur
-// insyder.io, quitte à cropper le haut/bas de la vidéo source.
+// Deux exports distincts, recomposés par Cowork (pas juste croppés l'un
+// de l'autre) : hook-9x16.mp4 pour mobile, hook-16x9.mp4 pour desktop —
+// voir la discussion du 02/10. On ne rend qu'une seule balise <video> à
+// la fois (jamais les deux en parallèle) pour ne pas télécharger et
+// autoplayer deux fichiers vidéo simultanément.
 function HookVideoSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [soundOn, setSoundOn] = useState(false);
+  // false par défaut (plutôt que null) pour un rendu SSR cohérent avec le
+  // premier rendu client avant que matchMedia ne soit évalué — corrigé
+  // quasi immédiatement au montage, léger flash possible sur desktop au
+  // tout premier chargement, acceptable ici.
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 768px)');
+    setIsDesktop(mql.matches);
+    function handleChange(e: MediaQueryListEvent) {
+      setIsDesktop(e.matches);
+      setSoundOn(false);
+    }
+    mql.addEventListener('change', handleChange);
+    return () => mql.removeEventListener('change', handleChange);
+  }, []);
 
   function toggleSound() {
     const video = videoRef.current;
@@ -141,17 +157,22 @@ function HookVideoSection() {
     setSoundOn(next);
   }
 
+  const src = isDesktop ? '/videos/hook-16x9.mp4' : '/videos/hook-9x16.mp4';
+
   return (
     <section className="relative overflow-hidden bg-white px-6 py-20 dark:bg-slate-950">
       <div className="mx-auto max-w-5xl">
         <motion.div
           {...reveal}
-          className="relative w-full overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800"
+          className={`relative mx-auto overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800 ${
+            isDesktop ? 'w-full' : 'w-full max-w-xs'
+          }`}
         >
           <video
+            key={src}
             ref={videoRef}
-            className="block aspect-video w-full object-cover"
-            src="/videos/hook.mp4"
+            className={`block w-full object-cover ${isDesktop ? 'aspect-video' : 'aspect-[9/16]'}`}
+            src={src}
             autoPlay
             loop
             muted
