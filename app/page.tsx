@@ -13,7 +13,7 @@ import FadeLine from '@/components/FadeLine';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -132,6 +132,7 @@ function RealitySection() {
 function HookVideoSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [soundOn, setSoundOn] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   // false par défaut (plutôt que null) pour un rendu SSR cohérent avec le
   // premier rendu client avant que matchMedia ne soit évalué — corrigé
   // quasi immédiatement au montage, léger flash possible sur desktop au
@@ -157,6 +158,13 @@ function HookVideoSection() {
     setSoundOn(next);
   }
 
+  function togglePlay() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) video.play();
+    else video.pause();
+  }
+
   const src = isDesktop ? '/videos/hook-16x9.mp4' : '/videos/hook-9x16.mp4';
 
   return (
@@ -171,14 +179,25 @@ function HookVideoSection() {
           <video
             key={src}
             ref={videoRef}
-            className={`block w-full object-cover ${isDesktop ? 'aspect-video' : 'aspect-[9/16]'}`}
+            className={`block w-full cursor-pointer object-cover ${isDesktop ? 'aspect-video' : 'aspect-[9/16]'}`}
             src={src}
             autoPlay
             loop
             muted
             playsInline
             preload="metadata"
+            onClick={togglePlay}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
           />
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={isPlaying ? 'Mettre en pause' : 'Reprendre la lecture'}
+            className="absolute bottom-4 left-4 inline-flex items-center justify-center rounded-full bg-black/60 p-2 text-white backdrop-blur transition hover:bg-black/75"
+          >
+            {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+          </button>
           <button
             type="button"
             onClick={toggleSound}
