@@ -125,9 +125,10 @@ function RealitySection() {
 // manuellement, même pattern que les vidéos hero autoplay muettes vues
 // ailleurs (ex: insyder.io).
 // Fichier actuel : public/videos/hook.mp4 — version finale (v3), export
-// 9:16 (format réseaux sociaux). D'où le format vertical contraint
-// plutôt que plein largeur : une vidéo 9:16 étirée en pleine largeur
-// serait très écrasée/cropée.
+// 9:16 (format réseaux sociaux). Affichée ici dans un cadre large 16:9
+// (object-cover) plutôt que dans son format vertical d'origine — demande
+// explicite de l'utilisateur pour matcher la présentation vue sur
+// insyder.io, quitte à cropper le haut/bas de la vidéo source.
 function HookVideoSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [soundOn, setSoundOn] = useState(false);
@@ -145,11 +146,11 @@ function HookVideoSection() {
       <div className="mx-auto max-w-5xl">
         <motion.div
           {...reveal}
-          className="relative mx-auto w-full max-w-xs overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800 sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl"
+          className="relative w-full overflow-hidden rounded-3xl border border-slate-100 bg-slate-950 shadow-xl dark:border-slate-800"
         >
           <video
             ref={videoRef}
-            className="block aspect-[9/16] w-full object-cover"
+            className="block aspect-video w-full object-cover"
             src="/videos/hook.mp4"
             autoPlay
             loop
