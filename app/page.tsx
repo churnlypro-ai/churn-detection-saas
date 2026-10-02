@@ -124,11 +124,10 @@ function RealitySection() {
 // navigateurs autorisent l'autoplay), avec un bouton pour activer le son
 // manuellement, même pattern que les vidéos hero autoplay muettes vues
 // ailleurs (ex: insyder.io).
-// Fichier actuel : public/videos/hook.mp4 — version 9:16 (format
-// réseaux sociaux), posée ici temporairement en attendant la version
-// recomposée en 16:9 pour le site. D'où le format vertical contraint
-// (max-w-sm) plutôt que plein largeur : une vidéo 9:16 étirée en pleine
-// largeur serait très écrasée/cropée.
+// Fichier actuel : public/videos/hook.mp4 — version finale (v3), export
+// 9:16 (format réseaux sociaux). D'où le format vertical contraint
+// plutôt que plein largeur : une vidéo 9:16 étirée en pleine largeur
+// serait très écrasée/cropée.
 function HookVideoSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [soundOn, setSoundOn] = useState(false);
