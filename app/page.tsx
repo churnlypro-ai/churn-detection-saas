@@ -13,7 +13,7 @@ import FadeLine from '@/components/FadeLine';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X, Plus, CreditCard, Trash2 } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X, Plus, CreditCard, Trash2, Mail, Download, Calendar, Users, Gift } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -400,6 +400,93 @@ function ComparatifSection() {
         </motion.p>
       </div>
     </section>
+  );
+}
+
+const FEATURE_ICONS = [LineChart, Mail, Download, Calendar, Users, Zap];
+
+// Grille de fonctionnalités + bandeau Haiku/Opus (quel modèle Claude tourne
+// selon l'essai gratuit ou l'abonnement — voir lib/claude.ts MODEL_BY_TIER).
+function FeaturesSection() {
+  const t = useTranslations('home').features;
+
+  return (
+    <section id="fonctionnalites" className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
+      <div className="mx-auto max-w-5xl">
+        <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
+          {t.eyebrow}
+        </motion.p>
+        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+          {t.title} <span className="text-slate-400 dark:text-slate-500">{t.titleRest}</span>
+        </motion.h2>
+
+        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {t.items.map((item, i) => {
+            const Icon = FEATURE_ICONS[i];
+            return (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.6, ease: EASE_OUT, delay: (i % 3) * 0.1 }}
+                className="flex flex-col gap-3.5 rounded-2xl border border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-200 bg-brand-50 text-brand-600 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400">
+                  <Icon className="h-5 w-5" strokeWidth={1.75} />
+                </div>
+                <h3 className="text-[17px] font-semibold tracking-tight text-slate-900 dark:text-white">{item.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{item.description}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <motion.div
+          {...reveal}
+          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }}
+          className="mt-8 flex flex-wrap items-center gap-10 rounded-3xl border border-slate-100 bg-white p-8 dark:border-slate-800 dark:bg-slate-950 sm:p-10"
+        >
+          <div className="flex min-w-[260px] flex-1 flex-col gap-3">
+            <span className="text-xs font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">{t.aiSplit.eyebrow}</span>
+            <h3 className="text-2xl font-bold leading-snug tracking-tight text-slate-900 dark:text-white">
+              {t.aiSplit.title} <span className="text-slate-400 dark:text-slate-500">{t.aiSplit.titleRest}</span>
+            </h3>
+          </div>
+          <div className="grid flex-[1.3] grid-cols-1 gap-4 sm:min-w-[320px] sm:grid-cols-2">
+            <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">{t.aiSplit.free.label}</span>
+              <span className="font-mono text-lg font-medium tracking-tight text-slate-900 dark:text-white">{t.aiSplit.free.model}</span>
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t.aiSplit.free.body}</p>
+            </div>
+            <div className="flex flex-col gap-2 rounded-2xl border border-brand-200 bg-brand-50 p-5 dark:border-brand-500/35 dark:bg-brand-500/10">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-brand-700 dark:text-brand-400">{t.aiSplit.paid.label}</span>
+              <span className="font-mono text-lg font-medium tracking-tight text-slate-900 dark:text-white">{t.aiSplit.paid.model}</span>
+              <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">{t.aiSplit.paid.body}</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function ReferralCallout() {
+  const t = useTranslations('home').referralCallout;
+
+  return (
+    <motion.div
+      {...reveal}
+      className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-slate-950 sm:p-6"
+    >
+      <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-brand-200 bg-brand-50 text-brand-600 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400">
+        <Gift className="h-5 w-5" strokeWidth={1.75} />
+      </div>
+      <p className="flex-1 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
+        <span className="font-semibold text-slate-900 dark:text-white">{t.title}. </span>
+        {t.body}
+      </p>
+    </motion.div>
   );
 }
 
@@ -891,6 +978,7 @@ export default function Home() {
     { id: 'churn', label: tToc.churn },
     { id: 'strategie', label: tToc.strategy },
     { id: 'comparatif', label: tToc.comparatif },
+    { id: 'fonctionnalites', label: tToc.features },
     { id: 'tarif', label: tToc.pricing },
     { id: 'comment-ca-marche', label: tToc.howItWorks },
     { id: 'cas-reels', label: tToc.caseStudies },
@@ -922,8 +1010,14 @@ export default function Home() {
         <ComparatifSection />
         <SectionDivider />
 
+        <FeaturesSection />
+        <SectionDivider />
+
         <div id="tarif" className="relative bg-slate-50 dark:bg-slate-900">
           <Calculator />
+          <div className="mx-auto max-w-5xl px-6 pb-20">
+            <ReferralCallout />
+          </div>
         </div>
         <SectionDivider />
 
@@ -942,17 +1036,36 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="relative bg-white py-10 dark:bg-slate-950">
+      <footer className="relative bg-white py-14 dark:bg-slate-950">
         <FadeLine className="top-0" />
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 dark:text-slate-500 sm:flex-row">
-          <span>© {new Date().getFullYear()} Churnly</span>
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-            <Link href="/confidentialite" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.privacy}</Link>
-            <Link href="/conditions" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.terms}</Link>
-            <Link href="/politique-cookies" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.cookies}</Link>
-            <Link href="/remboursement" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.refund}</Link>
-            <Link href="/mentions-legales" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.legalNotice}</Link>
-            <a href="mailto:contact@churnly.fr" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.contact}</a>
+        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6">
+          <div className="flex flex-wrap justify-between gap-10">
+            <div className="flex max-w-sm flex-col gap-3">
+              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Churnly</span>
+              <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-500">{tFooter.tagline}</p>
+            </div>
+            <div className="flex flex-wrap gap-12">
+              <nav aria-label={tFooter.productLabel} className="flex flex-col gap-1">
+                <span className="pb-2 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{tFooter.productLabel}</span>
+                <a href="#fonctionnalites" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tToc.features}</a>
+                <a href="#comment-ca-marche" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tToc.howItWorks}</a>
+                <a href="#tarif" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tToc.pricing}</a>
+                <a href="#faq" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tToc.faq}</a>
+              </nav>
+              <nav aria-label={tFooter.legalLabel} className="flex flex-col gap-1">
+                <span className="pb-2 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{tFooter.legalLabel}</span>
+                <Link href="/confidentialite" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.privacy}</Link>
+                <Link href="/conditions" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.terms}</Link>
+                <Link href="/politique-cookies" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.cookies}</Link>
+                <Link href="/remboursement" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.refund}</Link>
+                <Link href="/mentions-legales" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.legalNotice}</Link>
+                <a href="mailto:contact@churnly.fr" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.contact}</a>
+              </nav>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-between gap-3 border-t border-slate-100 pt-6 text-sm text-slate-400 dark:border-slate-900 dark:text-slate-500">
+            <span>© {new Date().getFullYear()} Churnly</span>
+            <span>{tFooter.poweredBy}</span>
           </div>
         </div>
       </footer>
