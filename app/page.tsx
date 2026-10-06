@@ -13,7 +13,7 @@ import FadeLine from '@/components/FadeLine';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X, Plus, CreditCard, Trash2 } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -737,6 +737,65 @@ function TestimonialsSection({ items }: { items: Testimonial[] }) {
   );
 }
 
+const SECURITY_ICONS = [CreditCard, ShieldCheck, Trash2];
+
+// FAQ + bloc sécurité — contenu volontairement plus court que le FAQ complet
+// de /pricing (déjà très détaillé sur les plans Standard/Performance) :
+// ici on reste sur les questions générales qu'un visiteur se pose avant de
+// s'inscrire, pas la tarification en détail.
+function FaqSection() {
+  const t = useTranslations('home').faqSection;
+
+  return (
+    <section id="faq" className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
+      <div className="mx-auto flex max-w-5xl flex-col gap-12 lg:flex-row lg:gap-16">
+        <div className="flex flex-col gap-8 lg:flex-1">
+          <div>
+            <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
+              {t.eyebrow}
+            </motion.p>
+            <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+              {t.title}
+            </motion.h2>
+          </div>
+          <motion.div {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="flex flex-col gap-5 rounded-3xl border border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t.securityLabel}</span>
+            {t.securityItems.map((item, i) => {
+              const Icon = SECURITY_ICONS[i];
+              return (
+                <div key={item.title} className="flex gap-3">
+                  <Icon className="h-[18px] w-[18px] flex-none text-brand-600 dark:text-brand-400" strokeWidth={1.75} />
+                  <div>
+                    <p className="text-[15px] font-semibold text-slate-900 dark:text-white">{item.title}</p>
+                    <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{item.body}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+        </div>
+
+        <div className="flex flex-col border-t border-slate-200 dark:border-slate-800 lg:flex-[2]">
+          {t.items.map((item, i) => (
+            <motion.details
+              key={item.q}
+              {...reveal}
+              transition={{ duration: 0.6, ease: EASE_OUT, delay: Math.min(i * 0.06, 0.3) }}
+              className="group border-b border-slate-200 py-2 dark:border-slate-800"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 text-[17px] font-semibold text-slate-900 [&::-webkit-details-marker]:hidden dark:text-white">
+                {item.q}
+                <Plus className="h-5 w-5 flex-none text-brand-600 transition-transform duration-200 group-open:rotate-45 dark:text-brand-400" />
+              </summary>
+              <p className="pb-4 pr-8 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">{item.a}</p>
+            </motion.details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CTASection() {
   const ctaRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ctaRef, offset: ['start end', 'end start'] });
@@ -835,6 +894,7 @@ export default function Home() {
     { id: 'tarif', label: tToc.pricing },
     { id: 'comment-ca-marche', label: tToc.howItWorks },
     { id: 'cas-reels', label: tToc.caseStudies },
+    { id: 'faq', label: tToc.faq },
     ...(testimonials.length > 0 ? [{ id: 'avis', label: tToc.testimonials }] : []),
   ];
 
@@ -870,6 +930,8 @@ export default function Home() {
         <HowItWorksSection />
         <SectionDivider />
         <CaseStudiesSection />
+        <SectionDivider />
+        <FaqSection />
         <SectionDivider />
         <CTASection />
         {testimonials.length > 0 && (
