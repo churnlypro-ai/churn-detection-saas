@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
@@ -51,7 +50,6 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
 }
 
 export default function AvisPage() {
-  const router = useRouter();
   const { language } = useLanguage();
   const t = useTranslations('avis');
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
@@ -69,10 +67,14 @@ export default function AvisPage() {
   const [error, setError] = useState('');
   const [justSubmitted, setJustSubmitted] = useState(false);
 
-  // Laisser un avis nécessite un compte — voir /api/testimonials POST.
+  // Pas de compte requis pour laisser un avis (décision explicite) — voir
+  // la note dans /api/testimonials POST. Un visiteur connecté garde le
+  // comportement normal (préremplissage de son entreprise, avis existant
+  // retrouvable et modifiable) ; un anonyme voit simplement un formulaire
+  // vide, sans "mine" possible.
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data?.user) { router.replace('/login'); return; }
+      if (!data?.user) { setLoading(false); return; }
       setUser(data.user);
 
       const { data: profileData } = await supabase
@@ -100,7 +102,7 @@ export default function AvisPage() {
 
       setLoading(false);
     });
-  }, [router]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
