@@ -92,6 +92,24 @@ export const fr = {
         { company: 'E-commerce premium', unit: '€/an récupérés', description: '15 clients réactivés via des offres personnalisées générées par Churnly. ROI 64x.', metric: 'ROI 64x' },
       ],
     },
+    comparatif: {
+      eyebrow: 'Comparatif',
+      title: 'Churnly face aux autres approches.',
+      subtitle: 'Les faits, ligne par ligne — sans viser un concurrent en particulier.',
+      columns: {
+        classicLabel: 'Solutions classiques',
+        classicSub: 'Outils de suivi client généralistes',
+        sheetsLabel: 'Tableurs',
+        sheetsSub: 'Type Excel, suivi maison',
+      },
+      rows: [
+        { criterion: 'Score de risque par client', detail: 'Recalculé en continu, jusqu\'à 37 signaux selon vos données connectées', churnly: 'Automatique', classic: 'Rapports ponctuels', sheets: 'Suivi manuel' },
+        { criterion: 'Import de vos données', detail: 'Stripe en un clic, ou CSV avec vos propres colonnes', churnly: 'En un clic', classic: 'Selon l\'outil', sheets: 'Copier-coller' },
+        { criterion: 'Email de relance par client à risque', detail: 'Rédigé et prêt à envoyer, à relire avant l\'envoi', churnly: 'Prêt à envoyer', classic: 'Modèles à adapter', sheets: 'Rédaction manuelle' },
+        { criterion: 'Tarif', detail: 'Aligné sur votre chiffre d\'affaires mensuel, affiché publiquement', churnly: 'Grille publique', classic: 'Souvent sur devis', sheets: 'Pas d\'abonnement' },
+      ],
+      footnote: 'Comparaison par catégorie d\'outils, à titre indicatif : aucun produit concurrent n\'est visé en particulier.',
+    },
     cta: {
       title: 'Prêt à arrêter de perdre des clients ?',
       body: 'Importez vos données. Voyez vos clients à risque. Agissez. Le tout en 30 secondes.',
@@ -108,6 +126,7 @@ export const fr = {
     toc: {
       reality: 'Le constat',
       strategy: 'Votre stratégie',
+      comparatif: 'Comparatif',
       pricing: 'Votre tarif',
       howItWorks: 'Comment ça marche',
       churn: 'Le churn',

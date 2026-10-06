@@ -13,7 +13,7 @@ import FadeLine from '@/components/FadeLine';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -320,6 +320,84 @@ function StrategySection() {
             {t.calloutBody}
           </p>
         </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// Tableau comparatif Churnly vs solutions classiques / tableurs — par
+// catégorie d'outils, jamais un concurrent nommé (voir le disclaimer en
+// pied de tableau). Les 4 lignes reprennent des faits réels du produit
+// (37 signaux, import Stripe/CSV, email de relance rédigé, tarif public
+// aligné sur le CA) plutôt que des chiffres de performance inventés.
+function ComparatifSection() {
+  const t = useTranslations('home').comparatif;
+
+  return (
+    <section id="comparatif" className="relative bg-white px-6 py-28 dark:bg-slate-950">
+      <div className="mx-auto max-w-5xl">
+        <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
+          {t.eyebrow}
+        </motion.p>
+        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+          {t.title}
+        </motion.h2>
+        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-400">
+          {t.subtitle}
+        </motion.p>
+
+        <motion.div {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }} className="mt-12 overflow-x-auto rounded-3xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <caption className="sr-only">{t.title}</caption>
+            <thead>
+              <tr>
+                <th scope="col" className="w-2/5 px-6 py-5 text-left align-bottom" />
+                <th scope="col" className="border-x border-brand-200/60 bg-brand-50 px-4 py-5 text-center align-bottom dark:border-brand-800/40 dark:bg-brand-500/10">
+                  <span className="block text-lg font-bold tracking-tight text-slate-900 dark:text-white">Churnly</span>
+                </th>
+                <th scope="col" className="px-4 py-5 text-center align-bottom font-normal">
+                  <span className="block text-sm font-semibold text-slate-900 dark:text-white">{t.columns.classicLabel}</span>
+                  <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">{t.columns.classicSub}</span>
+                </th>
+                <th scope="col" className="px-4 py-5 text-center align-bottom font-normal">
+                  <span className="block text-sm font-semibold text-slate-900 dark:text-white">{t.columns.sheetsLabel}</span>
+                  <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">{t.columns.sheetsSub}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {t.rows.map((row) => (
+                <tr key={row.criterion} className="border-t border-slate-100 dark:border-slate-800">
+                  <th scope="row" className="px-6 py-5 text-left align-middle font-normal">
+                    <span className="block text-[15px] font-semibold text-slate-900 dark:text-white">{row.criterion}</span>
+                    <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-500">{row.detail}</span>
+                  </th>
+                  <td className="border-x border-brand-200/60 bg-brand-50/60 px-4 py-5 text-center align-middle dark:border-brand-800/40 dark:bg-brand-500/5">
+                    <span className="inline-flex flex-col items-center gap-1.5">
+                      <Check className="h-4 w-4 text-brand-600 dark:text-brand-400" strokeWidth={3} />
+                      <span className="text-xs font-medium text-slate-900 dark:text-white">{row.churnly}</span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-5 text-center align-middle">
+                    <span className="inline-flex flex-col items-center gap-1.5">
+                      <Minus className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                      <span className="text-xs text-slate-500 dark:text-slate-500">{row.classic}</span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-5 text-center align-middle">
+                    <span className="inline-flex flex-col items-center gap-1.5">
+                      <X className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                      <span className="text-xs text-slate-500 dark:text-slate-500">{row.sheets}</span>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </motion.div>
+        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.4 }} className="mt-4 text-xs text-slate-400 dark:text-slate-500">
+          {t.footnote}
+        </motion.p>
       </div>
     </section>
   );
@@ -753,6 +831,7 @@ export default function Home() {
     { id: 'constat', label: tToc.reality },
     { id: 'churn', label: tToc.churn },
     { id: 'strategie', label: tToc.strategy },
+    { id: 'comparatif', label: tToc.comparatif },
     { id: 'tarif', label: tToc.pricing },
     { id: 'comment-ca-marche', label: tToc.howItWorks },
     { id: 'cas-reels', label: tToc.caseStudies },
@@ -778,6 +857,9 @@ export default function Home() {
         <ChurnDefinitionSection />
         <SectionDivider />
         <StrategySection />
+        <SectionDivider />
+
+        <ComparatifSection />
         <SectionDivider />
 
         <div id="tarif" className="relative bg-slate-50 dark:bg-slate-900">
