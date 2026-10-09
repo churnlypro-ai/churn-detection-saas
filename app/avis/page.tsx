@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import Navigation from '@/components/Navigation';
+import SiteFooter from '@/components/SiteFooter';
 import { EASE_OUT } from '@/lib/animations';
 import { Star, Check, Pencil, ArrowRight } from 'lucide-react';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
@@ -322,6 +323,7 @@ export default function AvisPage() {
           )}
         </AnimatePresence>
       </main>
+      <SiteFooter />
     </>
   );
 }

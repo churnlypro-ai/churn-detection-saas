@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navigation from '@/components/Navigation';
 import FadeLine from '@/components/FadeLine';
+import SiteFooter from '@/components/SiteFooter';
 import { EASE_OUT } from '@/lib/animations';
 import { supabase } from '@/lib/supabase';
 import { calcPrice, calcPerformanceBaseFee, formatEuro } from '@/lib/pricing';
@@ -96,7 +96,6 @@ export default function PricingPage() {
   const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<'performance' | 'revenue_tier' | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
   const t = useTranslations('pricing');
-  const tFooter = useTranslations('home').footer;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -384,20 +383,7 @@ export default function PricingPage() {
         <FaqAccordion items={t.faq} />
       </section>
 
-      <footer className="relative bg-white py-10 dark:bg-slate-950">
-        <FadeLine className="top-0" />
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 dark:text-slate-500 sm:flex-row">
-          <span>© {new Date().getFullYear()} Churnly</span>
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-            <Link href="/confidentialite" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.privacy}</Link>
-            <Link href="/conditions" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.terms}</Link>
-            <Link href="/politique-cookies" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.cookies}</Link>
-            <Link href="/remboursement" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.refund}</Link>
-            <Link href="/mentions-legales" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.legalNotice}</Link>
-            <a href="mailto:contact@churnly.fr" className="hover:text-slate-800 dark:hover:text-slate-300">{tFooter.contact}</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

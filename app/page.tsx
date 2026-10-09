@@ -7,9 +7,9 @@ import Navigation from '@/components/Navigation';
 import AnimatedHero from '@/components/AnimatedHero';
 import Calculator from '@/components/Calculator';
 import SectionDivider from '@/components/SectionDivider';
+import SiteFooter from '@/components/SiteFooter';
 import SectionToc from '@/components/SectionToc';
 import SignalMarquee from '@/components/SignalMarquee';
-import FadeLine from '@/components/FadeLine';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
@@ -963,7 +963,6 @@ export default function Home() {
   const heroOpacity = useTransform(heroProgress, [0, 0.85], [1, 0.2]);
   const heroScale = useTransform(heroProgress, [0, 1], [1, 0.95]);
   const tToc = useTranslations('home').toc;
-  const tFooter = useTranslations('home').footer;
 
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   useEffect(() => {
@@ -1036,39 +1035,7 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="relative bg-white py-14 dark:bg-slate-950">
-        <FadeLine className="top-0" />
-        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6">
-          <div className="flex flex-wrap justify-between gap-10">
-            <div className="flex max-w-sm flex-col gap-3">
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Churnly</span>
-              <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-500">{tFooter.tagline}</p>
-            </div>
-            <div className="flex flex-wrap gap-12">
-              <nav aria-label={tFooter.productLabel} className="flex flex-col gap-1">
-                <span className="pb-2 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{tFooter.productLabel}</span>
-                <a href="#fonctionnalites" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tToc.features}</a>
-                <a href="#comment-ca-marche" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tToc.howItWorks}</a>
-                <a href="#tarif" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tToc.pricing}</a>
-                <a href="#faq" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tToc.faq}</a>
-              </nav>
-              <nav aria-label={tFooter.legalLabel} className="flex flex-col gap-1">
-                <span className="pb-2 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{tFooter.legalLabel}</span>
-                <Link href="/confidentialite" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.privacy}</Link>
-                <Link href="/conditions" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.terms}</Link>
-                <Link href="/politique-cookies" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.cookies}</Link>
-                <Link href="/remboursement" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.refund}</Link>
-                <Link href="/mentions-legales" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.legalNotice}</Link>
-                <a href="mailto:contact@churnly.fr" className="flex min-h-[32px] items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300">{tFooter.contact}</a>
-              </nav>
-            </div>
-          </div>
-          <div className="flex flex-wrap justify-between gap-3 border-t border-slate-100 pt-6 text-sm text-slate-400 dark:border-slate-900 dark:text-slate-500">
-            <span>© {new Date().getFullYear()} Churnly</span>
-            <span>{tFooter.poweredBy}</span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
+import SiteFooter from '@/components/SiteFooter';
 import MetricCards from '@/components/MetricCards';
 import ClientTable from '@/components/ClientTable';
 import { EASE_OUT } from '@/lib/animations';
@@ -304,6 +305,7 @@ function DemoContent() {
           )}
         </AnimatePresence>
       </main>
+      <SiteFooter />
     </>
   );
 }
