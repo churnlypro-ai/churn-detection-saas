@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValueEvent, useScroll } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -16,6 +16,21 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
   const [menuOpen, setMenuOpen] = useState(false);
   const t = useTranslations('nav');
   const tToc = useTranslations('home').toc;
+
+  // Barre rétractable : se cache en scrollant vers le bas (au-delà d'un
+  // petit seuil, pour ne pas disparaître sur un micro-scroll), réapparaît
+  // dès qu'on remonte, même d'un pixel — pattern standard (ex. Medium,
+  // insyder.io) plutôt qu'un simple fondu lié à la position absolue.
+  const { scrollY } = useScroll();
+  const [hidden, setHidden] = useState(false);
+  const lastScrollY = useRef(0);
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    const previous = lastScrollY.current;
+    lastScrollY.current = latest;
+    if (menuOpen) return;
+    if (latest > previous && latest > 80) setHidden(true);
+    else setHidden(false);
+  });
 
   useEffect(() => {
     setMenuOpen(false);
@@ -45,7 +60,11 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
   const mobileLinkClass = 'block w-full rounded-xl px-4 py-3 text-base font-medium text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800';
 
   return (
-    <header className="sticky top-0 z-50 px-3 pt-3 sm:px-6">
+    <motion.header
+      animate={{ y: hidden ? '-130%' : '0%' }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      className="sticky top-0 z-50 px-3 pt-3 sm:px-6"
+    >
       <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 rounded-[20px] border border-slate-200 bg-white/80 px-3 py-2 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/75 sm:gap-4 sm:px-4">
         <Link href={user ? '/dashboard' : '/'} className="shrink-0 px-2 py-2 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
           Churn<span className="text-brand-600">ly</span>
@@ -113,7 +132,7 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
           {!isAuthPage && (
             <button
               type="button"
-              onClick={() => setMenuOpen((v) => !v)}
+              onClick={() => { setHidden(false); setMenuOpen((v) => !v); }}
               aria-label={menuOpen ? t.closeMenu : t.openMenu}
               className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             >
@@ -165,6 +184,6 @@ export default function Navigation({ user }: { user: { id?: string; email?: stri
           </motion.div>
         )}
       </AnimatePresence>
-    </header>
+    </motion.header>
   );
 }

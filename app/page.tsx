@@ -366,8 +366,15 @@ function ComparatifSection() {
               </tr>
             </thead>
             <tbody>
-              {t.rows.map((row) => (
-                <tr key={row.criterion} className="border-t border-slate-100 dark:border-slate-800">
+              {t.rows.map((row, i) => (
+                <motion.tr
+                  key={row.criterion}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.08 }}
+                  className="border-t border-slate-100 dark:border-slate-800"
+                >
                   <th scope="row" className="px-6 py-5 text-left align-middle font-normal">
                     <span className="block text-[15px] font-semibold text-slate-900 dark:text-white">{row.criterion}</span>
                     <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-500">{row.detail}</span>
@@ -390,7 +397,7 @@ function ComparatifSection() {
                       <span className="text-xs text-slate-500 dark:text-slate-500">{row.sheets}</span>
                     </span>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>

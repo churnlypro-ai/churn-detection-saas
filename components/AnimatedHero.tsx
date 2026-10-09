@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { ShieldCheck, CreditCard, Trash2, Check, Plug, ArrowRight, Calendar } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/LanguageContext';
 import { CallBookingModal } from '@/components/CallBookingModal';
@@ -152,10 +152,18 @@ export default function AnimatedHero() {
   const t = useTranslations('home').hero;
   const tCall = useTranslations('callBooking');
   const [callModalOpen, setCallModalOpen] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // Léger parallax au scroll sur le mockup du dashboard (comme
+  // data-parallax="hero-mockup" dans la maquette Claude Design) — le
+  // visuel dérive un peu plus lentement que le reste de la page pendant
+  // qu'on quitte le hero, plutôt que de défiler à l'identique.
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] });
+  const mockY = useTransform(scrollYProgress, [0, 1], [0, -60]);
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-white to-slate-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+      <section ref={sectionRef} className="relative overflow-hidden bg-gradient-to-b from-white via-white to-slate-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
           <div className="absolute left-[-10%] top-[10%] h-[400px] w-[400px] rounded-full bg-brand-200/20 blur-[120px] dark:bg-brand-500/10" />
           <div className="absolute right-[-5%] bottom-[5%] h-[300px] w-[300px] rounded-full bg-brand-100/30 blur-[100px] dark:bg-brand-500/10" />
@@ -253,9 +261,9 @@ export default function AnimatedHero() {
             </motion.ul>
           </div>
 
-          <div className="w-full lg:flex-1">
+          <motion.div style={{ y: mockY }} className="w-full lg:flex-1">
             <DashboardMock />
-          </div>
+          </motion.div>
         </div>
       </section>
 

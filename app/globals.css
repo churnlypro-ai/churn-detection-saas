@@ -69,17 +69,24 @@
   }
   html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
-  }
-  body {
-    @apply bg-background text-foreground;
     /* Un seul élément trop large quelque part sur la page (table, carte, texte
        non cassable) suffit à rendre toute la page défilable horizontalement
        sur mobile — perçu comme un swipe gauche/droite au lieu d'un simple
        scroll vertical. Les tableaux qui ont vraiment besoin de défiler
        horizontalement le font dans leur propre conteneur overflow-x-auto
-       (voir ClientTable, dashboard), donc ce garde-fou global ne casse rien. */
+       (voir ClientTable, dashboard), donc ce garde-fou global ne casse rien.
+       Gardé UNIQUEMENT sur html, jamais aussi sur body : fixer overflow-x
+       sans overflow-y bascule automatiquement ce dernier sur 'auto' (règle
+       du spec CSS Overflow, qui s'applique même si on écrit
+       overflow-y:visible explicitement — ça ne change rien). Le poser sur
+       les deux transforme html ET body en deux conteneurs de scroll
+       distincts, ce qui casse position:sticky pour tout ce qui s'y
+       accroche (la nav, notamment). Un seul vrai scroll, sur html, suffit
+       au garde-fou. */
     overflow-x: hidden;
+  }
+  body {
+    @apply bg-background text-foreground;
     max-width: 100vw;
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
