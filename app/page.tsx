@@ -13,7 +13,7 @@ import SignalMarquee from '@/components/SignalMarquee';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X, Plus, CreditCard, Trash2, Mail, Download, Calendar, Users, Gift } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X, Plus, CreditCard, Trash2, Mail, Download, Calendar, Users, Gift, FileText } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -494,6 +494,8 @@ const STEP_ICONS = [Zap, LineChart, ShieldCheck];
 
 function HowItWorksSection() {
   const t = useTranslations('home').howItWorks;
+  const tMock = useTranslations('home').hero.mock;
+  const p = t.preview;
   const steps = t.steps.map((step, i) => ({ ...step, icon: STEP_ICONS[i], step: String(i + 1).padStart(2, '0') }));
 
   return (
@@ -529,6 +531,59 @@ function HowItWorksSection() {
                 </div>
                 <h3 className={`text-lg font-semibold ${isAction ? 'text-brand-800 dark:text-brand-400' : 'text-slate-900 dark:text-white'}`}>{step.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{step.description}</p>
+
+                {i === 0 && (
+                  <div className="mt-5 flex flex-col gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+                    <div className="flex items-center gap-2.5 rounded-lg bg-white px-2.5 py-2 dark:bg-slate-900">
+                      <span className="flex h-7 w-7 flex-none items-center justify-center rounded-md bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"><CreditCard className="h-3.5 w-3.5" /></span>
+                      <span className="flex-1 text-sm font-semibold text-slate-900 dark:text-white">{p.stripeLabel}</span>
+                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">{p.stripeReadOnly}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 rounded-lg bg-white px-2.5 py-2 dark:bg-slate-900">
+                      <span className="flex h-7 w-7 flex-none items-center justify-center rounded-md bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"><FileText className="h-3.5 w-3.5" /></span>
+                      <span className="flex-1 font-mono text-[13px] font-medium text-slate-900 dark:text-white">{p.csvLabel}</span>
+                      <span className="flex-none whitespace-nowrap rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">{p.csvFreeColumns}</span>
+                    </div>
+                  </div>
+                )}
+
+                {i === 1 && (
+                  <div className="mt-5 flex flex-col gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5 dark:border-slate-800 dark:bg-slate-950">
+                    <div className="flex items-center gap-2 text-[13px]">
+                      <span className="h-1.5 w-1.5 flex-none rounded-full bg-red-500" />
+                      <span className="flex-1 text-slate-500 dark:text-slate-400">{p.paymentStatus}</span>
+                      <span className="font-mono text-xs text-slate-900 dark:text-white">{p.paymentFailed}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[13px]">
+                      <span className="h-1.5 w-1.5 flex-none rounded-full bg-brand-500" />
+                      <span className="flex-1 text-slate-500 dark:text-slate-400">{p.renewal}</span>
+                      <span className="font-mono text-xs text-slate-900 dark:text-white">{p.renewalDays}</span>
+                    </div>
+                    <div className="h-px bg-slate-200 dark:bg-slate-800" />
+                    <div className="flex items-center gap-3">
+                      <span className="text-[13px] font-semibold text-slate-900 dark:text-white">{p.score}</span>
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                        <div className="h-full w-[82%] rounded-full bg-red-500" />
+                      </div>
+                      <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white">82/100</span>
+                    </div>
+                  </div>
+                )}
+
+                {i === 2 && (
+                  <div className="mt-5 flex flex-col gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5 dark:border-slate-800 dark:bg-slate-950">
+                    <span className="text-[13px] font-semibold text-slate-900 dark:text-white">{tMock.emailSubject}</span>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800" />
+                      <span className="h-1.5 w-5/6 rounded-full bg-slate-200 dark:bg-slate-800" />
+                      <span className="h-1.5 w-3/5 rounded-full bg-slate-200 dark:bg-slate-800" />
+                    </div>
+                    <span className="inline-flex w-fit items-center gap-1.5 rounded-md bg-brand-500 px-2.5 py-1 text-[12px] font-semibold text-slate-950">
+                      <Check className="h-3 w-3" strokeWidth={3} /> {tMock.readyToSend}
+                    </span>
+                  </div>
+                )}
+
                 {i < steps.length - 1 && (
                   <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-slate-300 dark:text-slate-700 sm:block">
                     <ArrowRight className="h-5 w-5" />

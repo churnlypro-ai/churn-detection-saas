@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { PhoneCall, ShieldCheck, CreditCard, Trash2, Check } from 'lucide-react';
+import { ShieldCheck, CreditCard, Trash2, Check, Plug, ArrowRight, Calendar } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/LanguageContext';
 import { CallBookingModal } from '@/components/CallBookingModal';
 
@@ -121,7 +121,7 @@ function DashboardMock() {
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 2.4 }}
-        className="absolute -left-12 top-36 hidden w-40 rounded-2xl border border-slate-700 bg-slate-800/95 p-3.5 shadow-xl backdrop-blur sm:block"
+        className="absolute -left-36 top-36 hidden w-40 rounded-2xl border border-slate-700 bg-slate-800/95 p-3.5 shadow-xl backdrop-blur sm:block"
       >
         <p className="font-mono text-[10.5px] uppercase tracking-widest text-slate-400">{t.upTo}</p>
         <p className="flex items-baseline gap-1.5">
@@ -202,18 +202,28 @@ export default function AnimatedHero() {
               transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center gap-3 lg:items-start"
             >
-              <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                <Link
-                  href="/signup"
-                  className="rounded-full bg-brand-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
-                >
-                  {t.cta}
-                </Link>
+              <Link
+                href="/signup"
+                className="group flex w-full max-w-xl items-center gap-2.5 rounded-full border border-slate-200 bg-white p-2 pl-3 shadow-lg shadow-slate-900/5 transition hover:border-brand-300 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20 dark:hover:border-brand-700"
+              >
+                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-slate-100 text-brand-600 dark:bg-slate-800 dark:text-brand-400">
+                  <Plug className="h-5 w-5" strokeWidth={1.75} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[15px] text-slate-400 dark:text-slate-500">
+                  Connectez votre Stripe, ou importez un CSV…
+                </span>
+                <span className="flex flex-none items-center gap-2 rounded-full bg-gradient-to-b from-brand-500 to-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition group-hover:brightness-105 sm:px-6">
+                  {t.cta} <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pl-1 lg:justify-start">
+                <span className="text-xs text-slate-400 dark:text-slate-500">{t.ctaNote}</span>
                 <button
                   onClick={() => setCallModalOpen(true)}
-                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-3.5 text-base font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700"
+                  className="flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900"
                 >
-                  <PhoneCall className="h-4 w-4" />
+                  <Calendar className="h-3.5 w-3.5" />
                   {tCall.button}
                 </button>
               </div>
@@ -223,7 +233,6 @@ export default function AnimatedHero() {
               >
                 {t.demoLink}
               </Link>
-              <span className="text-xs text-slate-400 dark:text-slate-500">{t.ctaNote}</span>
             </motion.div>
 
             <motion.ul
