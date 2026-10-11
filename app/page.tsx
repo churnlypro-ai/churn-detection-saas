@@ -13,7 +13,7 @@ import SignalMarquee from '@/components/SignalMarquee';
 import { CallBookingModal } from '@/components/CallBookingModal';
 import { EASE_OUT } from '@/lib/animations';
 import { useLanguage, useTranslations } from '@/lib/i18n/LanguageContext';
-import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, PhoneCall, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X, Plus, CreditCard, Trash2, Mail, Download, Calendar, Users, Gift, FileText } from 'lucide-react';
+import { ShieldCheck, Zap, LineChart, ArrowRight, TrendingDown, Quote, Star, Volume2, VolumeX, Play, Pause, Check, Minus, X, Plus, CreditCard, Download, Calendar, Users, Gift, FileText, LogIn, Gauge, Plug, Mail } from 'lucide-react';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -21,12 +21,6 @@ const reveal = {
   viewport: { once: true, amount: 0.15 },
   transition: { duration: 0.6, ease: EASE_OUT },
 } as const;
-
-const REALITY_STAT_VALUES = [
-  { value: 90, suffix: '%' },
-  { value: 60000, prefix: '€', suffix: '/an' },
-  { value: 5, suffix: 'x' },
-];
 
 function CountUp({ end, duration = 1.5, prefix = '', suffix = '' }: { end: number; duration?: number; prefix?: string; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -65,53 +59,142 @@ function CountUp({ end, duration = 1.5, prefix = '', suffix = '' }: { end: numbe
   );
 }
 
-function RealitySection() {
-  const pulseRef = useRef<HTMLDivElement>(null);
-  const pulseInView = useInView(pulseRef, { once: false, amount: 0.1 });
-  const t = useTranslations('home').reality;
+// Double-fond en dégradé pour simuler une bordure en dégradé (la maquette
+// Claude Design utilise ce procédé partout : un fond uni en padding-box +
+// un dégradé en border-box, impossible à obtenir avec une simple bordure
+// CSS classique sur plusieurs couleurs).
+function gradientBorderStyle(angle: number, accent: string): React.CSSProperties {
+  return {
+    border: '1px solid transparent',
+    backgroundImage: `linear-gradient(#0f172a, #0f172a), linear-gradient(${angle}deg, rgba(148,163,184,0.32), rgba(51,65,85,0.6) 30%, rgba(30,41,59,0.4) 72%, ${accent})`,
+    backgroundOrigin: 'border-box',
+    backgroundClip: 'padding-box, border-box',
+  };
+}
+
+const CHURN_CURVE = 'M0 10 L33.3 20.8 L66.7 31.1 L100 40.9 L133.3 50.2 L166.7 59 L200 67.4 L233.3 75.4 L266.7 82.9 L300 90.1 L333.3 97 L366.7 103.4 L400 109.6';
+
+// Graphique du taux de churn cumulé sur 12 mois — la ligne se dessine au
+// scroll (pathLength animé une fois dans le viewport), équivalent du
+// cy-draw/animation-timeline:view() de la maquette, en framer-motion pour
+// un support cross-browser (animation-timeline n'existe que sur Chrome).
+function ChurnChart() {
+  const t = useTranslations('home').reality.chart;
 
   return (
-    <section id="constat" className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/30 px-6 py-28 dark:from-slate-950 dark:to-slate-900">
-      <div className="mx-auto max-w-4xl">
-        <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
-          {t.eyebrow}
-        </motion.p>
-        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-          {t.title}
-        </motion.h2>
-        <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-          {t.body}
-        </motion.p>
+    <div className="relative flex flex-col gap-4 rounded-[20px] bg-slate-900 p-5 text-white shadow-2xl shadow-slate-950/40" style={gradientBorderStyle(160, 'rgba(220,38,38,0.32)')}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col leading-tight">
+          <span className="text-sm font-semibold">{t.title}</span>
+          <span className="text-xs text-slate-400">{t.subtitle}</span>
+        </div>
+        <span className="flex-none rounded-full bg-red-600 px-2.5 py-1 font-mono text-xs font-semibold text-white">{t.badge}</span>
+      </div>
 
-        <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-3">
-          {REALITY_STAT_VALUES.map((stat, i) => (
-            <motion.div
-              key={t.statLabels[i]}
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6, ease: EASE_OUT, delay: i * 0.2 }}
-              className="text-center"
-            >
-              <p className="text-4xl font-extrabold text-brand-600 dark:text-brand-400 sm:text-5xl">
-                <CountUp end={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
-              </p>
-              <p className="mt-3 text-sm text-slate-500 dark:text-slate-500">{t.statLabels[i]}</p>
-            </motion.div>
-          ))}
+      <div className="relative h-[150px]">
+        <svg width="100%" height="150" viewBox="0 0 400 150" preserveAspectRatio="none" className="block overflow-visible">
+          <path d={`${CHURN_CURVE} L400 10 Z`} fill="rgba(220,38,38,0.16)" />
+          <path d={`${CHURN_CURVE} L400 150 L0 150 Z`} fill="rgba(148,163,184,0.08)" />
+          <path d="M0 10 L400 10" fill="none" stroke="rgba(148,163,184,0.3)" strokeWidth="1" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+          <motion.path
+            d={CHURN_CURVE}
+            fill="none"
+            stroke="#f4f2ec"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            initial={{ pathLength: 0 }}
+            whileInView={{ pathLength: 1 }}
+            viewport={{ once: true, amount: 0.6 }}
+            transition={{ duration: 1.4, ease: EASE_OUT }}
+          />
+        </svg>
+        <span className="absolute left-0 top-0 -translate-y-[120%] font-mono text-[11px] text-slate-400">{t.startLabel}</span>
+        <span className="absolute right-0 top-[73%] h-2.5 w-2.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.22)]" />
+        <span className="absolute right-3.5 top-[73%] -translate-y-[150%] font-mono text-[11px] font-semibold text-white">{t.endLabel}</span>
+      </div>
+
+      <div className="flex justify-between font-mono text-[11px] text-slate-400">
+        <span>{t.month1}</span>
+        <span>{t.month12}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-800 pt-3 text-xs text-slate-400">
+        <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-red-600/45" />{t.lostLegend}</span>
+        <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-slate-700" />{t.remainingLegend}</span>
+        <span className="ml-auto font-mono text-[11px]">{t.rateLabel}</span>
+      </div>
+    </div>
+  );
+}
+
+function RealitySection() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const t = useTranslations('home').reality;
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start end', 'end start'] });
+  const chartY = useTransform(scrollYProgress, [0, 1], [40, -40]);
+
+  return (
+    <section ref={sectionRef} id="constat" className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-16 lg:flex-row lg:gap-16">
+        <div className="flex flex-1 flex-col gap-7">
+          <div className="flex flex-col gap-3.5">
+            <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
+              {t.eyebrow}
+            </motion.p>
+            <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
+              {t.title} <span className="text-slate-400 dark:text-slate-500">{t.titleRest}</span>
+            </motion.h2>
+            <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="max-w-lg text-base leading-relaxed text-slate-600 dark:text-slate-400">
+              {t.body}
+            </motion.p>
+          </div>
+
+          <ul className="flex flex-col">
+            {t.stats.map((stat, i) => (
+              <motion.li
+                key={stat.label}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.1 + i * 0.1 }}
+                className={`flex items-baseline gap-5 border-t border-slate-100 py-4 dark:border-slate-800 ${i === t.stats.length - 1 ? 'border-b' : ''}`}
+              >
+                <span className="w-20 flex-none font-mono text-xl font-medium tracking-tight text-brand-600 dark:text-brand-400">{stat.value}</span>
+                <span className="text-[15px] leading-snug text-slate-600 dark:text-slate-400">{stat.label}</span>
+              </motion.li>
+            ))}
+          </ul>
         </div>
 
-        <div ref={pulseRef} className="no-theme-transition relative mt-20 h-32">
-          {pulseInView && Array.from({ length: 12 }).map((_, i) => (
+        <div className="relative w-full flex-1">
+          <motion.div style={{ y: chartY }} className="relative mx-auto w-full max-w-sm">
+            <ChurnChart />
+
             <motion.div
-              key={i}
-              className="absolute h-16 w-16 rounded-full border border-brand-200 bg-brand-50/50 dark:border-brand-800/40 dark:bg-brand-500/10"
-              style={{ left: `${(i / 12) * 100}%`, top: `${Math.sin(i) * 20}px` }}
-              initial={{ opacity: 0.6 }}
-              animate={{ opacity: [0.6, 0.05, 0.6] }}
-              transition={{ duration: 3, repeat: Infinity, delay: i * 0.3, ease: 'easeInOut' }}
-            />
-          ))}
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -right-8 -top-16 hidden w-52 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+            >
+              <span className="h-2.5 w-2.5 flex-none rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.2)]" />
+              <div className="min-w-0 leading-tight">
+                <p className="text-[13.5px] font-semibold text-white">{t.floatCancel.title}</p>
+                <p className="font-mono text-[11px] text-slate-400">{t.floatCancel.sub}</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.4 }}
+              className="absolute -bottom-16 -left-8 hidden w-56 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+            >
+              <span className="h-2.5 w-2.5 flex-none rounded-full bg-brand-500 shadow-[0_0_0_4px_rgba(245,158,11,0.2)]" />
+              <div className="min-w-0 leading-tight">
+                <p className="text-[13.5px] font-semibold text-white">{t.floatMissed.title}</p>
+                <p className="font-mono text-[11px] text-slate-400">{t.floatMissed.sub}</p>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     </section>
@@ -258,7 +341,7 @@ function StrategySection() {
         <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
           {t.eyebrow}
         </motion.p>
-        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
           {t.title}
         </motion.h2>
         <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
@@ -339,8 +422,8 @@ function ComparatifSection() {
         <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
           {t.eyebrow}
         </motion.p>
-        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-          {t.title}
+        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
+          {t.title} <span className="text-slate-400 dark:text-slate-500">{t.titleRest}</span>
         </motion.h2>
         <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-400">
           {t.subtitle}
@@ -354,6 +437,7 @@ function ComparatifSection() {
                 <th scope="col" className="w-2/5 px-6 py-5 text-left align-bottom" />
                 <th scope="col" className="border-x border-brand-200/60 bg-brand-50 px-4 py-5 text-center align-bottom dark:border-brand-800/40 dark:bg-brand-500/10">
                   <span className="block text-lg font-bold tracking-tight text-slate-900 dark:text-white">Churnly</span>
+                  <span className="mt-1 block font-mono text-[11.5px] font-medium text-brand-600 dark:text-brand-400">{t.churnlyBadge}</span>
                 </th>
                 <th scope="col" className="px-4 py-5 text-center align-bottom font-normal">
                   <span className="block text-sm font-semibold text-slate-900 dark:text-white">{t.columns.classicLabel}</span>
@@ -410,69 +494,124 @@ function ComparatifSection() {
   );
 }
 
-const FEATURE_ICONS = [LineChart, Mail, Download, Calendar, Users, Zap];
+const FEATURE_ICONS = [Calendar, Download, Users, LogIn, Gauge];
 
 // Grille de fonctionnalités + bandeau Haiku/Opus (quel modèle Claude tourne
 // selon l'essai gratuit ou l'abonnement — voir lib/claude.ts MODEL_BY_TIER).
+function FeaturesMock() {
+  const t = useTranslations('home').features.mock;
+  const rows = [
+    { name: 'Atelier Nuances', pct: 82, color: '#dc2626' },
+    { name: 'Agence Corail', pct: 71, color: '#dc2626' },
+    { name: 'Studio Brume', pct: 54, color: '#f59e0b' },
+  ];
+
+  return (
+    <div className="relative mx-auto w-full max-w-sm">
+      <div className="relative flex flex-col gap-3.5 rounded-[20px] bg-slate-900 p-5 text-white shadow-2xl shadow-slate-950/40" style={gradientBorderStyle(160, 'rgba(245,158,11,0.28)')}>
+        <div className="flex items-center gap-3 border-b border-slate-800 pb-3.5">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-brand-500/15 text-brand-400">
+            <Calendar className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          </span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold">{t.headerTitle}</span>
+            <span className="font-mono text-[11.5px] text-slate-400">{t.headerSub}</span>
+          </div>
+        </div>
+        <span className="text-[17px] font-semibold leading-tight tracking-tight">{t.heading}</span>
+        <div className="flex flex-col gap-1.5">
+          {rows.map((row) => (
+            <div key={row.name} className="flex items-center gap-2.5 rounded-lg bg-slate-800 px-2.5 py-2">
+              <span className="flex-1 text-[13.5px] font-medium">{row.name}</span>
+              <span className="h-[5px] w-16 overflow-hidden rounded-full bg-slate-700">
+                <span className="block h-full" style={{ width: `${row.pct}%`, background: row.color }} />
+              </span>
+              <span className="w-10 text-right font-mono text-xs font-semibold">{row.pct}&nbsp;%</span>
+            </div>
+          ))}
+        </div>
+        <span className="inline-flex w-fit items-center gap-2 rounded-lg border border-brand-500/35 bg-brand-500/10 px-3.5 py-2 text-[13px] font-semibold text-brand-400">
+          {t.openDashboard} <ArrowRight className="h-3.5 w-3.5" />
+        </span>
+      </div>
+
+      <motion.div
+        animate={{ y: [0, -8, 0] }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -left-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+      >
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-500/35 bg-brand-500/10 text-brand-400">
+          <Download className="h-[18px] w-[18px]" strokeWidth={1.75} />
+        </span>
+        <div className="min-w-0 leading-tight">
+          <p className="text-[13.5px] font-semibold text-white">{t.exportChip}</p>
+          <p className="truncate font-mono text-[11px] text-slate-400">{t.exportFile}</p>
+        </div>
+      </motion.div>
+
+      <motion.div
+        animate={{ y: [0, -8, 0] }}
+        transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+        className="absolute -bottom-16 -right-8 hidden w-56 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+      >
+        <span className="flex flex-none">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-800 bg-slate-600 font-mono text-[10px] font-semibold">CL</span>
+          <span className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-800 bg-slate-500 font-mono text-[10px] font-semibold">TM</span>
+          <span className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-800 bg-brand-500 font-mono text-[10px] font-semibold text-slate-950">+1</span>
+        </span>
+        <div className="min-w-0 leading-tight">
+          <p className="text-[13.5px] font-semibold text-white">{t.teamChip}</p>
+          <p className="font-mono text-[11px] text-slate-400">{t.teamSub}</p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function FeaturesSection() {
   const t = useTranslations('home').features;
 
   return (
     <section id="fonctionnalites" className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
-      <div className="mx-auto max-w-5xl">
-        <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
-          {t.eyebrow}
-        </motion.p>
-        <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-          {t.title} <span className="text-slate-400 dark:text-slate-500">{t.titleRest}</span>
-        </motion.h2>
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-16 lg:flex-row-reverse lg:gap-16">
+        <div className="flex flex-1 flex-col gap-8">
+          <div className="flex flex-col gap-3.5">
+            <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
+              {t.eyebrow}
+            </motion.p>
+            <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
+              {t.title} <span className="text-slate-400 dark:text-slate-500">{t.titleRest}</span>
+            </motion.h2>
+          </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {t.items.map((item, i) => {
-            const Icon = FEATURE_ICONS[i];
-            return (
-              <motion.div
-                key={item.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.6, ease: EASE_OUT, delay: (i % 3) * 0.1 }}
-                className="flex flex-col gap-3.5 rounded-2xl border border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-200 bg-brand-50 text-brand-600 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400">
-                  <Icon className="h-5 w-5" strokeWidth={1.75} />
-                </div>
-                <h3 className="text-[17px] font-semibold tracking-tight text-slate-900 dark:text-white">{item.title}</h3>
-                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{item.description}</p>
-              </motion.div>
-            );
-          })}
+          <ul className="flex flex-col gap-5">
+            {t.items.map((item, i) => {
+              const Icon = FEATURE_ICONS[i];
+              return (
+                <motion.li
+                  key={item.title}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.08 }}
+                  className="flex items-start gap-3.5"
+                >
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-brand-200 bg-brand-50 text-brand-600 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400">
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[15.5px] font-semibold text-slate-900 dark:text-white">{item.title}</span>
+                    <span className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{item.description}</span>
+                  </div>
+                </motion.li>
+              );
+            })}
+          </ul>
         </div>
 
-        <motion.div
-          {...reveal}
-          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }}
-          className="mt-8 flex flex-wrap items-center gap-10 rounded-3xl border border-slate-100 bg-white p-8 dark:border-slate-800 dark:bg-slate-950 sm:p-10"
-        >
-          <div className="flex min-w-[260px] flex-1 flex-col gap-3">
-            <span className="text-xs font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">{t.aiSplit.eyebrow}</span>
-            <h3 className="text-2xl font-bold leading-snug tracking-tight text-slate-900 dark:text-white">
-              {t.aiSplit.title} <span className="text-slate-400 dark:text-slate-500">{t.aiSplit.titleRest}</span>
-            </h3>
-          </div>
-          <div className="grid flex-[1.3] grid-cols-1 gap-4 sm:min-w-[320px] sm:grid-cols-2">
-            <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
-              <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">{t.aiSplit.free.label}</span>
-              <span className="font-mono text-lg font-medium tracking-tight text-slate-900 dark:text-white">{t.aiSplit.free.model}</span>
-              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t.aiSplit.free.body}</p>
-            </div>
-            <div className="flex flex-col gap-2 rounded-2xl border border-brand-200 bg-brand-50 p-5 dark:border-brand-500/35 dark:bg-brand-500/10">
-              <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-brand-700 dark:text-brand-400">{t.aiSplit.paid.label}</span>
-              <span className="font-mono text-lg font-medium tracking-tight text-slate-900 dark:text-white">{t.aiSplit.paid.model}</span>
-              <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">{t.aiSplit.paid.body}</p>
-            </div>
-          </div>
-        </motion.div>
+        <div className="w-full flex-1">
+          <FeaturesMock />
+        </div>
       </div>
     </section>
   );
@@ -508,7 +647,7 @@ function HowItWorksSection() {
   return (
     <section id="comment-ca-marche" className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
       <div className="mx-auto max-w-5xl">
-        <motion.h2 {...reveal} className="mb-4 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+        <motion.h2 {...reveal} className="mb-4 text-center text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
           {t.title}
         </motion.h2>
         <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mb-16 text-center text-slate-600 dark:text-slate-400">
@@ -623,7 +762,7 @@ function ChurnDefinitionSection() {
   return (
     <section id="churn" className="relative overflow-hidden bg-white px-6 py-28 dark:bg-slate-950">
       <div className="mx-auto max-w-3xl">
-        <motion.h2 {...reveal} className="text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+        <motion.h2 {...reveal} className="text-center text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
           {t.title}
         </motion.h2>
         <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
@@ -689,7 +828,7 @@ function CaseStudiesSection() {
   return (
     <section id="cas-reels" className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
       <div className="mx-auto max-w-5xl">
-        <motion.h2 {...reveal} className="mb-16 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+        <motion.h2 {...reveal} className="mb-16 text-center text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
           {t.title}
         </motion.h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -848,7 +987,7 @@ function TestimonialsSection({ items }: { items: Testimonial[] }) {
           <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
             {t.eyebrow}
           </motion.p>
-          <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+          <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
             {t.title}
           </motion.h2>
           <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="mt-4 text-lg text-slate-600 dark:text-slate-400">
@@ -886,61 +1025,73 @@ function TestimonialsSection({ items }: { items: Testimonial[] }) {
   );
 }
 
-const SECURITY_ICONS = [CreditCard, ShieldCheck, Trash2];
-
 // FAQ + bloc sécurité — contenu volontairement plus court que le FAQ complet
 // de /pricing (déjà très détaillé sur les plans Standard/Performance) :
 // ici on reste sur les questions générales qu'un visiteur se pose avant de
 // s'inscrire, pas la tarification en détail.
 function FaqSection() {
   const t = useTranslations('home').faqSection;
+  const [callModalOpen, setCallModalOpen] = useState(false);
 
   return (
     <section id="faq" className="relative bg-slate-50 px-6 py-28 dark:bg-slate-900">
       <div className="mx-auto flex max-w-5xl flex-col gap-12 lg:flex-row lg:gap-16">
         <div className="flex flex-col gap-8 lg:flex-1">
-          <div>
+          <div className="flex flex-col gap-3.5">
             <motion.p {...reveal} className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">
               {t.eyebrow}
             </motion.p>
-            <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+            <motion.h2 {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }} className="text-3xl font-bold tracking-tight text-slate-900 [text-wrap:balance] dark:text-white sm:text-4xl">
               {t.title}
             </motion.h2>
+            <motion.p {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="text-base text-slate-600 dark:text-slate-400">
+              {t.subtitle}
+            </motion.p>
           </div>
-          <motion.div {...reveal} transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }} className="flex flex-col gap-5 rounded-3xl border border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
-            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t.securityLabel}</span>
-            {t.securityItems.map((item, i) => {
-              const Icon = SECURITY_ICONS[i];
-              return (
-                <div key={item.title} className="flex gap-3">
-                  <Icon className="h-[18px] w-[18px] flex-none text-brand-600 dark:text-brand-400" strokeWidth={1.75} />
-                  <div>
-                    <p className="text-[15px] font-semibold text-slate-900 dark:text-white">{item.title}</p>
-                    <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{item.body}</p>
-                  </div>
-                </div>
-              );
-            })}
+          <motion.div
+            {...reveal}
+            transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }}
+            className="flex flex-col gap-4 rounded-2xl bg-slate-900 p-5 text-white"
+            style={gradientBorderStyle(160, 'rgba(245,158,11,0.4)')}
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-brand-500/15 text-brand-400">
+                <Mail className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[15px] font-semibold">{t.anotherQuestion}</span>
+                <span className="text-[13.5px] text-slate-400">{t.contactEmail}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCallModalOpen(true)}
+              className="flex w-fit items-center gap-2 rounded-full border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+            >
+              <Calendar className="h-3.5 w-3.5" /> {t.bookCall}
+            </button>
           </motion.div>
         </div>
 
-        <div className="flex flex-col border-t border-slate-200 dark:border-slate-800 lg:flex-[2]">
+        <div className="flex flex-col gap-3 lg:flex-[2]">
           {t.items.map((item, i) => (
             <motion.details
               key={item.q}
               {...reveal}
               transition={{ duration: 0.6, ease: EASE_OUT, delay: Math.min(i * 0.06, 0.3) }}
-              className="group border-b border-slate-200 py-2 dark:border-slate-800"
+              className="group rounded-2xl border border-slate-100 bg-white px-5 dark:border-slate-800 dark:bg-slate-950"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 text-[17px] font-semibold text-slate-900 [&::-webkit-details-marker]:hidden dark:text-white">
-                {item.q}
+              <summary className="flex cursor-pointer list-none items-center gap-4 py-4 [&::-webkit-details-marker]:hidden">
+                <span className="w-6 flex-none font-mono text-xs font-medium text-brand-600 dark:text-brand-400">{String(i + 1).padStart(2, '0')}</span>
+                <span className="flex-1 text-[16px] font-semibold text-slate-900 dark:text-white">{item.q}</span>
                 <Plus className="h-5 w-5 flex-none text-brand-600 transition-transform duration-200 group-open:rotate-45 dark:text-brand-400" />
               </summary>
-              <p className="pb-4 pr-8 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">{item.a}</p>
+              <p className="pb-4 pl-10 pr-8 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">{item.a}</p>
             </motion.details>
           ))}
         </div>
       </div>
+      <CallBookingModal open={callModalOpen} onClose={() => setCallModalOpen(false)} />
     </section>
   );
 }
@@ -950,65 +1101,89 @@ function CTASection() {
   const { scrollYProgress } = useScroll({ target: ctaRef, offset: ['start end', 'end start'] });
   const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 1, 1.02]);
   const t = useTranslations('home').cta;
-  const tCall = useTranslations('callBooking');
+  const tHero = useTranslations('home').hero;
   const [callModalOpen, setCallModalOpen] = useState(false);
 
   return (
     <>
     <section ref={ctaRef} className="relative overflow-hidden bg-gradient-to-b from-white to-brand-50/40 px-6 py-28 text-center dark:from-slate-950 dark:to-slate-900">
       <motion.div style={{ scale }} className="relative mx-auto max-w-2xl">
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.6, ease: EASE_OUT }}
+          className="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400"
+        >
+          {t.eyebrow}
+        </motion.p>
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.6, ease: EASE_OUT }}
-          className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl"
+          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.1 }}
+          className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl"
         >
-          {t.title}
+          {t.title} <span className="text-slate-400 dark:text-slate-500">{t.titleRest}</span>
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.15 }}
-          className="mt-4 text-lg leading-relaxed text-slate-600 dark:text-slate-400"
+          transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.2 }}
+          className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-slate-600 dark:text-slate-400"
         >
           {t.body}
         </motion.p>
+
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }}
-          className="mt-10 flex flex-wrap items-center justify-center gap-3"
+          className="mx-auto mt-10 flex max-w-xl flex-col items-center gap-3"
         >
-          <motion.a
+          <Link
             href="/signup"
-            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-            whileTap={{ scale: 0.98 }}
-            className="inline-block rounded-full bg-brand-600 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-700 dark:hover:bg-brand-500"
+            className="group flex w-full items-center gap-2.5 rounded-full border border-slate-200 bg-white p-2 pl-3 text-left shadow-lg shadow-slate-900/5 transition hover:border-brand-300 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20 dark:hover:border-brand-700"
           >
-            {t.button}
-          </motion.a>
-          <motion.button
-            onClick={() => setCallModalOpen(true)}
-            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-            whileTap={{ scale: 0.98 }}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-8 py-4 text-lg font-bold text-slate-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700"
-          >
-            <PhoneCall className="h-4 w-4" />
-            {tCall.button}
-          </motion.button>
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-slate-100 text-brand-600 dark:bg-slate-800 dark:text-brand-400">
+              <Plug className="h-5 w-5" strokeWidth={1.75} />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[15px] text-slate-400 dark:text-slate-500">
+              {tHero.inputPlaceholder}
+            </span>
+            <span className="flex flex-none items-center gap-2 rounded-full bg-gradient-to-b from-brand-500 to-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition group-hover:brightness-105 sm:px-6">
+              {t.ctaButton} <ArrowRight className="h-4 w-4" />
+            </span>
+          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <span className="text-sm text-slate-400 dark:text-slate-500">{t.ctaNote}</span>
+            <button
+              type="button"
+              onClick={() => setCallModalOpen(true)}
+              className="flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              {t.bookCall}
+            </button>
+          </div>
         </motion.div>
-        <motion.p
+
+        <motion.ul
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-4 text-sm text-slate-400 dark:text-slate-500"
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500 dark:text-slate-400"
         >
-          {t.note}
-        </motion.p>
+          {t.trust.map((label) => (
+            <li key={label} className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+              {label}
+            </li>
+          ))}
+        </motion.ul>
       </motion.div>
     </section>
 

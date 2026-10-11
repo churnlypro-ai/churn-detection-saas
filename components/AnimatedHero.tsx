@@ -218,7 +218,7 @@ export default function AnimatedHero() {
                   <Plug className="h-5 w-5" strokeWidth={1.75} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[15px] text-slate-400 dark:text-slate-500">
-                  Connectez votre Stripe, ou importez un CSV…
+                  {t.inputPlaceholder}
                 </span>
                 <span className="flex flex-none items-center gap-2 rounded-full bg-gradient-to-b from-brand-500 to-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition group-hover:brightness-105 sm:px-6">
                   {t.cta} <ArrowRight className="h-4 w-4" />
