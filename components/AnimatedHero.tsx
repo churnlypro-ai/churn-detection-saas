@@ -121,19 +121,6 @@ function DashboardMock() {
 
       <motion.div
         animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 2.4 }}
-        className="absolute -left-36 top-36 hidden w-40 rounded-2xl border border-slate-200 bg-white/95 p-3.5 shadow-xl backdrop-blur sm:block dark:border-slate-700 dark:bg-slate-800/95"
-      >
-        <p className="font-mono text-[10.5px] uppercase tracking-widest text-slate-600 dark:text-slate-400">{t.upTo}</p>
-        <p className="flex items-baseline gap-1.5">
-          <span className="font-mono text-[32px] font-medium leading-none tracking-tight text-brand-700 dark:text-brand-400">37</span>
-          <span className="text-sm font-semibold text-slate-900 dark:text-white">{t.signalsWord}</span>
-        </p>
-        <p className="mt-1 text-xs leading-snug text-slate-600 dark:text-slate-400">{t.signalsNote}</p>
-      </motion.div>
-
-      <motion.div
-        animate={{ y: [0, -8, 0] }}
         transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
         className="absolute -bottom-6 -right-8 hidden w-48 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:flex dark:border-slate-700 dark:bg-slate-800/95"
       >
@@ -171,7 +158,7 @@ export default function AnimatedHero() {
         </div>
 
         <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-14 px-6 py-24 lg:flex-row lg:items-center lg:gap-12 lg:py-32">
-          <div className="flex flex-col items-center gap-6 text-center lg:flex-[1.1] lg:items-start lg:text-left">
+          <div className="flex w-full flex-col items-center gap-6 text-center lg:flex-[1.1] lg:items-start lg:text-left">
             <motion.span
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -209,19 +196,21 @@ export default function AnimatedHero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col items-center gap-3 lg:items-start"
+              className="flex w-full flex-col items-center gap-3 lg:items-start"
             >
               <Link
                 href="/signup"
-                className="group flex w-full max-w-xl items-center gap-2.5 rounded-full border border-slate-200 bg-white p-2 pl-3 shadow-lg shadow-slate-900/5 transition hover:border-brand-300 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20 dark:hover:border-brand-700"
+                className="group flex w-full max-w-xl flex-col gap-2 rounded-3xl border border-slate-200 bg-white p-2 shadow-lg shadow-slate-900/5 transition hover:border-brand-300 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20 dark:hover:border-brand-700 sm:flex-row sm:items-center sm:gap-2.5 sm:rounded-full sm:pl-3"
               >
-                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-slate-100 text-brand-600 dark:bg-slate-800 dark:text-brand-400">
-                  <Plug className="h-5 w-5" strokeWidth={1.75} />
+                <span className="flex min-w-0 flex-1 items-center gap-2.5 pl-1 sm:pl-0">
+                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-slate-100 text-brand-600 dark:bg-slate-800 dark:text-brand-400">
+                    <Plug className="h-5 w-5" strokeWidth={1.75} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[15px] text-slate-400 dark:text-slate-500">
+                    {t.inputPlaceholder}
+                  </span>
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[15px] text-slate-400 dark:text-slate-500">
-                  {t.inputPlaceholder}
-                </span>
-                <span className="flex flex-none items-center gap-2 rounded-full bg-gradient-to-b from-brand-500 to-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition group-hover:brightness-105 sm:px-6">
+                <span className="flex flex-none items-center justify-center gap-2 rounded-full bg-gradient-to-b from-brand-500 to-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition group-hover:brightness-105 sm:px-6">
                   {t.cta} <ArrowRight className="h-4 w-4" />
                 </span>
               </Link>

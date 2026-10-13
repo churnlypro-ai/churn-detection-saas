@@ -186,18 +186,6 @@ function RealitySection() {
                 <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.floatCancel.sub}</p>
               </div>
             </motion.div>
-
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.4 }}
-              className="absolute -bottom-16 -left-8 hidden w-56 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
-            >
-              <span className="h-2.5 w-2.5 flex-none rounded-full bg-brand-500 shadow-[0_0_0_4px_rgba(245,158,11,0.2)]" />
-              <div className="min-w-0 leading-tight">
-                <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.floatMissed.title}</p>
-                <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.floatMissed.sub}</p>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </div>
@@ -352,19 +340,19 @@ function StrategySection() {
           {t.body}
         </motion.p>
 
-        <div className="relative mt-16 flex items-center justify-center gap-8 py-12">
+        <div className="relative mt-16 flex items-center justify-center gap-3 py-12 sm:gap-8">
           <motion.div
             initial={{ opacity: 0, x: -60 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.8, ease: EASE_OUT }}
-            className="flex flex-col items-center gap-3"
+            className="flex w-20 flex-none flex-col items-center gap-3 sm:w-auto"
           >
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
-              <TrendingDown className="h-8 w-8" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 sm:h-20 sm:w-20">
+              <TrendingDown className="h-6 w-6 sm:h-8 sm:w-8" />
             </div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t.acquisitionLabel}</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">{t.acquisitionSub}</p>
+            <p className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">{t.acquisitionLabel}</p>
+            <p className="text-center text-xs text-slate-400 dark:text-slate-500">{t.acquisitionSub}</p>
           </motion.div>
 
           <motion.div
@@ -372,10 +360,10 @@ function StrategySection() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.4 }}
-            className="flex flex-col items-center"
+            className="flex flex-none flex-col items-center"
           >
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
-              <ArrowRight className="h-6 w-6" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400 sm:h-16 sm:w-16">
+              <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
           </motion.div>
 
@@ -384,18 +372,18 @@ function StrategySection() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.8, ease: EASE_OUT, delay: 0.2 }}
-            className="flex flex-col items-center gap-3"
+            className="flex w-20 flex-none flex-col items-center gap-3 sm:w-auto"
           >
             <motion.div
               ref={shieldRef}
               animate={shieldInView ? { boxShadow: ['0 0 0 0 rgba(217,119,6,0.2)', '0 0 0 12px rgba(217,119,6,0)'] } : undefined}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
-              className="flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"
+              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 sm:h-20 sm:w-20"
             >
-              <ShieldCheck className="h-8 w-8" />
+              <ShieldCheck className="h-6 w-6 sm:h-8 sm:w-8" />
             </motion.div>
-            <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">{t.retentionLabel}</p>
-            <p className="text-xs text-brand-500 dark:text-brand-500">{t.retentionSub}</p>
+            <p className="text-center text-sm font-semibold text-brand-700 dark:text-brand-400">{t.retentionLabel}</p>
+            <p className="text-center text-xs text-brand-500 dark:text-brand-500">{t.retentionSub}</p>
           </motion.div>
         </div>
 
@@ -550,22 +538,6 @@ function FeaturesMock() {
         <div className="min-w-0 leading-tight">
           <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.exportChip}</p>
           <p className="truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.exportFile}</p>
-        </div>
-      </motion.div>
-
-      <motion.div
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
-        className="absolute -bottom-16 -right-8 hidden w-56 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
-      >
-        <span className="flex flex-none">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-600 font-mono text-[10px] font-semibold text-white dark:border-slate-800">CL</span>
-          <span className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-500 font-mono text-[10px] font-semibold text-white dark:border-slate-800">TM</span>
-          <span className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-brand-500 font-mono text-[10px] font-semibold text-slate-950 dark:border-slate-800">+1</span>
-        </span>
-        <div className="min-w-0 leading-tight">
-          <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.teamChip}</p>
-          <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.teamSub}</p>
         </div>
       </motion.div>
     </div>

@@ -57,9 +57,6 @@ export const fr = {
         emailReady: 'Email de relance généré',
         connected: 'Connecté en 2 minutes',
         stripeReadOnly: 'Stripe · lecture seule',
-        upTo: 'Jusqu\'à',
-        signalsWord: 'signaux',
-        signalsNote: 'analysés par client, selon les données connectées',
         readyToSend: 'Prêt à envoyer',
         relanceFor: 'Relance',
       },
@@ -87,7 +84,6 @@ export const fr = {
         rateLabel: '5 % / mois',
       },
       floatCancel: { title: 'Résiliation reçue', sub: 'Agence Corail · aujourd\'hui' },
-      floatMissed: { title: 'Signal manqué', sub: 'Aucune connexion depuis 41 jours' },
     },
     strategy: {
       eyebrow: 'Le levier',
@@ -213,8 +209,6 @@ export const fr = {
         openDashboard: 'Ouvrir le dashboard',
         exportChip: 'Export PDF',
         exportFile: 'clients-a-risque.pdf',
-        teamChip: 'Équipe · 3 membres',
-        teamSub: 'sans coût par personne',
       },
     },
     referralCallout: {

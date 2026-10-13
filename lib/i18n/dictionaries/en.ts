@@ -59,9 +59,6 @@ export const en: Dictionary = {
         emailReady: 'Retention email generated',
         connected: 'Connected in 2 minutes',
         stripeReadOnly: 'Stripe · read-only',
-        upTo: 'Up to',
-        signalsWord: 'signals',
-        signalsNote: 'analyzed per customer, based on connected data',
         readyToSend: 'Ready to send',
         relanceFor: 'Follow-up',
       },
@@ -89,7 +86,6 @@ export const en: Dictionary = {
         rateLabel: '5% / month',
       },
       floatCancel: { title: 'Cancellation received', sub: 'Agence Corail · today' },
-      floatMissed: { title: 'Signal missed', sub: 'No login in 41 days' },
     },
     strategy: {
       eyebrow: 'The lever',
@@ -215,8 +211,6 @@ export const en: Dictionary = {
         openDashboard: 'Open the dashboard',
         exportChip: 'PDF export',
         exportFile: 'at-risk-customers.pdf',
-        teamChip: 'Team · 3 members',
-        teamSub: 'no cost per seat',
       },
     },
     referralCallout: {
