@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { analyzeChurnRisk, type AnalysisLanguage, type ModelTier } from '@/lib/claude';
+import { analyzeChurnRisk, type AnalysisLanguage, type ModelTier, type CalibrationExample } from '@/lib/claude';
 import { triggerRiskWebhooks } from '@/lib/webhooks';
 import { CONTROL_GROUP_RATE } from '@/lib/pricing';
 
@@ -8,6 +8,66 @@ function parseDateOrNull(value: unknown): string | null {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);
+}
+
+// En dessous de ce nombre de résultats réels confirmés, le bruit l'emporte
+// sur le signal (voir calibrationInstruction dans lib/claude.ts) — mieux
+// vaut aucune calibration-compte que quelques points non représentatifs.
+// Plafond volontairement bas : ceci s'ajoute au prompt système de CHAQUE lot
+// (BATCH_SIZE clients) d'une analyse, donc même quand l'historique du compte
+// est long, seuls les résultats les plus récents sont montrés.
+const MIN_RESOLVED_OUTCOMES_FOR_CALIBRATION = 3;
+const MAX_CALIBRATION_EXAMPLES = 8;
+
+// Reconstruit, à partir de client_outcomes (résultats réels confirmés —
+// manuels ou auto-détectés, voir plus bas dans ce fichier) et de
+// analysis_results (texte de la raison donnée à l'époque), les exemples de
+// calibration propres à CE compte. churn_score_at_outcome vient toujours du
+// dernier analysis_results.churn_score connu pour ce client au moment du
+// marquage (voir app/api/mark-outcome et la détection auto plus bas) — on
+// peut donc retrouver la raison associée en recherchant (client_name,
+// churn_score) exact plutôt que de deviner.
+async function getCalibrationExamples(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+): Promise<CalibrationExample[] | null> {
+  const { data: outcomes } = await supabaseAdmin
+    .from('client_outcomes')
+    .select('client_name, outcome, churn_score_at_outcome')
+    .eq('user_id', userId)
+    .not('churn_score_at_outcome', 'is', null)
+    .order('resolved_at', { ascending: false })
+    .limit(MAX_CALIBRATION_EXAMPLES);
+
+  if (!outcomes || outcomes.length < MIN_RESOLVED_OUTCOMES_FOR_CALIBRATION) return null;
+
+  const clientNames = Array.from(new Set(outcomes.map((o) => o.client_name)));
+  const { data: pastAnalyses } = await supabaseAdmin
+    .from('analysis_results')
+    .select('client_name, churn_score, reason')
+    .eq('user_id', userId)
+    .in('client_name', clientNames)
+    .order('analyzed_at', { ascending: false });
+
+  // Un même (client, score) peut apparaître plusieurs fois dans l'historique
+  // — on garde la raison de l'analyse la plus récente (requête déjà triée
+  // par analyzed_at desc, donc la première occurrence rencontrée gagne).
+  const reasonByKey = new Map<string, string>();
+  for (const a of pastAnalyses ?? []) {
+    const key = `${a.client_name}::${a.churn_score}`;
+    if (!reasonByKey.has(key)) reasonByKey.set(key, a.reason);
+  }
+
+  const examples: CalibrationExample[] = [];
+  for (const o of outcomes) {
+    const reason = reasonByKey.get(`${o.client_name}::${o.churn_score_at_outcome}`);
+    // Pas de raison retrouvée pour ce score précis (historique purgé,
+    // incohérence) → on saute cet exemple plutôt que d'inventer un contexte.
+    if (!reason) continue;
+    examples.push({ clientReason: reason, scoreGiven: o.churn_score_at_outcome as number, outcome: o.outcome as 'churned' | 'retained' });
+  }
+
+  return examples.length >= MIN_RESOLVED_OUTCOMES_FOR_CALIBRATION ? examples : null;
 }
 
 // Partagée entre l'import CSV (app/api/analyze) et l'import Stripe Connect
@@ -37,11 +97,13 @@ export async function runChurnAnalysis(
   const modelTier: ModelTier = businessProfile?.subscription_status === 'active' ? 'premium' : 'standard';
   const isPaying = businessProfile?.subscription_status === 'active' || businessProfile?.subscription_status === 'trialing';
 
+  const calibrationExamples = await getCalibrationExamples(supabaseAdmin, userId);
+
   const analysis = await analyzeChurnRisk(clients, language, {
     companyName: businessProfile?.company_name ?? null,
     industry: businessProfile?.industry ?? null,
     description: businessProfile?.business_description ?? null,
-  }, modelTier);
+  }, modelTier, calibrationExamples);
 
   // Doit être lu AVANT d'insérer les nouveaux résultats plus bas : c'est la
   // photo "avant ce ré-import" qui sert de référence pour détecter les

@@ -55,6 +55,29 @@ function businessContextInstruction(context?: BusinessContext | null): string {
   return `\n\nCONTEXTE MÉTIER DE L'ENTREPRISE CHURNLY QUI TE SOUMET CES CLIENTS (pas un de ses clients — son propre profil) :\n${lines.join('\n')}\n\nUtilise ce contexte pour calibrer, avant tout jugement, ce qui constitue un signal d'alerte de fréquence/inactivité pour CE produit précis. Un produit à usage quotidien par nature (réseau social, outil utilisé en continu, app consultée plusieurs fois par jour) justifie de traiter 7-10 jours d'inactivité comme un vrai risque. Un produit consommé normalement de façon hebdomadaire, mensuelle ou même trimestrielle par sa nature même (reporting, audit, service B2B ponctuel, outil de fond) NE DOIT PAS être pénalisé pour la même inactivité — c'est un usage sain pour ce type de produit, pas un signal de churn. Déduis la cadence attendue de la description ci-dessus et juge chaque client relativement à CETTE cadence, jamais à un seuil universel en nombre de jours.`;
 }
 
+export interface CalibrationExample {
+  clientReason: string;
+  scoreGiven: number;
+  outcome: 'churned' | 'retained';
+}
+
+// Calibration sur l'historique RÉEL de ce compte précis (voir client_outcomes
+// et runChurnAnalysis dans lib/analysis.ts, qui détecte ou enregistre si un
+// client a vraiment churné ou est resté) — contrairement à CALIBRATION_ANCHORS
+// (des repères génériques fixes, identiques pour tous les comptes), ceci
+// montre à Claude ce qui s'est réellement passé pour DES clients de CETTE
+// entreprise après un score donné. Un signal qui s'avère systématiquement
+// sans suite chez ce client précis (ex: un secteur où l'inactivité ne veut
+// rien dire) devient ainsi visible, pas seulement déduit de la description
+// métier libre. Seulement si on a assez d'historique résolu (voir le seuil
+// dans getCalibrationExamples, lib/analysis.ts) — avec 1-2 exemples, le
+// bruit l'emporterait sur le signal.
+function calibrationInstruction(examples?: CalibrationExample[] | null): string {
+  if (!examples || examples.length === 0) return '';
+  const lines = examples.map((e) => `- Score donné à l'époque: ${e.scoreGiven}/100, raison alors identifiée: "${e.clientReason}" → résultat réel constaté depuis: ${e.outcome === 'churned' ? 'a résilié' : 'est resté client'}`);
+  return `\n\nHISTORIQUE RÉEL DE CETTE ENTREPRISE (résultats confirmés de précédentes analyses — utilise-les pour calibrer tes seuils sur CE compte précis, en plus des repères génériques ci-dessus) :\n${lines.join('\n')}\n\nSi un profil actuel ressemble à l'un de ces cas passés, ajuste ton score dans la même direction que ce qui s'est réellement passé — mais ne copie jamais un score, chaque client reste jugé sur ses propres données.`;
+}
+
 let anthropicClient: Anthropic | null = null;
 
 function getClient(): Anthropic {
@@ -64,9 +87,23 @@ function getClient(): Anthropic {
   return anthropicClient;
 }
 
+// Repères fixes et volontairement génériques (pas liés à un compte réel) —
+// but : ancrer l'échelle 0-100 sur des cas concrets plutôt que de laisser
+// Claude la réinventer à chaque lot de 15 clients (BATCH_SIZE), ce qui
+// produisait des scores incohérents entre deux lots pour des profils
+// pourtant comparables (aucune mémoire partagée entre appels). Ce ne sont
+// que des repères d'échelle : la justification d'un score doit toujours
+// venir des vraies données du client qu'on analyse, jamais de ces exemples.
+const CALIBRATION_ANCHORS = `
+EXEMPLES DE CALIBRATION (profils fictifs, pour ancrer l'échelle — jamais des règles automatiques) :
+- Paiement en échec + renouvellement dans 5 jours + 30 jours sans connexion → score ≈ 85, confidence ≈ 0.9 (plusieurs signaux forts et non ambigus, qui se recoupent)
+- Quelques tickets support + légère baisse d'usage, paiement à jour, pas d'échéance proche → score ≈ 50, confidence ≈ 0.6 (signal réel mais isolé, pas d'urgence)
+- Paiement à jour, usage stable ou en hausse, aucun signal d'alerte → score ≈ 15, confidence ≈ 0.85 (profil sain, peu d'ambiguïté)`;
+
 const ANALYSIS_SYSTEM_PROMPT = `Tu es un analyste churn expert pour des entreprises SaaS et agences. On te fournit des données réelles sur des clients (inactivité, tickets support, usage, statut de paiement, revenu, et tout autre champ présent). Ton travail est chirurgical: chaque affirmation doit être justifiée par une vraie valeur des données fournies. N'invente jamais une donnée qui n'est pas dans l'input.
 
 Un signal de fréquence ou d'inactivité n'a de sens que relativement au type de produit analysé — un contexte métier (nom, secteur, description de l'activité) peut t'être fourni plus bas dans ce prompt : sers-t'en systématiquement pour calibrer tes seuils avant de juger un client, plutôt que d'appliquer un seuil universel en nombre de jours.
+${CALIBRATION_ANCHORS}
 
 Pour CHAQUE client, retourne:
 1. churn_score (0-100): basé uniquement sur les signaux réels fournis.
@@ -82,24 +119,62 @@ Pour CHAQUE client, retourne:
    - detail: action précise et actionnable (montant d'une offre, délai, angle d'approche) — jamais générique du type "vérifier l'engagement"
    - expected_impact: pourquoi cette action a des chances de fonctionner pour CE client spécifique, en te basant sur les risk_factors identifiés
 
-Réponds UNIQUEMENT avec un JSON valide respectant exactement ce schéma, sans texte autour:
+Appelle l'outil submit_churn_analysis avec un objet par client fourni, dans le même ordre, en respectant exactement son schéma.`;
 
-{
-  "analysis": [
-    {
-      "client_name": "string",
-      "churn_score": 0,
-      "confidence": 0.0,
-      "summary_reason": "string",
-      "risk_factors": [
-        { "factor": "string", "evidence": "string", "weight": "low" }
-      ],
-      "recommended_actions": [
-        { "type": "email", "detail": "string", "expected_impact": "string" }
-      ]
-    }
-  ]
-}`;
+// Sortie structurée (tool use) plutôt qu'un JSON à extraire du texte par
+// regex (l'ancienne approche, encore utilisée dans generateClientEmail) :
+// un bloc de texte parasite avant/après le JSON, une réponse tronquée au
+// milieu d'un gros lot, ou un second objet qui ressemble à du JSON dans une
+// evidence citée suffisait à faire échouer le regex /\{[\s\S]*\}/ ou à lui
+// faire capturer le mauvais bloc. Le tool use fait valider la forme (types,
+// enums, champs requis) par l'API elle-même avant de nous revenir.
+const ANALYSIS_TOOL: Anthropic.Tool = {
+  name: 'submit_churn_analysis',
+  description: 'Soumet l\'analyse de risque de churn pour chaque client fourni, dans le même ordre.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      analysis: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            client_name: { type: 'string' },
+            churn_score: { type: 'integer', minimum: 0, maximum: 100 },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+            summary_reason: { type: 'string' },
+            risk_factors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  factor: { type: 'string' },
+                  evidence: { type: 'string' },
+                  weight: { type: 'string', enum: ['low', 'medium', 'high'] },
+                },
+                required: ['factor', 'evidence', 'weight'],
+              },
+            },
+            recommended_actions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string', enum: ['email', 'call', 'offer', 'other'] },
+                  detail: { type: 'string' },
+                  expected_impact: { type: 'string' },
+                },
+                required: ['type', 'detail', 'expected_impact'],
+              },
+            },
+          },
+          required: ['client_name', 'churn_score', 'confidence', 'summary_reason', 'risk_factors', 'recommended_actions'],
+        },
+      },
+    },
+    required: ['analysis'],
+  },
+};
 
 export interface RiskFactor {
   factor: string;
@@ -307,13 +382,16 @@ async function analyzeChurnRiskBatchOnce(
   language: AnalysisLanguage,
   businessContext?: BusinessContext | null,
   modelTier: ModelTier = 'standard',
+  calibrationExamples?: CalibrationExample[] | null,
 ): Promise<ChurnAnalysisItem[]> {
   const client = getClient();
 
   const message = await client.messages.create({
     model: MODEL_BY_TIER[modelTier],
     max_tokens: 8192,
-    system: ANALYSIS_SYSTEM_PROMPT + businessContextInstruction(businessContext) + languageInstruction(language),
+    system: ANALYSIS_SYSTEM_PROMPT + businessContextInstruction(businessContext) + calibrationInstruction(calibrationExamples) + languageInstruction(language),
+    tools: [ANALYSIS_TOOL],
+    tool_choice: { type: 'tool', name: ANALYSIS_TOOL.name },
     messages: [
       {
         role: 'user',
@@ -322,19 +400,14 @@ async function analyzeChurnRiskBatchOnce(
     ],
   });
 
-  const textBlock = message.content.find(
-    (block): block is Anthropic.TextBlock => block.type === 'text',
+  const toolUseBlock = message.content.find(
+    (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
   );
-  if (!textBlock) {
-    throw new Error('Claude did not return a text response');
+  if (!toolUseBlock) {
+    throw new Error('Claude did not return a tool_use response');
   }
 
-  const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Could not find JSON in Claude response');
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]) as { analysis: Array<Partial<ChurnAnalysisItem> & Record<string, unknown>> };
+  const parsed = toolUseBlock.input as { analysis: Array<Partial<ChurnAnalysisItem> & Record<string, unknown>> };
   if (!Array.isArray(parsed.analysis)) {
     throw new Error('Claude response missing analysis array');
   }
@@ -353,11 +426,12 @@ async function analyzeChurnRiskBatch(
   language: AnalysisLanguage,
   businessContext?: BusinessContext | null,
   modelTier: ModelTier = 'standard',
+  calibrationExamples?: CalibrationExample[] | null,
 ): Promise<ChurnAnalysisItem[]> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= BATCH_MAX_RETRIES; attempt++) {
     try {
-      return await analyzeChurnRiskBatchOnce(clients, language, businessContext, modelTier);
+      return await analyzeChurnRiskBatchOnce(clients, language, businessContext, modelTier, calibrationExamples);
     } catch (err) {
       lastError = err;
       if (attempt < BATCH_MAX_RETRIES) {
@@ -403,6 +477,7 @@ export async function analyzeChurnRisk(
   language: AnalysisLanguage = 'fr',
   businessContext?: BusinessContext | null,
   modelTier: ModelTier = 'standard',
+  calibrationExamples?: CalibrationExample[] | null,
 ): Promise<ChurnAnalysisItem[]> {
   const batches: Array<Record<string, unknown>>[] = [];
   for (let i = 0; i < clients.length; i += BATCH_SIZE) {
@@ -410,7 +485,7 @@ export async function analyzeChurnRisk(
   }
 
   const results = await mapWithConcurrency(batches, MAX_CONCURRENT_BATCHES, (batch) =>
-    analyzeChurnRiskBatch(batch, language, businessContext, modelTier),
+    analyzeChurnRiskBatch(batch, language, businessContext, modelTier, calibrationExamples),
   );
   return results.flat();
 }
