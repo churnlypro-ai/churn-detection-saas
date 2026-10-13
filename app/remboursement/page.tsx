@@ -6,7 +6,7 @@ import FadeLine from '@/components/FadeLine';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const CONTACT_EMAIL = 'contact@churnly.fr';
-const LAST_UPDATED = { fr: '20 septembre 2026', en: 'September 20, 2026' };
+const LAST_UPDATED = { fr: '13 octobre 2026', en: 'October 13, 2026' };
 
 interface Section {
   title: string;
@@ -32,19 +32,26 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         ],
       },
       {
-        title: '3. Pas de remboursement discrétionnaire',
+        title: '3. Garantie premier mois (plan Standard)',
         body: [
-          "Sauf disposition légale contraire (voir section 4), Churnly n'offre pas de remboursement, total ou partiel, pour un mois ou une année déjà entamés — y compris en cas de résiliation en cours de période. Vous pouvez résilier à tout moment depuis /settings : la résiliation prend effet à la fin de la période en cours, et vous conservez l'accès jusqu'à cette date sans reconduction ultérieure.",
+          "Si vous êtes abonné au plan Standard et que vous n'êtes pas convaincu durant votre premier mois d'abonnement, nous vous remboursons intégralement ce premier mois, sans justification à fournir. Il suffit d'écrire à " + CONTACT_EMAIL + " dans les 30 jours suivant votre premier prélèvement.",
+          "Cette garantie s'applique une seule fois par compte et ne couvre pas le plan Performance, dont le tarif est déjà structuré pour ne vous faire payer que sur des résultats mesurés (voir nos tarifs). Passé ce délai de 30 jours, ou pour les mois suivants, les règles de la section 4 ci-dessous s'appliquent.",
         ],
       },
       {
-        title: '4. Droit de rétractation',
+        title: '4. Pas de remboursement discrétionnaire au-delà',
+        body: [
+          "En dehors de la garantie premier mois ci-dessus et sauf disposition légale contraire (voir section 5), Churnly n'offre pas de remboursement, total ou partiel, pour un mois ou une année déjà entamés — y compris en cas de résiliation en cours de période. Vous pouvez résilier à tout moment depuis /settings : la résiliation prend effet à la fin de la période en cours, et vous conservez l'accès jusqu'à cette date sans reconduction ultérieure.",
+        ],
+      },
+      {
+        title: '5. Droit de rétractation',
         body: [
           "Churnly est un service destiné aux professionnels (dirigeants et entreprises) dans le cadre direct de leur activité. Le délai de rétractation de 14 jours prévu par le Code de la consommation pour les achats en ligne s'applique aux consommateurs particuliers et ne couvre en principe pas ce type d'usage professionnel. Si vous estimez relever d'un régime de protection spécifique (par exemple non-professionnel au sens du droit applicable), contactez-nous : nous examinerons votre situation au cas par cas.",
         ],
       },
       {
-        title: '5. Erreurs de facturation',
+        title: '6. Erreurs de facturation',
         body: [
           {
             intro: 'Nous remboursons intégralement et sans délai toute erreur de notre fait, notamment :',
@@ -58,13 +65,13 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         ],
       },
       {
-        title: '6. Paiements et contestations (Stripe)',
+        title: '7. Paiements et contestations (Stripe)',
         body: [
           "Tous les paiements sont traités par Stripe. En cas de désaccord non résolu directement avec nous, vous conservez la possibilité de contester un prélèvement auprès de votre banque ou de Stripe, conformément aux conditions de votre moyen de paiement.",
         ],
       },
       {
-        title: '7. Contact',
+        title: '8. Contact',
         body: [`Pour toute question relative à votre facturation, écrivez-nous à ${CONTACT_EMAIL}.`],
       },
     ],
@@ -87,19 +94,26 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         ],
       },
       {
-        title: '3. No discretionary refunds',
+        title: '3. First-month guarantee (Standard plan)',
         body: [
-          "Unless legally required otherwise (see section 4), Churnly does not offer full or partial refunds for a month or year already started — including if you cancel partway through a period. You can cancel any time from /settings: cancellation takes effect at the end of the current period, and you keep access until then with no further renewal.",
+          "If you're subscribed to the Standard plan and you're not convinced during your first month of subscription, we refund that first month in full, no justification needed. Just email " + CONTACT_EMAIL + " within 30 days of your first charge.",
+          'This guarantee applies once per account and does not cover the Performance plan, whose pricing is already structured to charge you only on measured results (see our pricing). Past this 30-day window, or for any following month, the rules in section 4 below apply.',
         ],
       },
       {
-        title: '4. Right of withdrawal',
+        title: '4. No discretionary refunds beyond that',
+        body: [
+          "Outside the first-month guarantee above, and unless legally required otherwise (see section 5), Churnly does not offer full or partial refunds for a month or year already started — including if you cancel partway through a period. You can cancel any time from /settings: cancellation takes effect at the end of the current period, and you keep access until then with no further renewal.",
+        ],
+      },
+      {
+        title: '5. Right of withdrawal',
         body: [
           "Churnly is a service intended for professionals (business owners and companies) used directly in the course of their business. The 14-day withdrawal period set by French consumer law for online purchases applies to individual consumers and generally does not cover this kind of professional use. If you believe you fall under a specific protection regime (for example, a non-professional under applicable law), contact us — we will review your situation case by case.",
         ],
       },
       {
-        title: '5. Billing errors',
+        title: '6. Billing errors',
         body: [
           {
             intro: 'We refund in full and promptly any error on our part, including:',
@@ -113,13 +127,13 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         ],
       },
       {
-        title: '6. Payments and disputes (Stripe)',
+        title: '7. Payments and disputes (Stripe)',
         body: [
           'All payments are processed by Stripe. If a disagreement is not resolved directly with us, you retain the ability to dispute a charge with your bank or Stripe, in line with the terms of your payment method.',
         ],
       },
       {
-        title: '7. Contact',
+        title: '8. Contact',
         body: [`For any billing question, write to us at ${CONTACT_EMAIL}.`],
       },
     ],
