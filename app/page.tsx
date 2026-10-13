@@ -62,11 +62,15 @@ function CountUp({ end, duration = 1.5, prefix = '', suffix = '' }: { end: numbe
 // Double-fond en dégradé pour simuler une bordure en dégradé (la maquette
 // Claude Design utilise ce procédé partout : un fond uni en padding-box +
 // un dégradé en border-box, impossible à obtenir avec une simple bordure
-// CSS classique sur plusieurs couleurs).
+// CSS classique sur plusieurs couleurs). Le fond et les tons neutres de la
+// bordure viennent de variables CSS (--mock-card-bg/--mock-border-*, voir
+// globals.css) qui basculent elles-mêmes clair/sombre via .dark — ces
+// cartes suivent donc le thème de la page au lieu de rester figées en navy
+// foncé comme avant.
 function gradientBorderStyle(angle: number, accent: string): React.CSSProperties {
   return {
     border: '1px solid transparent',
-    backgroundImage: `linear-gradient(#0f172a, #0f172a), linear-gradient(${angle}deg, rgba(148,163,184,0.32), rgba(51,65,85,0.6) 30%, rgba(30,41,59,0.4) 72%, ${accent})`,
+    backgroundImage: `linear-gradient(var(--mock-card-bg), var(--mock-card-bg)), linear-gradient(${angle}deg, var(--mock-border-1), var(--mock-border-2) 30%, var(--mock-border-3) 72%, ${accent})`,
     backgroundOrigin: 'border-box',
     backgroundClip: 'padding-box, border-box',
   };
@@ -82,11 +86,11 @@ function ChurnChart() {
   const t = useTranslations('home').reality.chart;
 
   return (
-    <div className="relative flex flex-col gap-4 rounded-[20px] bg-slate-900 p-5 text-white shadow-2xl shadow-slate-950/40" style={gradientBorderStyle(160, 'rgba(220,38,38,0.32)')}>
+    <div className="relative flex flex-col gap-4 rounded-[20px] p-5 text-slate-900 shadow-2xl shadow-slate-900/10 dark:text-white dark:shadow-slate-950/40" style={gradientBorderStyle(160, 'rgba(220,38,38,0.32)')}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col leading-tight">
           <span className="text-sm font-semibold">{t.title}</span>
-          <span className="text-xs text-slate-400">{t.subtitle}</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400">{t.subtitle}</span>
         </div>
         <span className="flex-none rounded-full bg-red-600 px-2.5 py-1 font-mono text-xs font-semibold text-white">{t.badge}</span>
       </div>
@@ -99,7 +103,7 @@ function ChurnChart() {
           <motion.path
             d={CHURN_CURVE}
             fill="none"
-            stroke="#f4f2ec"
+            className="stroke-slate-900 dark:stroke-[#f4f2ec]"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -110,18 +114,18 @@ function ChurnChart() {
             transition={{ duration: 1.4, ease: EASE_OUT }}
           />
         </svg>
-        <span className="absolute left-0 top-0 -translate-y-[120%] font-mono text-[11px] text-slate-400">{t.startLabel}</span>
+        <span className="absolute left-0 top-0 -translate-y-[120%] font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.startLabel}</span>
         <span className="absolute right-0 top-[73%] h-2.5 w-2.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.22)]" />
-        <span className="absolute right-3.5 top-[73%] -translate-y-[150%] font-mono text-[11px] font-semibold text-white">{t.endLabel}</span>
+        <span className="absolute right-3.5 top-[73%] -translate-y-[150%] font-mono text-[11px] font-semibold text-slate-900 dark:text-white">{t.endLabel}</span>
       </div>
 
-      <div className="flex justify-between font-mono text-[11px] text-slate-400">
+      <div className="flex justify-between font-mono text-[11px] text-slate-600 dark:text-slate-400">
         <span>{t.month1}</span>
         <span>{t.month12}</span>
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-800 pt-3 text-xs text-slate-400">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200 pt-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
         <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-red-600/45" />{t.lostLegend}</span>
-        <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-slate-700" />{t.remainingLegend}</span>
+        <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-sm bg-slate-200 dark:bg-slate-700" />{t.remainingLegend}</span>
         <span className="ml-auto font-mono text-[11px]">{t.rateLabel}</span>
       </div>
     </div>
@@ -174,24 +178,24 @@ function RealitySection() {
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -right-8 -top-16 hidden w-52 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+              className="absolute -right-8 -top-16 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
             >
               <span className="h-2.5 w-2.5 flex-none rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.2)]" />
               <div className="min-w-0 leading-tight">
-                <p className="text-[13.5px] font-semibold text-white">{t.floatCancel.title}</p>
-                <p className="font-mono text-[11px] text-slate-400">{t.floatCancel.sub}</p>
+                <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.floatCancel.title}</p>
+                <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.floatCancel.sub}</p>
               </div>
             </motion.div>
 
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.4 }}
-              className="absolute -bottom-16 -left-8 hidden w-56 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+              className="absolute -bottom-16 -left-8 hidden w-56 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
             >
               <span className="h-2.5 w-2.5 flex-none rounded-full bg-brand-500 shadow-[0_0_0_4px_rgba(245,158,11,0.2)]" />
               <div className="min-w-0 leading-tight">
-                <p className="text-[13.5px] font-semibold text-white">{t.floatMissed.title}</p>
-                <p className="font-mono text-[11px] text-slate-400">{t.floatMissed.sub}</p>
+                <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.floatMissed.title}</p>
+                <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.floatMissed.sub}</p>
               </div>
             </motion.div>
           </motion.div>
@@ -508,29 +512,29 @@ function FeaturesMock() {
 
   return (
     <div className="relative mx-auto w-full max-w-sm">
-      <div className="relative flex flex-col gap-3.5 rounded-[20px] bg-slate-900 p-5 text-white shadow-2xl shadow-slate-950/40" style={gradientBorderStyle(160, 'rgba(245,158,11,0.28)')}>
-        <div className="flex items-center gap-3 border-b border-slate-800 pb-3.5">
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-brand-500/15 text-brand-400">
+      <div className="relative flex flex-col gap-3.5 rounded-[20px] p-5 text-slate-900 shadow-2xl shadow-slate-900/10 dark:text-white dark:shadow-slate-950/40" style={gradientBorderStyle(160, 'rgba(245,158,11,0.28)')}>
+        <div className="flex items-center gap-3 border-b border-slate-200 pb-3.5 dark:border-slate-800">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-brand-500/15 text-brand-700 dark:text-brand-400">
             <Calendar className="h-[18px] w-[18px]" strokeWidth={1.75} />
           </span>
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold">{t.headerTitle}</span>
-            <span className="font-mono text-[11.5px] text-slate-400">{t.headerSub}</span>
+            <span className="font-mono text-[11.5px] text-slate-600 dark:text-slate-400">{t.headerSub}</span>
           </div>
         </div>
         <span className="text-[17px] font-semibold leading-tight tracking-tight">{t.heading}</span>
         <div className="flex flex-col gap-1.5">
           {rows.map((row) => (
-            <div key={row.name} className="flex items-center gap-2.5 rounded-lg bg-slate-800 px-2.5 py-2">
+            <div key={row.name} className="flex items-center gap-2.5 rounded-lg bg-slate-100 px-2.5 py-2 dark:bg-slate-800">
               <span className="flex-1 text-[13.5px] font-medium">{row.name}</span>
-              <span className="h-[5px] w-16 overflow-hidden rounded-full bg-slate-700">
+              <span className="h-[5px] w-16 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                 <span className="block h-full" style={{ width: `${row.pct}%`, background: row.color }} />
               </span>
               <span className="w-10 text-right font-mono text-xs font-semibold">{row.pct}&nbsp;%</span>
             </div>
           ))}
         </div>
-        <span className="inline-flex w-fit items-center gap-2 rounded-lg border border-brand-500/35 bg-brand-500/10 px-3.5 py-2 text-[13px] font-semibold text-brand-400">
+        <span className="inline-flex w-fit items-center gap-2 rounded-lg border border-brand-300/60 bg-brand-50 px-3.5 py-2 text-[13px] font-semibold text-brand-700 dark:border-brand-500/35 dark:bg-brand-500/10 dark:text-brand-400">
           {t.openDashboard} <ArrowRight className="h-3.5 w-3.5" />
         </span>
       </div>
@@ -538,30 +542,30 @@ function FeaturesMock() {
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -left-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+        className="absolute -left-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
       >
         <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-500/35 bg-brand-500/10 text-brand-400">
           <Download className="h-[18px] w-[18px]" strokeWidth={1.75} />
         </span>
         <div className="min-w-0 leading-tight">
-          <p className="text-[13.5px] font-semibold text-white">{t.exportChip}</p>
-          <p className="truncate font-mono text-[11px] text-slate-400">{t.exportFile}</p>
+          <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.exportChip}</p>
+          <p className="truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.exportFile}</p>
         </div>
       </motion.div>
 
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
-        className="absolute -bottom-16 -right-8 hidden w-56 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+        className="absolute -bottom-16 -right-8 hidden w-56 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
       >
         <span className="flex flex-none">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-800 bg-slate-600 font-mono text-[10px] font-semibold">CL</span>
-          <span className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-800 bg-slate-500 font-mono text-[10px] font-semibold">TM</span>
-          <span className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-800 bg-brand-500 font-mono text-[10px] font-semibold text-slate-950">+1</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-600 font-mono text-[10px] font-semibold text-white dark:border-slate-800">CL</span>
+          <span className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-500 font-mono text-[10px] font-semibold text-white dark:border-slate-800">TM</span>
+          <span className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-brand-500 font-mono text-[10px] font-semibold text-slate-950 dark:border-slate-800">+1</span>
         </span>
         <div className="min-w-0 leading-tight">
-          <p className="text-[13.5px] font-semibold text-white">{t.teamChip}</p>
-          <p className="font-mono text-[11px] text-slate-400">{t.teamSub}</p>
+          <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.teamChip}</p>
+          <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.teamSub}</p>
         </div>
       </motion.div>
     </div>
@@ -1051,22 +1055,22 @@ function FaqSection() {
           <motion.div
             {...reveal}
             transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.3 }}
-            className="flex flex-col gap-4 rounded-2xl bg-slate-900 p-5 text-white"
+            className="flex flex-col gap-4 rounded-2xl p-5 text-slate-900 dark:text-white"
             style={gradientBorderStyle(160, 'rgba(245,158,11,0.4)')}
           >
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-brand-500/15 text-brand-400">
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-brand-500/15 text-brand-700 dark:text-brand-400">
                 <Mail className="h-[18px] w-[18px]" strokeWidth={1.75} />
               </span>
               <div className="flex flex-col leading-tight">
                 <span className="text-[15px] font-semibold">{t.anotherQuestion}</span>
-                <span className="text-[13.5px] text-slate-400">{t.contactEmail}</span>
+                <span className="text-[13.5px] text-slate-600 dark:text-slate-400">{t.contactEmail}</span>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setCallModalOpen(true)}
-              className="flex w-fit items-center gap-2 rounded-full border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+              className="flex w-fit items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"
             >
               <Calendar className="h-3.5 w-3.5" /> {t.bookCall}
             </button>

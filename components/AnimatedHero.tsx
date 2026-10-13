@@ -9,12 +9,13 @@ import { CallBookingModal } from '@/components/CallBookingModal';
 
 const TRUST_ICONS = [Check, ShieldCheck, Trash2];
 
-// Carte "mockup produit" du hero : toujours en tons navy foncés, dans les
-// deux thèmes clair/sombre du site — comme une capture d'écran du vrai
-// dashboard, qui ne change pas de palette avec le thème de la page autour
-// d'elle. Les 3 jetons flottants ("Connecté en 2 minutes", "37 signaux",
-// "Prêt à envoyer") utilisent une animation en boucle légère plutôt que le
-// réseau de particules 3D précédent.
+// Carte "mockup produit" du hero : suit le thème clair/sombre de la page
+// (maquette Claude Design "Version PC claire") — un fond blanc, des lignes
+// slate-100/50 et du texte slate-900 en thème Jour, les tons navy d'origine
+// réapparaissant seulement en thème Nuit via les variantes dark:. Les 3
+// jetons flottants ("Connecté en 2 minutes", "37 signaux", "Prêt à
+// envoyer") utilisent une animation en boucle légère plutôt que le réseau
+// de particules 3D précédent.
 function DashboardMock() {
   const t = useTranslations('home').hero.mock;
 
@@ -34,39 +35,39 @@ function DashboardMock() {
         animate={{ opacity: 1, y: 0, rotateY: -6 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         style={{ transformPerspective: 1400 }}
-        className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl shadow-slate-950/40"
+        className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40"
       >
-        <div className="flex items-baseline gap-2.5 border-b border-slate-800 px-4 py-3.5">
-          <span className="text-[15px] font-bold tracking-tight text-white">Churnly</span>
-          <span className="text-[13px] text-slate-400">{t.panelTitle}</span>
+        <div className="flex items-baseline gap-2.5 border-b border-slate-200 px-4 py-3.5 dark:border-slate-800">
+          <span className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">Churnly</span>
+          <span className="text-[13px] text-slate-500 dark:text-slate-400">{t.panelTitle}</span>
         </div>
 
         <div className="flex flex-col gap-1 px-2.5 pb-1 pt-2.5">
-          <div className="flex items-center gap-3 rounded-xl bg-slate-800 px-2.5 py-2.5">
-            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-700 font-mono text-xs font-semibold text-slate-200">AN</span>
+          <div className="flex items-center gap-3 rounded-xl bg-slate-100 px-2.5 py-2.5 dark:bg-slate-800">
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-200 font-mono text-xs font-semibold text-slate-900 dark:bg-slate-700 dark:text-slate-200">AN</span>
             <div className="min-w-0 flex-1 leading-tight">
-              <p className="text-sm font-semibold text-white">Atelier Nuances</p>
-              <p className="font-mono text-[11px] text-slate-400">Plan Pro · 89&nbsp;€/mois</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Atelier Nuances</p>
+              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">Plan Pro · 89&nbsp;€/mois</p>
             </div>
             <span className="flex-none rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold text-white">
               <span className="font-mono">82&nbsp;%</span> {t.atRisk}
             </span>
           </div>
           <div className="flex items-center gap-3 px-2.5 py-2.5">
-            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-800 font-mono text-xs font-semibold text-slate-200">SB</span>
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-100 font-mono text-xs font-semibold text-slate-900 dark:bg-slate-800 dark:text-slate-200">SB</span>
             <div className="min-w-0 flex-1 leading-tight">
-              <p className="text-sm font-semibold text-white">Studio Brume</p>
-              <p className="font-mono text-[11px] text-slate-400">Plan Essentiel · 39&nbsp;€/mois</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Studio Brume</p>
+              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">Plan Essentiel · 39&nbsp;€/mois</p>
             </div>
             <span className="flex-none rounded-full bg-brand-500 px-2.5 py-1 text-xs font-semibold text-slate-950">
               <span className="font-mono">54&nbsp;%</span> {t.watch}
             </span>
           </div>
           <div className="flex items-center gap-3 px-2.5 py-2.5">
-            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-800 font-mono text-xs font-semibold text-slate-200">ML</span>
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-100 font-mono text-xs font-semibold text-slate-900 dark:bg-slate-800 dark:text-slate-200">ML</span>
             <div className="min-w-0 flex-1 leading-tight">
-              <p className="text-sm font-semibold text-white">Maison Lumen</p>
-              <p className="font-mono text-[11px] text-slate-400">Plan Pro · 89&nbsp;€/mois</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Maison Lumen</p>
+              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">Plan Pro · 89&nbsp;€/mois</p>
             </div>
             <span className="flex-none rounded-full bg-green-600 px-2.5 py-1 text-xs font-semibold text-slate-950">
               <span className="font-mono">12&nbsp;%</span> {t.stable}
@@ -74,30 +75,30 @@ function DashboardMock() {
           </div>
         </div>
 
-        <div className="mx-2.5 mb-2.5 flex flex-col gap-3 rounded-2xl border border-slate-700 bg-slate-800 p-4">
+        <div className="mx-2.5 mb-2.5 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[15px] font-semibold text-white">Atelier Nuances</span>
-            <span className="font-mono text-[13px] text-slate-400"><span className="font-semibold text-white">82</span> / 100</span>
+            <span className="text-[15px] font-semibold text-slate-900 dark:text-white">Atelier Nuances</span>
+            <span className="font-mono text-[13px] text-slate-600 dark:text-slate-400"><span className="font-semibold text-slate-900 dark:text-white">82</span> / 100</span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
             <div className="h-full w-[82%] rounded-full bg-red-600" />
           </div>
           <div className="flex flex-col gap-2">
-            <span className="font-mono text-[10.5px] font-medium uppercase tracking-widest text-slate-400">{t.why}</span>
+            <span className="font-mono text-[10.5px] font-medium uppercase tracking-widest text-slate-600 dark:text-slate-400">{t.why}</span>
             <div className="flex flex-wrap gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-red-600/20 px-2.5 py-1 text-xs text-red-200">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-red-600/[0.08] px-2.5 py-1 text-xs text-slate-700 dark:bg-red-600/20 dark:text-red-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />{t.reason1}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-red-600/20 px-2.5 py-1 text-xs text-red-200">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-red-600/[0.08] px-2.5 py-1 text-xs text-slate-700 dark:bg-red-600/20 dark:text-red-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />{t.reason2}
               </span>
             </div>
           </div>
-          <div className="flex flex-col gap-1.5 rounded-lg border border-slate-700 bg-slate-900 p-3">
-            <span className="text-xs text-slate-400">{t.emailSubject}</span>
-            <span className="text-xs leading-relaxed text-slate-400">{t.emailPreview}</span>
+          <div className="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+            <span className="text-xs text-slate-600 dark:text-slate-400">{t.emailSubject}</span>
+            <span className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t.emailPreview}</span>
           </div>
-          <span className="inline-flex w-fit items-center gap-2 rounded-lg border border-brand-500/35 bg-brand-500/10 px-3 py-2 text-[13px] font-semibold text-brand-400">
+          <span className="inline-flex w-fit items-center gap-2 rounded-lg border border-brand-300/60 bg-brand-50 px-3 py-2 text-[13px] font-semibold text-brand-700 dark:border-brand-500/35 dark:bg-brand-500/10 dark:text-brand-400">
             <Check className="h-4 w-4" strokeWidth={2.5} />
             {t.emailReady}
           </span>
@@ -107,41 +108,41 @@ function DashboardMock() {
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -right-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+        className="absolute -right-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:flex dark:border-slate-700 dark:bg-slate-800/95"
       >
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-500/35 bg-brand-500/10 text-brand-400">
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-300/50 bg-brand-50 text-brand-700 dark:border-brand-500/35 dark:bg-brand-500/10 dark:text-brand-400">
           <CreditCard className="h-[18px] w-[18px]" />
         </span>
         <div className="min-w-0 leading-tight">
-          <p className="text-[13.5px] font-semibold text-white">{t.connected}</p>
-          <p className="font-mono text-[11px] text-slate-400">{t.stripeReadOnly}</p>
+          <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.connected}</p>
+          <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.stripeReadOnly}</p>
         </div>
       </motion.div>
 
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 2.4 }}
-        className="absolute -left-36 top-36 hidden w-40 rounded-2xl border border-slate-700 bg-slate-800/95 p-3.5 shadow-xl backdrop-blur sm:block"
+        className="absolute -left-36 top-36 hidden w-40 rounded-2xl border border-slate-200 bg-white/95 p-3.5 shadow-xl backdrop-blur sm:block dark:border-slate-700 dark:bg-slate-800/95"
       >
-        <p className="font-mono text-[10.5px] uppercase tracking-widest text-slate-400">{t.upTo}</p>
+        <p className="font-mono text-[10.5px] uppercase tracking-widest text-slate-600 dark:text-slate-400">{t.upTo}</p>
         <p className="flex items-baseline gap-1.5">
-          <span className="font-mono text-[32px] font-medium leading-none tracking-tight text-brand-400">37</span>
-          <span className="text-sm font-semibold text-white">{t.signalsWord}</span>
+          <span className="font-mono text-[32px] font-medium leading-none tracking-tight text-brand-700 dark:text-brand-400">37</span>
+          <span className="text-sm font-semibold text-slate-900 dark:text-white">{t.signalsWord}</span>
         </p>
-        <p className="mt-1 text-xs leading-snug text-slate-400">{t.signalsNote}</p>
+        <p className="mt-1 text-xs leading-snug text-slate-600 dark:text-slate-400">{t.signalsNote}</p>
       </motion.div>
 
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
-        className="absolute -bottom-6 -right-8 hidden w-48 items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/95 p-3 shadow-xl backdrop-blur sm:flex"
+        className="absolute -bottom-6 -right-8 hidden w-48 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:flex dark:border-slate-700 dark:bg-slate-800/95"
       >
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-500/35 bg-brand-500/10 text-brand-400">
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-300/50 bg-brand-50 text-brand-700 dark:border-brand-500/35 dark:bg-brand-500/10 dark:text-brand-400">
           <Check className="h-[18px] w-[18px]" strokeWidth={2.5} />
         </span>
         <div className="min-w-0 leading-tight">
-          <p className="text-[13.5px] font-semibold text-white">{t.readyToSend}</p>
-          <p className="font-mono text-[11px] text-slate-400">{t.relanceFor} · Atelier Nuances</p>
+          <p className="text-[13.5px] font-semibold text-slate-900 dark:text-white">{t.readyToSend}</p>
+          <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{t.relanceFor} · Atelier Nuances</p>
         </div>
       </motion.div>
     </div>

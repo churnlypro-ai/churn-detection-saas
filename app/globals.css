@@ -29,6 +29,17 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+
+    /* Fond + bordure en dégradé des cartes "mockup produit" (ChurnChart,
+       FeaturesMock, DashboardMock, carte de contact FAQ — voir
+       gradientBorderStyle dans app/page.tsx) : un seul jeu de variables que
+       la maquette Claude Design "claire" (fond blanc, bordure slate-200
+       unie) vs "sombre" (fond navy, bordure en 3 tons) fait basculer via
+       .dark, sans dupliquer la logique de dégradé dans chaque composant. */
+    --mock-card-bg: #ffffff;
+    --mock-border-1: #e2e8f0;
+    --mock-border-2: #e2e8f0;
+    --mock-border-3: #e2e8f0;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -55,6 +66,11 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    --mock-card-bg: #0f172a;
+    --mock-border-1: rgba(148, 163, 184, 0.32);
+    --mock-border-2: rgba(51, 65, 85, 0.6);
+    --mock-border-3: rgba(30, 41, 59, 0.4);
   }
 }
 
