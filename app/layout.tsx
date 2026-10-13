@@ -5,6 +5,7 @@ import ThemeProviderClient from '@/components/ThemeProviderClient';
 import AdSourceCapture from '@/components/AdSourceCapture';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
+import SmoothScroll from '@/components/SmoothScroll';
 import { CookieConsentProvider } from '@/lib/cookieConsent';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import './globals.css';
@@ -32,6 +33,7 @@ export default function RootLayout({
             <LanguageProvider>
               <GoogleAnalytics />
               <AdSourceCapture />
+              <SmoothScroll />
               <CookieConsentBanner />
               {children}
             </LanguageProvider>
