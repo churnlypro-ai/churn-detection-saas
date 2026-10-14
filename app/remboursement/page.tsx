@@ -41,7 +41,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '4. Pas de remboursement discrétionnaire au-delà',
         body: [
-          "En dehors de la garantie premier mois ci-dessus et sauf disposition légale contraire (voir section 5), Churnly n'offre pas de remboursement, total ou partiel, pour un mois ou une année déjà entamés — y compris en cas de résiliation en cours de période. Vous pouvez résilier à tout moment depuis /settings : la résiliation prend effet à la fin de la période en cours, et vous conservez l'accès jusqu'à cette date sans reconduction ultérieure.",
+          "En dehors de la garantie premier mois ci-dessus et sauf disposition légale contraire (voir section 5), Churnly n'offre pas de remboursement, total ou partiel, pour un mois ou une année déjà entamés, y compris en cas de résiliation en cours de période. Vous pouvez résilier à tout moment depuis /settings : la résiliation prend effet à la fin de la période en cours, et vous conservez l'accès jusqu'à cette date sans reconduction ultérieure.",
         ],
       },
       {
@@ -61,7 +61,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
               "Un prélèvement effectué après une résiliation déjà prise en compte.",
             ],
           },
-          `Signalez toute erreur de ce type à ${CONTACT_EMAIL} — nous traitons ces demandes en priorité.`,
+          `Signalez toute erreur de ce type à ${CONTACT_EMAIL}, nous traitons ces demandes en priorité.`,
         ],
       },
       {
@@ -103,13 +103,13 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '4. No discretionary refunds beyond that',
         body: [
-          "Outside the first-month guarantee above, and unless legally required otherwise (see section 5), Churnly does not offer full or partial refunds for a month or year already started — including if you cancel partway through a period. You can cancel any time from /settings: cancellation takes effect at the end of the current period, and you keep access until then with no further renewal.",
+          "Outside the first-month guarantee above, and unless legally required otherwise (see section 5), Churnly does not offer full or partial refunds for a month or year already started, including if you cancel partway through a period. You can cancel any time from /settings: cancellation takes effect at the end of the current period, and you keep access until then with no further renewal.",
         ],
       },
       {
         title: '5. Right of withdrawal',
         body: [
-          "Churnly is a service intended for professionals (business owners and companies) used directly in the course of their business. The 14-day withdrawal period set by French consumer law for online purchases applies to individual consumers and generally does not cover this kind of professional use. If you believe you fall under a specific protection regime (for example, a non-professional under applicable law), contact us — we will review your situation case by case.",
+          "Churnly is a service intended for professionals (business owners and companies) used directly in the course of their business. The 14-day withdrawal period set by French consumer law for online purchases applies to individual consumers and generally does not cover this kind of professional use. If you believe you fall under a specific protection regime (for example, a non-professional under applicable law), contact us, we will review your situation case by case.",
         ],
       },
       {
@@ -123,7 +123,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
               'A charge made after a cancellation we had already processed.',
             ],
           },
-          `Report any such error to ${CONTACT_EMAIL} — we handle these requests as a priority.`,
+          `Report any such error to ${CONTACT_EMAIL}, we handle these requests as a priority.`,
         ],
       },
       {

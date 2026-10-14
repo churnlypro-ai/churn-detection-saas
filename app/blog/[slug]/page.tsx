@@ -13,7 +13,7 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   const post = getBlogPost(params.slug);
   if (!post) return {};
   return {
-    title: `${post.title} — Churnly`,
+    title: `${post.title} · Churnly`,
     description: post.description,
     openGraph: { title: post.title, description: post.description, type: 'article' },
     twitter: { card: 'summary_large_image', title: post.title, description: post.description },

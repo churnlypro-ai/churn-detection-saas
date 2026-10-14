@@ -46,7 +46,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '5. Résiliation',
         body: [
-          "Vous pouvez résilier votre abonnement à tout moment depuis votre espace /settings. La résiliation prend effet à la fin de la période en cours ; aucun remboursement au prorata n'est effectué sauf disposition légale contraire — voir le détail dans notre politique de remboursement.",
+          "Vous pouvez résilier votre abonnement à tout moment depuis votre espace /settings. La résiliation prend effet à la fin de la période en cours ; aucun remboursement au prorata n'est effectué sauf disposition légale contraire, voir le détail dans notre politique de remboursement.",
         ],
       },
       {
@@ -117,7 +117,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '5. Cancellation',
         body: [
-          'You can cancel your subscription at any time from /settings. Cancellation takes effect at the end of the current period; no pro-rated refund is issued unless required by law — see our refund policy for details.',
+          'You can cancel your subscription at any time from /settings. Cancellation takes effect at the end of the current period; no pro-rated refund is issued unless required by law, see our refund policy for details.',
         ],
       },
       {

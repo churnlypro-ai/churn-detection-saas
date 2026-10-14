@@ -8,7 +8,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 const CONTACT_EMAIL = 'contact@churnly.fr';
 const LAST_UPDATED = { fr: '20 septembre 2026', en: 'September 20, 2026' };
 
-// ⚠️ À COMPLÉTER — ces informations sont exigées par la loi française (LCEN,
+// ⚠️ À COMPLÉTER, ces informations sont exigées par la loi française (LCEN,
 // article 6-III) pour tout site édité en France, et ne peuvent pas être
 // devinées ou inventées : elles doivent correspondre exactement à
 // l'immatriculation réelle de l'entreprise (ou de l'entrepreneur individuel)
@@ -165,8 +165,8 @@ export default function MentionsLegalesPage() {
         {isIncomplete && (
           <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-500/10 dark:text-amber-400">
             {language === 'fr'
-              ? "⚠️ Page incomplète : les informations d'identification de l'éditeur (nom, forme juridique, SIREN/SIRET, adresse) doivent être renseignées dans le code (PUBLISHER, en haut de app/mentions-legales/page.tsx) avant publication — obligation légale, non facultative."
-              : '⚠️ Incomplete page: the publisher identification details (name, legal form, SIREN/SIRET, address) must be filled in the code (PUBLISHER, at the top of app/mentions-legales/page.tsx) before this goes live — a legal requirement, not optional.'}
+              ? "⚠️ Page incomplète : les informations d'identification de l'éditeur (nom, forme juridique, SIREN/SIRET, adresse) doivent être renseignées dans le code (PUBLISHER, en haut de app/mentions-legales/page.tsx) avant publication, obligation légale, non facultative."
+              : '⚠️ Incomplete page: the publisher identification details (name, legal form, SIREN/SIRET, address) must be filled in the code (PUBLISHER, at the top of app/mentions-legales/page.tsx) before this goes live, a legal requirement, not optional.'}
           </div>
         )}
 

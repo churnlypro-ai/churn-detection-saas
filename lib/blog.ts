@@ -26,7 +26,7 @@ export const blogPosts: BlogPost[] = [
     blocks: [
       {
         type: 'p',
-        text: 'Un churn de 5% par mois. Vu isolément, ce chiffre ne semble pas alarmant — 95% des clients restent, chaque mois. Le problème, c\'est que ce taux se compose : un churn mensuel de 5% qui se répète chaque mois représente environ 46% de clients perdus sur un an, pas 60% (5% × 12) comme on pourrait le calculer trop vite, mais loin des 5% qu\'on regarde au tableau de bord chaque mois.',
+        text: 'Un churn de 5% par mois. Vu isolément, ce chiffre ne semble pas alarmant, 95% des clients restent, chaque mois. Le problème, c\'est que ce taux se compose : un churn mensuel de 5% qui se répète chaque mois représente environ 46% de clients perdus sur un an, pas 60% (5% × 12) comme on pourrait le calculer trop vite, mais loin des 5% qu\'on regarde au tableau de bord chaque mois.',
       },
       {
         type: 'h2',
@@ -34,7 +34,7 @@ export const blogPosts: BlogPost[] = [
       },
       {
         type: 'p',
-        text: 'La plupart des SaaS suivent leur churn mois par mois, parce que c\'est le chiffre que Stripe ou leur outil de facturation affiche nativement. Le problème, c\'est que ce chiffre isolé ne dit rien de la trajectoire réelle de la base de clients. Deux entreprises à 5% de churn mensuel n\'ont pas le même problème si l\'une le maintient depuis six mois et l\'autre vient de passer de 2% à 5% — la deuxième a un problème qui s\'aggrave, pas un chiffre stable à surveiller de loin.',
+        text: 'La plupart des SaaS suivent leur churn mois par mois, parce que c\'est le chiffre que Stripe ou leur outil de facturation affiche nativement. Le problème, c\'est que ce chiffre isolé ne dit rien de la trajectoire réelle de la base de clients. Deux entreprises à 5% de churn mensuel n\'ont pas le même problème si l\'une le maintient depuis six mois et l\'autre vient de passer de 2% à 5%, la deuxième a un problème qui s\'aggrave, pas un chiffre stable à surveiller de loin.',
       },
       {
         type: 'h2',
@@ -42,7 +42,7 @@ export const blogPosts: BlogPost[] = [
       },
       {
         type: 'p',
-        text: 'Retenir un client coûte généralement 5 à 7 fois moins cher que d\'en acquérir un nouveau. Chaque euro dépensé en acquisition pour compenser un churn évitable est donc un euro dépensé pour rester au même niveau, pas pour grandir. Un SaaS qui investit dans la rétention avant que le client parte — plutôt qu\'après, quand il a déjà annulé — change fondamentalement cette équation.',
+        text: 'Retenir un client coûte généralement 5 à 7 fois moins cher que d\'en acquérir un nouveau. Chaque euro dépensé en acquisition pour compenser un churn évitable est donc un euro dépensé pour rester au même niveau, pas pour grandir. Un SaaS qui investit dans la rétention avant que le client parte, plutôt qu\'après, quand il a déjà annulé, change fondamentalement cette équation.',
       },
       {
         type: 'h2',
@@ -50,19 +50,19 @@ export const blogPosts: BlogPost[] = [
       },
       {
         type: 'p',
-        text: 'La difficulté opérationnelle du churn, c\'est qu\'il ne prévient généralement pas : un client se désengage progressivement (moins d\'usage, moins de connexions, un ticket support non résolu) avant d\'annuler officiellement, mais peu d\'équipes ont le temps de repérer ce signal client par client dans leur fichier. C\'est exactement le créneau qu\'occupe Churnly : une analyse IA (Claude d\'Anthropic) du fichier clients qui attribue à chaque client un score de risque de 0 à 100, avec les facteurs qui l\'expliquent et une fenêtre de prédiction de 30 à 60 jours avant le départ probable — le temps d\'agir avant l\'annulation, pas après.',
+        text: 'La difficulté opérationnelle du churn, c\'est qu\'il ne prévient généralement pas : un client se désengage progressivement (moins d\'usage, moins de connexions, un ticket support non résolu) avant d\'annuler officiellement, mais peu d\'équipes ont le temps de repérer ce signal client par client dans leur fichier. C\'est exactement le créneau qu\'occupe Churnly : une analyse IA (Claude d\'Anthropic) du fichier clients qui attribue à chaque client un score de risque de 0 à 100, avec les facteurs qui l\'expliquent et une fenêtre de prédiction de 30 à 60 jours avant le départ probable, le temps d\'agir avant l\'annulation, pas après.',
       },
       {
         type: 'ul',
         items: [
-          'Premier scan gratuit, sans carte bancaire — voyez votre vrai taux de churn avant toute décision.',
+          'Premier scan gratuit, sans carte bancaire, voyez votre vrai taux de churn avant toute décision.',
           'Aucune donnée personnelle de vos clients finaux n\'est conservée durablement ; suppression en un clic.',
-          'Connexion directe à Stripe, Paddle ou Lemon Squeezy — pas de fichier à préparer à la main.',
+          'Connexion directe à Stripe, Paddle ou Lemon Squeezy, pas de fichier à préparer à la main.',
         ],
       },
       {
         type: 'p',
-        text: 'Si votre churn mensuel affiché vous semble raisonnable, faites le calcul composé sur douze mois avant de conclure que ce n\'est pas un problème — c\'est souvent là que la surprise se trouve.',
+        text: 'Si votre churn mensuel affiché vous semble raisonnable, faites le calcul composé sur douze mois avant de conclure que ce n\'est pas un problème, c\'est souvent là que la surprise se trouve.',
       },
     ],
   },

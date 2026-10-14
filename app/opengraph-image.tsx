@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/server';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const alt = 'Churnly — Prédisez qui va partir avant qu\'il ne parte';
+export const alt = 'Churnly · Prédisez qui va partir avant qu\'il ne parte';
 
 export default function OpengraphImage() {
   return new ImageResponse(

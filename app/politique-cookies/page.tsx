@@ -30,7 +30,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         title: '2. Cookies et stockage strictement nécessaires',
         body: [
           {
-            intro: "Ces éléments sont indispensables au fonctionnement du service et ne peuvent pas être désactivés — ils ne nécessitent pas votre consentement au sens du RGPD/ePrivacy :",
+            intro: "Ces éléments sont indispensables au fonctionnement du service et ne peuvent pas être désactivés, ils ne nécessitent pas votre consentement au sens du RGPD/ePrivacy :",
             items: [
               "Authentification (Supabase) : maintient votre session connectée. Expire à la déconnexion ou après une période d'inactivité.",
               "Préférence de langue et de thème (clair/sombre) : mémorisées dans le stockage local de votre navigateur, jamais transmises à un tiers.",
@@ -42,14 +42,14 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '3. Mesure d\'audience (soumise à votre consentement)',
         body: [
-          "Lorsque nous l'activons, Churnly utilise Google Analytics (GA4) pour comprendre l'usage global du site (pages visitées, provenance du trafic) — jamais pour vous identifier individuellement à des fins publicitaires. Ces cookies (_ga, _ga_*) ne sont déposés qu'après que vous ayez cliqué sur « Tout accepter » dans le bandeau affiché à votre première visite. Si vous cliquez sur « Refuser », ou si vous ne faites aucun choix, aucun cookie Google Analytics n'est déposé.",
+          "Lorsque nous l'activons, Churnly utilise Google Analytics (GA4) pour comprendre l'usage global du site (pages visitées, provenance du trafic), jamais pour vous identifier individuellement à des fins publicitaires. Ces cookies (_ga, _ga_*) ne sont déposés qu'après que vous ayez cliqué sur « Tout accepter » dans le bandeau affiché à votre première visite. Si vous cliquez sur « Refuser », ou si vous ne faites aucun choix, aucun cookie Google Analytics n'est déposé.",
           "Google peut traiter ces données aux États-Unis ; ce transfert s'appuie sur les clauses contractuelles types prévues par le RGPD. Politique de confidentialité de Google : policies.google.com/privacy.",
         ],
       },
       {
         title: '4. Attribution marketing (première partie, sans consentement requis)',
         body: [
-          "Quand vous arrivez sur Churnly via un lien publicitaire ou de parrainage (paramètres ?utm_... ou ?aff= dans l'URL), nous mémorisons cette provenance dans le stockage local de votre navigateur, uniquement pour savoir quel canal vous a amené jusqu'à nous si vous créez un compte ensuite. Cette information reste sur votre appareil et n'est envoyée à nos serveurs qu'au moment de votre inscription, jamais partagée avec un tiers (contrairement à un pixel publicitaire classique) — elle n'entre donc pas dans le champ du consentement cookies.",
+          "Quand vous arrivez sur Churnly via un lien publicitaire ou de parrainage (paramètres ?utm_... ou ?aff= dans l'URL), nous mémorisons cette provenance dans le stockage local de votre navigateur, uniquement pour savoir quel canal vous a amené jusqu'à nous si vous créez un compte ensuite. Cette information reste sur votre appareil et n'est envoyée à nos serveurs qu'au moment de votre inscription, jamais partagée avec un tiers (contrairement à un pixel publicitaire classique), elle n'entre donc pas dans le champ du consentement cookies.",
         ],
       },
       {
@@ -82,7 +82,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
         title: '2. Strictly necessary cookies and storage',
         body: [
           {
-            intro: 'These are required for the service to work and cannot be turned off — they do not require your consent under GDPR/ePrivacy:',
+            intro: 'These are required for the service to work and cannot be turned off, they do not require your consent under GDPR/ePrivacy:',
             items: [
               'Authentication (Supabase): keeps you signed in. Expires on logout or after a period of inactivity.',
               'Language and theme (light/dark) preference: stored in your browser\'s local storage, never sent to a third party.',
@@ -94,14 +94,14 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '3. Audience measurement (subject to your consent)',
         body: [
-          'When enabled, Churnly uses Google Analytics (GA4) to understand overall site usage (pages visited, traffic source) — never to identify you individually for advertising purposes. These cookies (_ga, _ga_*) are only set after you click "Accept all" on the banner shown on your first visit. If you click "Reject," or make no choice, no Google Analytics cookie is set.',
+          'When enabled, Churnly uses Google Analytics (GA4) to understand overall site usage (pages visited, traffic source), never to identify you individually for advertising purposes. These cookies (_ga, _ga_*) are only set after you click "Accept all" on the banner shown on your first visit. If you click "Reject," or make no choice, no Google Analytics cookie is set.',
           'Google may process this data in the United States; this transfer relies on GDPR standard contractual clauses. Google\'s privacy policy: policies.google.com/privacy.',
         ],
       },
       {
         title: '4. Marketing attribution (first-party, no consent required)',
         body: [
-          'When you arrive on Churnly through an ad or referral link (?utm_... or ?aff= parameters in the URL), we store that source in your browser\'s local storage, solely to know which channel brought you if you later create an account. This information stays on your device and is only sent to our servers when you sign up, never shared with a third party (unlike a typical advertising pixel) — so it falls outside the scope of cookie consent.',
+          'When you arrive on Churnly through an ad or referral link (?utm_... or ?aff= parameters in the URL), we store that source in your browser\'s local storage, solely to know which channel brought you if you later create an account. This information stays on your device and is only sent to our servers when you sign up, never shared with a third party (unlike a typical advertising pixel), so it falls outside the scope of cookie consent.',
         ],
       },
       {

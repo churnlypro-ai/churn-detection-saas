@@ -17,7 +17,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
   fr: {
     heading: 'Politique de confidentialité',
     intro:
-      "Churnly (\"nous\") édite un logiciel d'analyse du risque de désabonnement (churn) destiné aux entreprises SaaS. Cette politique explique quelles données nous collectons, pourquoi, et comment nous les protégeons — pour vous en tant qu'utilisateur de Churnly, et pour les données de vos propres clients que vous nous confiez.",
+      "Churnly (\"nous\") édite un logiciel d'analyse du risque de désabonnement (churn) destiné aux entreprises SaaS. Cette politique explique quelles données nous collectons, pourquoi, et comment nous les protégeons, pour vous en tant qu'utilisateur de Churnly, et pour les données de vos propres clients que vous nous confiez.",
     sections: [
       {
         title: '1. Responsable du traitement',
@@ -65,11 +65,11 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
           {
             intro: 'Pour fonctionner, Churnly fait appel aux prestataires suivants, chacun agissant comme sous-traitant technique :',
             items: [
-              'Supabase — hébergement de la base de données et authentification, avec chiffrement au repos et règles d\'accès strictes (Row Level Security).',
-              'Stripe — traitement des paiements et, si vous l\'activez, import en lecture seule de vos données d\'abonnements existantes.',
-              'Anthropic (Claude) — analyse du risque de désabonnement à partir des données que vous fournissez, dans le seul but de produire le résultat affiché sur votre tableau de bord.',
-              'Resend — envoi des emails transactionnels du service.',
-              'Vercel — hébergement de l\'application et des fonctions serveur.',
+              'Supabase, hébergement de la base de données et authentification, avec chiffrement au repos et règles d\'accès strictes (Row Level Security).',
+              'Stripe, traitement des paiements et, si vous l\'activez, import en lecture seule de vos données d\'abonnements existantes.',
+              'Anthropic (Claude), analyse du risque de désabonnement à partir des données que vous fournissez, dans le seul but de produire le résultat affiché sur votre tableau de bord.',
+              'Resend, envoi des emails transactionnels du service.',
+              'Vercel, hébergement de l\'application et des fonctions serveur.',
             ],
           },
           "Aucun de ces prestataires n'est autorisé à utiliser vos données à d'autres fins que la fourniture du service Churnly.",
@@ -90,7 +90,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '8. Sécurité',
         body: [
-          "L'accès aux données est protégé par authentification et par des règles de sécurité au niveau des lignes (Row Level Security) dans notre base de données : chaque utilisateur ne peut accéder qu'à ses propres données. Les connexions sont chiffrées (HTTPS/TLS). Aucun jeton d'accès Stripe n'est stocké côté serveur lors d'une connexion Stripe — seul l'identifiant du compte connecté est conservé.",
+          "L'accès aux données est protégé par authentification et par des règles de sécurité au niveau des lignes (Row Level Security) dans notre base de données : chaque utilisateur ne peut accéder qu'à ses propres données. Les connexions sont chiffrées (HTTPS/TLS). Aucun jeton d'accès Stripe n'est stocké côté serveur lors d'une connexion Stripe, seul l'identifiant du compte connecté est conservé.",
         ],
       },
       {
@@ -111,13 +111,13 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
               `Nous contacter à ${CONTACT_EMAIL} pour toute autre demande, y compris la suppression complète de votre compte.`,
             ],
           },
-          "Vous disposez également du droit d'introduire une réclamation auprès de la Commission Nationale de l'Informatique et des Libertés (CNIL) — www.cnil.fr — si vous estimez que le traitement de vos données ne respecte pas la réglementation applicable.",
+          "Vous disposez également du droit d'introduire une réclamation auprès de la Commission Nationale de l'Informatique et des Libertés (CNIL), www.cnil.fr, si vous estimez que le traitement de vos données ne respecte pas la réglementation applicable.",
         ],
       },
       {
         title: '11. Cookies',
         body: [
-          "Churnly dépose des cookies et technologies équivalentes strictement nécessaires au fonctionnement du service (authentification, préférence de langue, mode sombre), qui ne nécessitent pas votre consentement. Lorsque nous l'activons, un cookie de mesure d'audience (Google Analytics) n'est déposé qu'après votre consentement explicite, recueilli via le bandeau affiché à votre première visite — vous pouvez le refuser ou le retirer à tout moment. Le détail complet est disponible dans notre politique de cookies.",
+          "Churnly dépose des cookies et technologies équivalentes strictement nécessaires au fonctionnement du service (authentification, préférence de langue, mode sombre), qui ne nécessitent pas votre consentement. Lorsque nous l'activons, un cookie de mesure d'audience (Google Analytics) n'est déposé qu'après votre consentement explicite, recueilli via le bandeau affiché à votre première visite, vous pouvez le refuser ou le retirer à tout moment. Le détail complet est disponible dans notre politique de cookies.",
         ],
       },
       {
@@ -135,7 +135,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
   en: {
     heading: 'Privacy Policy',
     intro:
-      "Churnly (\"we\") provides churn-risk analysis software for SaaS businesses. This policy explains what data we collect, why, and how we protect it — both for you as a Churnly user, and for your own customers' data that you entrust to us.",
+      "Churnly (\"we\") provides churn-risk analysis software for SaaS businesses. This policy explains what data we collect, why, and how we protect it, both for you as a Churnly user, and for your own customers' data that you entrust to us.",
     sections: [
       {
         title: '1. Data controller',
@@ -183,11 +183,11 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
           {
             intro: 'To operate, Churnly relies on the following providers, each acting as a technical processor:',
             items: [
-              'Supabase — database hosting and authentication, with encryption at rest and strict access rules (Row Level Security).',
-              "Stripe — payment processing and, if you enable it, read-only import of your existing subscription data.",
-              'Anthropic (Claude) — churn-risk analysis based on the data you provide, solely to produce the result shown on your dashboard.',
-              "Resend — delivery of the service's transactional emails.",
-              'Vercel — hosting of the application and server functions.',
+              'Supabase, database hosting and authentication, with encryption at rest and strict access rules (Row Level Security).',
+              "Stripe, payment processing and, if you enable it, read-only import of your existing subscription data.",
+              'Anthropic (Claude), churn-risk analysis based on the data you provide, solely to produce the result shown on your dashboard.',
+              "Resend, delivery of the service's transactional emails.",
+              'Vercel, hosting of the application and server functions.',
             ],
           },
           'None of these providers is authorized to use your data for any purpose other than delivering the Churnly service.',
@@ -208,7 +208,7 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
       {
         title: '8. Security',
         body: [
-          'Access to data is protected by authentication and by row-level security rules in our database: each user can only access their own data. Connections are encrypted (HTTPS/TLS). No Stripe access token is stored server-side when you connect Stripe — only the connected account identifier is kept.',
+          'Access to data is protected by authentication and by row-level security rules in our database: each user can only access their own data. Connections are encrypted (HTTPS/TLS). No Stripe access token is stored server-side when you connect Stripe, only the connected account identifier is kept.',
         ],
       },
       {
@@ -229,13 +229,13 @@ const CONTENT: Record<'fr' | 'en', { heading: string; intro: string; sections: S
               `Contact us at ${CONTACT_EMAIL} for any other request, including full account deletion.`,
             ],
           },
-          'You also have the right to lodge a complaint with the French data protection authority (CNIL) — www.cnil.fr — if you believe our processing of your data does not comply with applicable regulations.',
+          'You also have the right to lodge a complaint with the French data protection authority (CNIL), www.cnil.fr, if you believe our processing of your data does not comply with applicable regulations.',
         ],
       },
       {
         title: '11. Cookies',
         body: [
-          'Churnly sets cookies and equivalent technologies strictly necessary for the service to function (authentication, language preference, dark mode), which do not require your consent. When enabled, an audience-measurement cookie (Google Analytics) is only set after your explicit consent, collected via the banner shown on your first visit — you can refuse or withdraw it at any time. Full details are available in our cookie policy.',
+          'Churnly sets cookies and equivalent technologies strictly necessary for the service to function (authentication, language preference, dark mode), which do not require your consent. When enabled, an audience-measurement cookie (Google Analytics) is only set after your explicit consent, collected via the banner shown on your first visit, you can refuse or withdraw it at any time. Full details are available in our cookie policy.',
         ],
       },
       {

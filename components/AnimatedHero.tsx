@@ -158,16 +158,6 @@ export default function AnimatedHero() {
 
         <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-14 px-6 py-24 lg:flex-row lg:items-center lg:gap-12 lg:py-32">
           <div className="flex w-full flex-col items-center gap-6 text-center lg:flex-[1.1] lg:items-start lg:text-left">
-            <motion.span
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 py-1.5 font-mono text-xs font-medium uppercase tracking-widest text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-              {t.badge}
-            </motion.span>
-
             <motion.h1
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}

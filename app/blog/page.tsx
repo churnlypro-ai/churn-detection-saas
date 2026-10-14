@@ -5,7 +5,7 @@ import { blogPosts } from '@/lib/blog';
 import { ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Blog — Churnly',
+  title: 'Blog · Churnly',
   description:
     "Rétention client, churn SaaS, prédiction de désabonnement : articles pratiques pour les fondateurs et équipes SaaS qui veulent garder leurs clients plus longtemps.",
 };
@@ -23,7 +23,7 @@ export default function BlogIndexPage() {
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Blog</h1>
         <p className="mt-3 text-slate-500 dark:text-slate-400">
-          Rétention client et churn SaaS, expliqués simplement — sans chiffres inventés.
+          Rétention client et churn SaaS, expliqués simplement, sans chiffres inventés.
         </p>
 
         <div className="mt-10 space-y-8">
