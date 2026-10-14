@@ -178,7 +178,7 @@ function RealitySection() {
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -right-8 -top-16 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
+              className="absolute -right-8 -top-16 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
             >
               <span className="h-2.5 w-2.5 flex-none rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.2)]" />
               <div className="min-w-0 leading-tight">
@@ -530,7 +530,7 @@ function FeaturesMock() {
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -left-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
+        className="absolute -left-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800/95 sm:flex"
       >
         <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-500/35 bg-brand-500/10 text-brand-400">
           <Download className="h-[18px] w-[18px]" strokeWidth={1.75} />

@@ -31,10 +31,9 @@ function DashboardMock() {
       </p>
 
       <motion.div
-        initial={{ opacity: 0, y: 24, rotateY: -6 }}
-        animate={{ opacity: 1, y: 0, rotateY: -6 }}
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        style={{ transformPerspective: 1400 }}
         className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40"
       >
         <div className="flex items-baseline gap-2.5 border-b border-slate-200 px-4 py-3.5 dark:border-slate-800">
@@ -47,7 +46,7 @@ function DashboardMock() {
             <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-200 font-mono text-xs font-semibold text-slate-900 dark:bg-slate-700 dark:text-slate-200">AN</span>
             <div className="min-w-0 flex-1 leading-tight">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Atelier Nuances</p>
-              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">Plan Pro · 89&nbsp;€/mois</p>
+              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">89&nbsp;€/mois</p>
             </div>
             <span className="flex-none rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold text-white">
               <span className="font-mono">82&nbsp;%</span> {t.atRisk}
@@ -57,7 +56,7 @@ function DashboardMock() {
             <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-100 font-mono text-xs font-semibold text-slate-900 dark:bg-slate-800 dark:text-slate-200">SB</span>
             <div className="min-w-0 flex-1 leading-tight">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Studio Brume</p>
-              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">Plan Essentiel · 39&nbsp;€/mois</p>
+              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">39&nbsp;€/mois</p>
             </div>
             <span className="flex-none rounded-full bg-brand-500 px-2.5 py-1 text-xs font-semibold text-slate-950">
               <span className="font-mono">54&nbsp;%</span> {t.watch}
@@ -67,7 +66,7 @@ function DashboardMock() {
             <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-slate-100 font-mono text-xs font-semibold text-slate-900 dark:bg-slate-800 dark:text-slate-200">ML</span>
             <div className="min-w-0 flex-1 leading-tight">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Maison Lumen</p>
-              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">Plan Pro · 89&nbsp;€/mois</p>
+              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">89&nbsp;€/mois</p>
             </div>
             <span className="flex-none rounded-full bg-green-600 px-2.5 py-1 text-xs font-semibold text-slate-950">
               <span className="font-mono">12&nbsp;%</span> {t.stable}
@@ -108,7 +107,7 @@ function DashboardMock() {
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -right-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:flex dark:border-slate-700 dark:bg-slate-800/95"
+        className="absolute -right-10 -top-7 hidden w-52 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl sm:flex dark:border-slate-700 dark:bg-slate-800/95"
       >
         <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-300/50 bg-brand-50 text-brand-700 dark:border-brand-500/35 dark:bg-brand-500/10 dark:text-brand-400">
           <CreditCard className="h-[18px] w-[18px]" />
@@ -122,7 +121,7 @@ function DashboardMock() {
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
-        className="absolute -bottom-6 -right-8 hidden w-48 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:flex dark:border-slate-700 dark:bg-slate-800/95"
+        className="absolute -bottom-6 -right-8 hidden w-48 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl sm:flex dark:border-slate-700 dark:bg-slate-800/95"
       >
         <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-brand-300/50 bg-brand-50 text-brand-700 dark:border-brand-500/35 dark:bg-brand-500/10 dark:text-brand-400">
           <Check className="h-[18px] w-[18px]" strokeWidth={2.5} />
